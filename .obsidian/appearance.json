@@ -1,0 +1,14 @@
+{
+  "theme": "obsidian",
+  "accentColor": "",
+  "cssTheme": "Minimal",
+  "baseFontSize": 18,
+  "textFontFamily": "Karla",
+  "interfaceFontFamily": "Inter",
+  "enabledCssSnippets": [
+    "night-owl"
+  ],
+  "nativeMenus": false,
+  "monospaceFontFamily": "IBM Plex Mono",
+  "baseFontSizeAction": false
+}

@@ -1,0 +1,15 @@
+# --- Obsidian State (Ignore) ---
+.obsidian/workspace.json
+.obsidian/graph.json
+.obsidian/core-plugins-migration.json
+
+# --- Temporary Files ---
+
+
+# --- Plugin Code (Optional) ---
+# Nếu bạn muốn lưu toàn bộ plugin (bao gồm cả code plugin bạn tự viết) 
+# thì ĐỪNG bỏ comment 2 dòng dưới đây. 
+# Nếu bạn chỉ muốn lưu cài đặt (data.json) mà không muốn lưu code plugin tải về, 
+# việc cấu hình sẽ phức tạp hơn. Lời khuyên cho dev là cứ lưu hết.
+
+# (Không ignore plugins/ để giữ lại code plugin daily-nav của bạn)

@@ -1,0 +1,10 @@
+{
+  "id": "daily-nav",
+  "name": "Daily Nav (Yesterday & Tomorrow)",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Tạo hoặc mở daily note cho hôm qua và ngày mai với template đầy đủ (id, aliases, tags, prev/next links).",
+  "author": "trongnghiango",
+  "authorUrl": "https://github.com/trongnghiango",
+  "isDesktopOnly": false
+}
