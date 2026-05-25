@@ -257,7 +257,7 @@
       "ch": 0
     },
     "02_atomic_nodes/HAE-concept-harness-definition.md": {
-      "line": 12,
+      "line": 14,
       "ch": 0
     },
     "02_atomic_nodes/HAE-concept-initialization-phase.md": {
@@ -338,6 +338,14 @@
     },
     "1-Journal/2026/05/2026-05-25-Monday.md": {
       "line": 0,
+      "ch": 0
+    },
+    "04_distilled/RULE.md": {
+      "line": 0,
+      "ch": 0
+    },
+    "02_atomic_nodes/HAE-concept-harness-moat-factor80.md": {
+      "line": 22,
       "ch": 0
     }
   }
