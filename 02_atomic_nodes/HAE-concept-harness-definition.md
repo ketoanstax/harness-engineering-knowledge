@@ -9,6 +9,8 @@ tags:
   - harness-concept
 date: 2026-05-24
 parent: null
+children:
+  - harness-moat-factor80
 ---
 
 # Định nghĩa Harness thực sự trong AI Agent Systems
@@ -36,7 +38,7 @@ Harness (Khung gá lắp) không đơn thuần là một file prompt dài. Nói 
   - [Tool Skill Registry](02_atomic_nodes/HAE-concept-tool-skill-registry.md) — Bộ ba năng lực
 
 - **Quả chuyển hóa (Derivative Effects):**
-  - *Chưa có Quả chuyển hóa trực tiếp (N nốt lá của cây tri thức).*
+  - [Harness Moat & 80% Factor](02_atomic_nodes/HAE-concept-harness-moat-factor80.md) — Định nghĩa vận hành kỹ thuật và lợi thế cạnh tranh của Harness.
 
 - **Dẫn chứng & Nguồn gốc (Evidence & Context):**
   - [Ghi chú cấu trúc: Lecture 02 - Harness thực sự là gì](01_structured_docs/lecture-02-what-a-harness-actually-is-processed.md)

@@ -24,6 +24,14 @@ Tài liệu này cung cấp bảng tra cứu nhanh (routing table) giúp AI Agen
 | **Cần debug khi tool lỗi** | Không có log để truy vết | [Lifecycle Hooks](02_atomic_nodes/HAE-concept-lifecycle-hooks.md), [4 Hook Types](02_atomic_nodes/HAE-concept-four-hook-types.md) | Dùng PreToolCall để log, OnError để retry hoặc escalate. |
 | **Machine crash giữa session dài** | Mất toàn bộ tiến trình | [Session Persistence](02_atomic_nodes/HAE-concept-session-persistence.md) | JSONL append-only → đọc lại file → phục hồi từ đúng điểm dừng. |
 | **Cần Agent tự hiểu project rules** | Phải giải thích lại từ đầu mỗi session | [Dynamic System Prompt](02_atomic_nodes/HAE-concept-dynamic-system-prompt.md) | System prompt pipeline tự gom CLAUDE.md + .agent/ files. |
+| **Cần giải thích Harness Engineering là gì** | Người mới khó hiểu khái niệm | [Harness Moat & 80% Factor](02_atomic_nodes/HAE-concept-harness-moat-factor80.md) | Định nghĩa Harness, phân biệt Model vs Harness, CPU-OS analogy, 80% Factor. |
+| **Đang design Agent Harness từ đầu** | Không biết cần xây component nào | [6 Layers](02_atomic_nodes/HAE-concept-six-harness-layers.md), [5 Principles](02_atomic_nodes/HAE-concept-five-harness-principles.md) | Xây 6 layer: Context Engineering -> Tool -> State -> Verification -> HITL -> Lifecycle. |
+| **Cần chọn kiến trúc Agent phù hợp** | Chọn sai pattern dẫn tới phức tạp hóa | [3 Patterns](02_atomic_nodes/HAE-concept-three-harness-patterns.md) | Default Single Agent + Verification. Split khi thực sự cần. |
+| **Cần deploy Agent ra production an toàn** | Không có quy trình kiểm soát | [5 Stage Deployment](02_atomic_nodes/HAE-concept-five-stage-deployment.md) | Eval -> Shadow -> Canary 5% -> Graduated -> Post-Deployment Validation. |
+| **Cần thiết lập Governance cho Agent** | Agent làm việc không kiểm soát | [4 Governance Layers](02_atomic_nodes/HAE-concept-four-governance-layers.md) | Identity isolation -> PEP intercept -> Audit trail -> HITL escalation. |
+| **Multi-agent chain bị sai lệch output** | Context bị suy giảm qua các hop | [Context-Switch Fatigue](02_atomic_nodes/HAE-concept-context-switch-fatigue-handoff.md) | Structured Handoff Schema + Goal-echo + Fidelity Checkpoint tại hop 3. |
+| **Cần thiết kế memory cho Agent system** | Không biết lưu context ở đâu, bao lâu | [3 Tier Memory](02_atomic_nodes/HAE-concept-three-tier-memory-architecture.md) | Ephemeral (in-context) -> Working (cache) -> Archival (vector DB). |
+| **Cần thuyết phục team đầu tư Harness** | Thiếu dữ liệu định lượng | [Quantified Metrics](02_atomic_nodes/HAE-concept-harness-quantified-metrics.md) | 83%->96%, 40-point diff, 30-50% token savings. |
 
 ---
 
