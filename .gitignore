@@ -3,6 +3,15 @@
 .obsidian/graph.json
 .obsidian/core-plugins-migration.json
 
+# --- Python bytecode (MRP Pipeline generated) ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- MRP Pipeline checkpoints (auto-generated on crash, safe to delete) ---
+05_journal/mrp_checkpoint_*.json
+
 # --- Temporary Files ---
 
 
