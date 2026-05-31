@@ -78,6 +78,8 @@ def run_batch_test():
     with open(bri_path, "r", encoding="utf-8") as f:
         bri_content = f.read()
 
+    bri_content_lower = bri_content.lower()
+
     print("✅ Nốt [blast-radius-isolation.md] tồn tại thực tế.")
 
     # Kiểm tra xem có chứa thông tin được MERGE từ File 15 hay không
