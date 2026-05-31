@@ -21,6 +21,10 @@ class MRPOrchestrator:
     def __init__(self, source_path: str):
         self.source_path = source_path
         self.source_slug = os.path.basename(source_path).replace(".md", "")
+
+        # Thiết lập biến môi trường cục bộ để định tuyến Mock LLM chính xác
+        os.environ["CURRENT_MRP_SOURCE_SLUG"] = self.source_slug
+
         self.llm = LLMClient()
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.checkpoint_path = os.path.join(DIR_JOURNAL, f"mrp_checkpoint_{self.source_slug}.json")

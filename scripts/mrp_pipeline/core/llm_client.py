@@ -68,7 +68,6 @@ class LLMClient:
         url = f"{self.base_url}/messages"
         headers = {
             "x-api-key": self.api_key,
-            # Một số custom gateway đòi hỏi Authorization: Bearer thay cho x-api-key, chúng ta hỗ trợ cả hai
             "Authorization": f"Bearer {self.api_key}",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json"
@@ -156,18 +155,16 @@ class LLMClient:
     def _mock_generate(self, prompt: str, response_json: bool) -> str:
         """
         Giả lập thông minh đầu ra cho test E2E Batch Sequential.
-        Định tuyến tuyệt đối chính xác bằng từ khóa ngữ nghĩa của CONCEPTS ở vòng ngoài cùng:
-        - Lecture 14: chứa "blast radius advanced" hoặc "blast-radius-isolation"
-        - Lecture 15: chứa "token-budget-under-large-load" hoặc "token-load-control"
-        - Lecture 16: chứa "causal-web-visualization" or "semantic-graph-visualization"
-        - Mặc định Lecture 13: "lecture-13" hoặc "global-context-loss"
+        Định tuyến tuyệt đối chính xác 100% bằng cách sử dụng Biến môi trường
+        ngữ cảnh CURRENT_MRP_SOURCE_SLUG do Orchestrator gán thời gian thực.
         """
         prompt_lower = prompt.lower()
+        current_slug = os.environ.get("CURRENT_MRP_SOURCE_SLUG", "")
 
         # =====================================================================
         # 📂 HỒ SƠ 1: LECTURE 14 (BLAST RADIUS ADVANCED)
         # =====================================================================
-        if "lecture-14" in prompt_lower or "blast-radius-isolation" in prompt_lower or "blast radius isolation" in prompt_lower:
+        if "lecture-14" in current_slug:
             # Planner 14
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
@@ -222,7 +219,7 @@ class LLMClient:
         # =====================================================================
         # 📂 HỒ SƠ 2: LECTURE 15 (TOKEN BUDGET UNDER LARGE LOAD)
         # =====================================================================
-        elif "lecture-15" in prompt_lower or "token-load-control" in prompt_lower or "token load control" in prompt_lower:
+        elif "lecture-15" in current_slug:
             # Planner 15
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
@@ -295,7 +292,7 @@ class LLMClient:
         # =====================================================================
         # 📂 HỒ SƠ 3: LECTURE 16 (CAUSAL WEB VISUALIZATION)
         # =====================================================================
-        elif "lecture-16" in prompt_lower or "semantic-graph-visualization" in prompt_lower or "semantic graph visualization" in prompt_lower or "causal-web-visualization" in prompt_lower:
+        elif "lecture-16" in current_slug:
             # Planner 16
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
