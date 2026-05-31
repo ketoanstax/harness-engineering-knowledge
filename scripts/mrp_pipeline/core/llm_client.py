@@ -10,17 +10,30 @@ class LLMClient:
     Tự động phát hiện biến môi trường để gọi API của Anthropic (Claude), OpenAI (GPT),
     hoặc Google (Gemini). Có cơ chế giả lập thông minh (mock/stub) khi không có API key
     để chạy thử nghiệm nhanh (local sandbox).
+
+    Hỗ trợ hoàn hảo cho Custom API Gateway (base_url, auth_token, custom model).
     """
     def __init__(self):
         self.api_provider = None
         self.api_key = None
         self.model = None
+        self.base_url = None
 
-        # Phát hiện cấu hình tự động
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        # 1. Phát hiện cấu hình Anthropic (Có thể là API thật hoặc Custom Gateway)
+        # Hỗ trợ cả ANTHROPIC_API_KEY và ANTHROPIC_AUTH_TOKEN của user
+        anthropic_key = os.environ.get("ANTHROPIC_AUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")
+
+        if anthropic_key:
             self.api_provider = "anthropic"
-            self.api_key = os.environ.get("ANTHROPIC_API_KEY")
-            self.model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+            self.api_key = anthropic_key
+            self.model = os.environ.get("ANTHROPIC_MODEL", "KhaBoDo_1.0")
+
+            # Đọc Custom Base URL của Gateway nếu có
+            self.base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1").rstrip("/")
+            print(f"🤖 Đã phát hiện cấu hình Anthropic Gateway:")
+            print(f"   Model: {self.model}")
+            print(f"   Base URL: {self.base_url}")
+
         elif os.environ.get("OPENAI_API_KEY"):
             self.api_provider = "openai"
             self.api_key = os.environ.get("OPENAI_API_KEY")
@@ -51,9 +64,12 @@ class LLMClient:
         return ""
 
     def _call_anthropic(self, prompt: str, system_prompt: str, response_json: bool) -> str:
-        url = "https://api.anthropic.com/v1/messages"
+        # Tự động ghép nối API endpoint từ base_url
+        url = f"{self.base_url}/messages"
         headers = {
             "x-api-key": self.api_key,
+            # Một số custom gateway đòi hỏi Authorization: Bearer thay cho x-api-key, chúng ta hỗ trợ cả hai
+            "Authorization": f"Bearer {self.api_key}",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json"
         }
@@ -78,7 +94,7 @@ class LLMClient:
                 result = json.loads(response.read().decode("utf-8"))
                 return result["content"][0]["text"].strip()
         except urllib.error.URLError as e:
-            print(f"❌ Lỗi gọi API Anthropic: {e}")
+            print(f"❌ Lỗi gọi API Anthropic Gateway ({url}): {e}")
             raise e
 
     def _call_openai(self, prompt: str, system_prompt: str, response_json: bool) -> str:
@@ -140,16 +156,19 @@ class LLMClient:
     def _mock_generate(self, prompt: str, response_json: bool) -> str:
         """
         Giả lập thông minh đầu ra cho test E2E Batch Sequential.
-        Cấu trúc phân cấp tối ưu: NHÓM THEO TÀI LIỆU trước, sau đó phân tách theo PHA.
-        Điều này đảm bảo không bao giờ bị chồng lấn (overlap) hoặc cướp cò prompt!
+        Định tuyến tuyệt đối chính xác bằng từ khóa ngữ nghĩa của CONCEPTS ở vòng ngoài cùng:
+        - Lecture 14: chứa "blast radius advanced" hoặc "blast-radius-isolation"
+        - Lecture 15: chứa "token-budget-under-large-load" hoặc "token-load-control"
+        - Lecture 16: chứa "causal-web-visualization" or "semantic-graph-visualization"
+        - Mặc định Lecture 13: "lecture-13" hoặc "global-context-loss"
         """
         prompt_lower = prompt.lower()
 
         # =====================================================================
         # 📂 HỒ SƠ 1: LECTURE 14 (BLAST RADIUS ADVANCED)
         # =====================================================================
-        if "lecture-14-blast-radius-advanced" in prompt_lower or "lecture 14" in prompt_lower or "blast radius isolation" in prompt_lower:
-            # 1. PLANNER 14
+        if "lecture-14" in prompt_lower or "blast-radius-isolation" in prompt_lower or "blast radius isolation" in prompt_lower:
+            # Planner 14
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
                     "new_nodes": [
@@ -174,7 +193,7 @@ class LLMClient:
                     "reasoning": "Tạo nốt mới Blast Radius Isolation để bổ trợ cho nốt agent-overreach."
                 }, ensure_ascii=False)
 
-            # 2. REDUCER 14
+            # Reducer 14
             if "lead architect" in prompt_lower:
                 return json.dumps({
                     "conflicts": [],
@@ -187,7 +206,7 @@ class LLMClient:
                     ]
                 }, ensure_ascii=False)
 
-            # 3. MAPPER 14 (Mặc định nếu là Mapper)
+            # Mapper 14 (mặc định)
             return json.dumps({
                 "title": "Bản chắt lọc tự động - Lecture 14",
                 "key_takeaways": [
@@ -203,8 +222,8 @@ class LLMClient:
         # =====================================================================
         # 📂 HỒ SƠ 2: LECTURE 15 (TOKEN BUDGET UNDER LARGE LOAD)
         # =====================================================================
-        elif "lecture-15-token-budget-under-large-load" in prompt_lower or "lecture 15" in prompt_lower or "token load control" in prompt_lower:
-            # 1. PLANNER 15
+        elif "lecture-15" in prompt_lower or "token-load-control" in prompt_lower or "token load control" in prompt_lower:
+            # Planner 15
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
                     "new_nodes": [
@@ -239,7 +258,7 @@ class LLMClient:
                     "reasoning": "Merge ý nghĩa bảo vệ token budget vào nốt blast-radius-isolation, và tạo nốt mới token-load-control nối cha với token-budget."
                 }, ensure_ascii=False)
 
-            # 2. REDUCER 15
+            # Reducer 15
             if "lead architect" in prompt_lower:
                 return json.dumps({
                     "conflicts": [
@@ -259,7 +278,7 @@ class LLMClient:
                     ]
                 }, ensure_ascii=False)
 
-            # 3. MAPPER 15
+            # Mapper 15
             return json.dumps({
                 "title": "Bản chắt lọc tự động - Lecture 15",
                 "key_takeaways": [
@@ -276,8 +295,8 @@ class LLMClient:
         # =====================================================================
         # 📂 HỒ SƠ 3: LECTURE 16 (CAUSAL WEB VISUALIZATION)
         # =====================================================================
-        elif "lecture-16-causal-web-visualization" in prompt_lower or "lecture 16" in prompt_lower or "semantic-graph-visualization" in prompt_lower:
-            # 1. PLANNER 16
+        elif "lecture-16" in prompt_lower or "semantic-graph-visualization" in prompt_lower or "semantic graph visualization" in prompt_lower or "causal-web-visualization" in prompt_lower:
+            # Planner 16
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
                     "new_nodes": [
@@ -302,7 +321,7 @@ class LLMClient:
                     "reasoning": "Tạo nốt mới Semantic Graph Visualization để bổ trợ trực quan."
                 }, ensure_ascii=False)
 
-            # 2. REDUCER 16
+            # Reducer 16
             if "lead architect" in prompt_lower:
                 return json.dumps({
                     "conflicts": [],
@@ -315,7 +334,7 @@ class LLMClient:
                     ]
                 }, ensure_ascii=False)
 
-            # 3. MAPPER 16
+            # Mapper 16
             return json.dumps({
                 "title": "Bản chắt lọc tự động - Lecture 16",
                 "key_takeaways": [
@@ -329,10 +348,10 @@ class LLMClient:
             }, ensure_ascii=False)
 
         # =====================================================================
-        # 📂 HỒ SƠ MẶC ĐỊNH: LECTURE 13 (MRP VS VECTOR DBS)
+        # 📂 LECTURE 13: DEFAULT (global-context-loss / no-accumulation)
         # =====================================================================
         else:
-            # 1. PLANNER 13
+            # Planner 13
             if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
                     "new_nodes": [
@@ -383,7 +402,7 @@ class LLMClient:
                     "reasoning": "Tài liệu mới nhấn mạnh 3 điểm mù của VectorDB: 1) Global Context Loss, 2) No Accumulation, 3) Uncontrolled Hallucination. Điểm 3 (Hallucination) đã được mô tả một phần trong nốt early-victory nên chúng tôi MERGE vào đó. Hai khái niệm còn lại hoàn toàn mới nên tạo nốt mới, nối parent với harness-definition và clean-state."
                 }, ensure_ascii=False)
 
-            # 2. REDUCER 13
+            # Reducer 13
             if "lead architect" in prompt_lower:
                 return json.dumps({
                     "conflicts": [
@@ -408,7 +427,7 @@ class LLMClient:
                     ]
                 }, ensure_ascii=False)
 
-            # 3. MAPPER 13
+            # Mapper 13
             return json.dumps({
                 "title": "Bản chắt lọc tự động - Lecture 13",
                 "key_takeaways": [
