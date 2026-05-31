@@ -47,5 +47,7 @@ Mỗi node phải tuân theo cấu trúc phẳng, cực kỳ súc tích:
 
 *   **Định nghĩa Harness trực quan: "Harness là môi trường được dựng lên để AI Agent nhảy lên đó hoạt động tự động, an toàn mà ít hoặc không cần con người phải can thiệp hay canh chừng".** (Được phát hiện vào 2026-05-24 từ FB-012).
 
+*   **Chạy nạp dữ liệu (Ingestion Pipeline) tuần tự (Sequential) theo thứ tự thời gian sửa đổi (Chronological) và áp dụng cơ chế lọc ngữ cảnh động (Active Context Filtering) thay vì chạy song song (Parallel).** (Được phát hiện vào 2026-05-31 từ FB-014).
+
 ---
 *Quy tắc này định hình tính toàn vẹn của đồ thị Obsidian Graph View và đảm bảo tính portable cho toàn bộ hệ thống tri thức.*

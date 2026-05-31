@@ -8,6 +8,8 @@ tags:
   - working
   - archival
   - state-management
+children:
+  - semantic-graph-visualization
 date: 2026-05-25
 parent: harness-moat-factor80
 ---

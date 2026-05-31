@@ -8,6 +8,8 @@ tags:
   - budget-allocation
   - cache-optimization
   - harness-primitive
+children:
+  - token-load-control
 date: 2026-05-24
 parent: context-manager
 ---

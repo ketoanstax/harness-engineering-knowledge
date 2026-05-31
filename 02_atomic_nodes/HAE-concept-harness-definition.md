@@ -11,6 +11,8 @@ date: 2026-05-24
 parent: null
 children:
   - harness-moat-factor80
+  - global-context-loss
+
 ---
 
 # Định nghĩa Harness thực sự trong AI Agent Systems

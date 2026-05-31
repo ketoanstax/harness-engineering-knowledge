@@ -14,16 +14,19 @@ Các nguyên lý định hình nền tảng cấu trúc của một Harness dàn
 - [Repository là Nguồn Sự Thật Duy Nhất (System of Record)](02_atomic_nodes/HAE-concept-system-of-record.md) — Tại sao Git repository là nguồn sự thật thay vì chat.
 
 ### 2. Quản lý Nhận thức (Cognitive & Context Management)
+- [Token Load Control - Kiểm soát tải token](02_atomic_nodes/HAE-concept-token-load-control.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 Cách thiết kế môi trường giúp giảm tải áp lực ngữ cảnh, tránh Agent bị quá tải thông tin:
 - [Tránh bẫy File Hướng Dẫn Khổng Lồ](02_atomic_nodes/HAE-concept-instruction-file-pitfall.md) — Bẫy dồn mọi quy tắc vào CLAUDE.md và giải pháp phân rã.
 - [Bảo Toàn Tính Liên Tục Trong Tác Vụ Dài Hạn](02_atomic_nodes/HAE-concept-session-continuity.md) — Cơ chế checkpoints để bảo toàn bối cảnh dài lâu.
 
 ### 3. Kiến trúc Quy trình làm việc (Workflow Architecture)
+- [Semantic Graph Visualization - Trực quan hóa đồ thị ngữ nghĩa phẳng](02_atomic_nodes/HAE-concept-semantic-graph-visualization.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 Quy trình và phương pháp luận vận hành Agent một cách tuần tự, nghiêm ngặt:
 - [Sự Cần Thiết Của Giai Đoạn Khởi Tạo (Plan Mode)](02_atomic_nodes/HAE-concept-initialization-phase.md) — Phân tách pha Plan Mode độc lập trước khi sửa code.
 - [Danh Mục Tính Năng (Feature List)](02_atomic_nodes/HAE-concept-feature-list-primitive.md) — Dẫn dắt sự tập trung bằng Task List nguyên thủy.
 
 ### 4. Rào chắn An toàn (Guardrails & Safety)
+- [Blast Radius Isolation - Cô lập rủi ro thực thi của Agent](02_atomic_nodes/HAE-concept-blast-radius-isolation.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 Cơ chế bảo vệ mã nguồn, giới hạn tác động và dọn dẹp hệ thống:
 - [Kiểm Sát Phạm Vi Ảnh Hưởng & Lỗi Tự Ý Sửa Code (Agent Overreach)](02_atomic_nodes/HAE-concept-agent-overreach.md) — Giới hạn phạm vi blast radius, cấm code dang dở.
 - [Tính Quan Sát Thuộc Về Bên Trong Harness (Telemetry & Logs)](02_atomic_nodes/HAE-concept-internal-observability.md) — Khả năng tự theo dõi hành vi Agent.

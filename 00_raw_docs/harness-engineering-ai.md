@@ -9,7 +9,7 @@ tags:
   - agent-harness
   - governance
 date: 2026-05-25
-status: to-process
+status: processed
 ---
 
 # Harness Engineering – Website Content (Kai Renner)

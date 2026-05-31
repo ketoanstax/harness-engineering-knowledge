@@ -28,7 +28,7 @@ Vector Database cắt tài liệu thành các chunk nhỏ khiến AI Agent khôn
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
-  - [Ghi chú cấu trúc: Lecture 13 Why Mrp Pipeline Triumphs Over Vector Dbs](01_structured_docs/lecture-13-why-mrp-pipeline-triumphs-over-vector-dbs-processed.md)
-  - [Ghi chú thô: Lecture 13 Why Mrp Pipeline Triumphs Over Vector Dbs](00_raw_docs/lecture-13-why-mrp-pipeline-triumphs-over-vector-dbs.md)
+  - [Ghi chú cấu trúc: Lecture 16 Causal Web Visualization](01_structured_docs/lecture-16-causal-web-visualization-processed.md)
+  - [Ghi chú thô: Lecture 16 Causal Web Visualization](00_raw_docs/lecture-16-causal-web-visualization.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Tuyên ngôn Harness Engineering](04_distilled/harness-engineering-manifesto.md)

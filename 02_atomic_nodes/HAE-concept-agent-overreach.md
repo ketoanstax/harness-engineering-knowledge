@@ -7,6 +7,8 @@ tags:
   - blast-radius
   - code-integrity
   - harness-concept
+children:
+  - blast-radius-isolation
 date: 2026-05-24
 parent: null
 ---

@@ -19,7 +19,7 @@ Quy tắc này quản lý cách thu thập, lưu trữ và bảo vệ dữ liệ
      - raw-source
      - {{source-type}} (ví dụ: website, video, paper)
    date: 2026-05-24
-   status: to-process # Hoặc processed sau khi đã cấu trúc hóa
+   status: processed # Hoặc processed sau khi đã cấu trúc hóa
    ---
    ```
 
