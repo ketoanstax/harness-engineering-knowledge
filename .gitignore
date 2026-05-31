@@ -25,3 +25,4 @@ __pycache__/
 # việc cấu hình sẽ phức tạp hơn. Lời khuyên cho dev là cứ lưu hết.
 
 # (Không ignore plugins/ để giữ lại code plugin daily-nav của bạn)
+node_modules/

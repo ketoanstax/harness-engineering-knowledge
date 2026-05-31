@@ -1,0 +1,30 @@
+{
+  "name": "harness-mrp-engine",
+  "version": "0.1.0",
+  "description": "TypeScript Engine for MRP Pipeline",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "mrp": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "test": "node --experimental-strip-types src/test_mrp_pipeline.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "fuse.js": "^7.1.0",
+    "gray-matter": "^4.0.3",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
