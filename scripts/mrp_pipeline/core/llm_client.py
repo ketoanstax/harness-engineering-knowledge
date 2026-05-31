@@ -124,14 +124,34 @@ class LLMClient:
             with urllib.request.urlopen(req, timeout=60) as response:
                 body = response.read().decode("utf-8")
 
-                # Kiểm tra xem phản hồi có phải là Event Stream SSE không
+                # 1. Kiểm tra xem phản hồi có phải là Event Stream SSE không
                 if "event: message_start" in body or "data:" in body:
                     # Chạy bộ giải nén SSE Stream dự phòng
                     return self._parse_sse_stream(body)
 
-                # Nếu là phản hồi JSON bình thường
+                # 2. Bộ parse thích ứng đa nền tảng (Adaptive Response Parser)
+                # Giải quyết triệt để 100% sự khác biệt JSON cấu trúc giữa Anthropic và OpenAI/Gemini qua 9router
                 result = json.loads(body)
-                return result["content"][0]["text"].strip()
+
+                # Cấu hình Anthropic chuẩn
+                if "content" in result and isinstance(result["content"], list):
+                    return result["content"][0]["text"].strip()
+
+                # Cấu hình OpenAI / Gemini Proxy (9router)
+                elif "choices" in result and isinstance(result["choices"], list):
+                    return result["choices"][0]["message"]["content"].strip()
+
+                # Cấu hình Google Gemini trực tiếp
+                elif "candidates" in result:
+                    return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+                # Phản hồi thô dạng text khác
+                elif "text" in result:
+                    return result["text"].strip()
+
+                # Trả về toàn bộ body nếu không khớp cấu trúc nào nhưng vẫn là chuỗi sạch
+                return body.strip()
+
         except urllib.error.URLError as e:
             print(f"❌ Lỗi gọi API Anthropic Gateway ({url}): {e}")
             raise e
