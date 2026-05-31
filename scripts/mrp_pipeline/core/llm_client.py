@@ -12,6 +12,7 @@ class LLMClient:
     để chạy thử nghiệm nhanh (local sandbox).
 
     Hỗ trợ hoàn hảo cho Custom API Gateway (base_url, auth_token, custom model).
+    Đặc biệt tương thích 100% với 9router (hỗ trợ SSE Stream Parsing và tắt streaming).
     """
     def __init__(self):
         self.api_provider = None
@@ -19,8 +20,7 @@ class LLMClient:
         self.model = None
         self.base_url = None
 
-        # 1. Phát hiện cấu hình Anthropic (Có thể là API thật hoặc Custom Gateway)
-        # Hỗ trợ cả ANTHROPIC_API_KEY và ANTHROPIC_AUTH_TOKEN của user
+        # 1. Phát hiện cấu hình Anthropic (Có thể là API thật hoặc Custom Gateway qua 9router)
         anthropic_key = os.environ.get("ANTHROPIC_AUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")
 
         if anthropic_key:
@@ -28,9 +28,9 @@ class LLMClient:
             self.api_key = anthropic_key
             self.model = os.environ.get("ANTHROPIC_MODEL", "KhaBoDo_1.0")
 
-            # Đọc Custom Base URL của Gateway nếu có
+            # Đọc Custom Base URL của Gateway nếu có (mặc định Anthropic Cloud)
             self.base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1").rstrip("/")
-            print(f"🤖 Đã phát hiện cấu hình Anthropic Gateway:")
+            print(f"🤖 Đã phát hiện cấu hình Anthropic/9router Gateway:")
             print(f"   Model: {self.model}")
             print(f"   Base URL: {self.base_url}")
 
@@ -63,8 +63,38 @@ class LLMClient:
 
         return ""
 
+    def _parse_sse_stream(self, stream_body: str) -> str:
+        """
+        Bộ phân tích SSE Stream (Server-Sent Events) dự phòng cho 9router.
+        Lọc toàn bộ dòng bắt đầu bằng 'data: ' và trích xuất trường 'text'.
+        """
+        text_parts = []
+        for line in stream_body.split("\n"):
+            line = line.strip()
+            if line.startswith("data:"):
+                json_str = line[5:].strip()
+                # Bỏ qua dòng kết thúc hoặc trống
+                if json_str == "[DONE]" or not json_str:
+                    continue
+                try:
+                    data = json.loads(json_str)
+                    # Chuẩn Anthropic Stream: content_block_delta -> delta -> text
+                    if data.get("type") == "content_block_delta":
+                        delta = data.get("delta", {})
+                        if "text" in delta:
+                            text_parts.append(delta["text"])
+                    # Một số định dạng khác
+                    elif "choices" in data:
+                        delta = data["choices"][0].get("delta", {})
+                        if "content" in delta:
+                            text_parts.append(delta["content"])
+                except Exception:
+                    pass
+
+        full_text = "".join(text_parts).strip()
+        return full_text
+
     def _call_anthropic(self, prompt: str, system_prompt: str, response_json: bool) -> str:
-        # Tự động ghép nối API endpoint từ base_url
         url = f"{self.base_url}/messages"
         headers = {
             "x-api-key": self.api_key,
@@ -77,9 +107,11 @@ class LLMClient:
         if response_json:
             prompt_content += "\n\nIMPORTANT: Return ONLY a valid JSON object. Do not include markdown code block syntax (like ```json) in your final response."
 
+        # Cấu hình payload. Tắt "stream" để 9router trả về phản hồi tĩnh đơn giản.
         data = {
             "model": self.model,
             "max_tokens": 4000,
+            "stream": False,  # BẮT BUỘC: Yêu cầu 9router không stream
             "messages": [
                 {"role": "user", "content": prompt_content}
             ]
@@ -90,7 +122,15 @@ class LLMClient:
         req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=60) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                body = response.read().decode("utf-8")
+
+                # Kiểm tra xem phản hồi có phải là Event Stream SSE không
+                if "event: message_start" in body or "data:" in body:
+                    # Chạy bộ giải nén SSE Stream dự phòng
+                    return self._parse_sse_stream(body)
+
+                # Nếu là phản hồi JSON bình thường
+                result = json.loads(body)
                 return result["content"][0]["text"].strip()
         except urllib.error.URLError as e:
             print(f"❌ Lỗi gọi API Anthropic Gateway ({url}): {e}")
