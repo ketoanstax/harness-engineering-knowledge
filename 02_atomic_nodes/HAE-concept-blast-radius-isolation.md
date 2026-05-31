@@ -26,6 +26,8 @@ Cô lập cứng môi trường thực thi của Agent và giới hạn request 
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
+  - [Ghi chú cấu trúc: Lecture 15 Token Budget Under Large Load](01_structured_docs/lecture-15-token-budget-under-large-load-processed.md)
+  - [Ghi chú thô: Lecture 15 Token Budget Under Large Load](00_raw_docs/lecture-15-token-budget-under-large-load.md)
   - [Ghi chú cấu trúc: Lecture 14 Blast Radius Advanced](01_structured_docs/lecture-14-blast-radius-advanced-processed.md)
   - [Ghi chú thô: Lecture 14 Blast Radius Advanced](00_raw_docs/lecture-14-blast-radius-advanced.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
