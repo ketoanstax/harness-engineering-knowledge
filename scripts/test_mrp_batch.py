@@ -34,6 +34,13 @@ def run_batch_test():
     print("🧪 KHỞI CHẠY TEST BATCH TUẦN TỰ & CONTEXT FILTERING")
     print("=======================================================")
 
+    # BẮT BUỘC: Ép chạy ở Mock Mode khi chạy test E2E để bảo vệ đồ thị tri thức tĩnh
+    # tránh việc Live LLM tự vẽ bậy các nốt chưa hoàn thiện gây lỗi liên kết hỏng.
+    import os
+    for env_var in ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"]:
+        if env_var in os.environ:
+            del os.environ[env_var]
+
     # 1. Setup thời gian
     setup_chronological_times()
 
