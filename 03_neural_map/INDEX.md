@@ -7,6 +7,8 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 ## 🗂️ Phân loại theo Danh mục (Categories)
 
 ### 1. Khung gá cốt lõi (Harness Core Concepts)
+- [No Accumulation - Hệ quả không tích lũy tri thức](02_atomic_nodes/HAE-concept-no-accumulation.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Global Context Loss - Mất bối cảnh tổng thể trong Vector DB](02_atomic_nodes/HAE-concept-global-context-loss.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 Các nguyên lý định hình nền tảng cấu trúc của một Harness dành cho AI Agent:
 - [Định nghĩa Harness thực sự trong AI Agent Systems](02_atomic_nodes/HAE-concept-harness-definition.md) — Định nghĩa cơ bản về Harness và blast radius.
 - [Repository là Nguồn Sự Thật Duy Nhất (System of Record)](02_atomic_nodes/HAE-concept-system-of-record.md) — Tại sao Git repository là nguồn sự thật thay vì chat.

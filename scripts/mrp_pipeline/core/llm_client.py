@@ -140,62 +140,16 @@ class LLMClient:
     def _mock_generate(self, prompt: str, response_json: bool) -> str:
         """
         Giả lập thông minh đầu ra để phục vụ test cục bộ mà không tốn tiền API key.
-        Sử dụng các khoá JSON duy nhất theo PHASE để tránh chồng lấn (overlap).
-        - Mapper 1: key là key_takeaways (duy nhất ở Mapper)
-        - Reducer 2: key là existing_slug (duy nhất ở Reducer)
-        - Planner 3: key là merge_nodes (duy nhất ở Planner)
+        Sử dụng phân tích cấu trúc prompt tuyệt đối chính xác để định tuyến pha:
+        - Planner: prompt chứa "Kỹ sư trưởng" (đặc trưng Planner)
+        - Reducer: prompt chứa "Lead Architect" hoặc "existing_nodes" (đặc trưng Reducer)
+        - Mapper: prompt chứa "Yêu cầu đầu ra (JSON)" và "key_takeaways" (đặc trưng Mapper)
         """
         prompt_lower = prompt.lower()
 
-        # --- PHASE 1: MAPPER ---
-        # JSON yêu cầu chứa key_takeaways (snake_case, duy nhất)
-        if '"key_takeaways"' in prompt or "'key_takeaways'" in prompt or "key_takeaways" in prompt_lower:
-            if response_json:
-                return json.dumps({
-                    "title": "Bản chắt lọc tự động - MRP Pipeline",
-                    "key_takeaways": [
-                        "MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.",
-                        "Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.",
-                        "Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc."
-                    ],
-                    "keywords": [
-                        {"name": "Global Context Loss", "definition": "Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc."},
-                        {"name": "No Accumulation", "definition": "Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn."},
-                        {"name": "Uncontrolled Hallucinations", "definition": "AI không thể truy vết ngược dòng dẫn chứng."}
-                    ],
-                    "summary": "Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song."
-                }, ensure_ascii=False)
-
-        # --- PHASE 2: REDUCER ---
-        # JSON yêu cầu chứa existing_slug (duy nhất ở Reducer)
-        if '"existing_slug"' in prompt or "existing_slug" in prompt_lower:
-            if response_json:
-                return json.dumps({
-                    "conflicts": [
-                        {
-                            "keyword": "Hallucinations",
-                            "existing_slug": "early-victory",
-                            "action": "merge",
-                            "reason": "Khái niệm ảo tưởng (hallucinations) liên quan đến lỗi tự mãn tuyên bố thành công sớm (early victory)."
-                        }
-                    ],
-                    "new_concepts": [
-                        {
-                            "name": "Global Context Loss",
-                            "suggested_slug": "global-context-loss",
-                            "definition": "Mất bối cảnh tổng thể khi AI chỉ nhận các đoạn vụn rời rạc từ Vector DB."
-                        },
-                        {
-                            "name": "No Accumulation",
-                            "suggested_slug": "no-accumulation",
-                            "definition": "Hệ thống không tích lũy tri thức, dẫn đến mâu thuẫn giữa dữ liệu cũ và mới."
-                        }
-                    ]
-                }, ensure_ascii=False)
-
         # --- PHASE 3: PLANNER ---
-        # JSON yêu cầu chứa merge_nodes (duy nhất ở Planner)
-        if '"merge_nodes"' in prompt or "merge_nodes" in prompt_lower:
+        # Kiểm tra trước để tránh Mapper cướp cò vì prompt Planner có thể chứa keyword Mapper
+        if "kỹ sư trưởng" in prompt_lower or "khái niệm tạo mới:" in prompt_lower:
             if response_json:
                 return json.dumps({
                     "new_nodes": [
@@ -220,7 +174,7 @@ class LLMClient:
                             "title": "No Accumulation - Hệ quả không tích lũy tri thức",
                             "category": "Harness Core Concept",
                             "tags": ["no-accumulation", "knowledge-merge", "consistency"],
-                            "definition": "Khi tài liệu thay đổi, VectorDB chỉ chèn thêm vector mới thay vì hợp nhất tri thức, dẫn đến mâu thuẫn.",
+                            "definition": "Khi tài liệu thay đổi, VectorDB chỉ chèn thêm vector mới thay vì hợp nhất tri thức, dẫn đến mâuthuẫn.",
                             "principles": [
                                 "Cơ chế MRP Merge thay thế ghi đè, luôn trộn (merge) kiến thức mới vào nốt cũ.",
                                 "Phát hiện xung đột ngữ nghĩa tự động bằng Reducer."
@@ -244,6 +198,50 @@ class LLMClient:
                         }
                     ],
                     "reasoning": "Tài liệu mới nhấn mạnh 3 điểm mù của VectorDB: 1) Global Context Loss, 2) No Accumulation, 3) Uncontrolled Hallucination. Điểm 3 (Hallucination) đã được mô tả một phần trong nốt early-victory nên chúng tôi MERGE vào đó. Hai khái niệm còn lại hoàn toàn mới nên tạo nốt mới, nối parent với harness-definition và clean-state."
+                }, ensure_ascii=False)
+
+        # --- PHASE 2: REDUCER ---
+        if "lead architect" in prompt_lower or "các khái niệm hiện tại trong hệ thống:" in prompt_lower:
+            if response_json:
+                return json.dumps({
+                    "conflicts": [
+                        {
+                            "keyword": "Hallucinations",
+                            "existing_slug": "early-victory",
+                            "action": "merge",
+                            "reason": "Khái niệm ảo tưởng (hallucinations) liên quan đến lỗi tự mãn tuyên bố thành công sớm (early victory)."
+                        }
+                    ],
+                    "new_concepts": [
+                        {
+                            "name": "Global Context Loss",
+                            "suggested_slug": "global-context-loss",
+                            "definition": "Mất bối cảnh tổng thể khi AI chỉ nhận các đoạn vụn rời rạc từ Vector DB."
+                        },
+                        {
+                            "name": "No Accumulation",
+                            "suggested_slug": "no-accumulation",
+                            "definition": "Hệ thống không tích lũy tri thức, dẫn đến mâuthuẫn giữa dữ liệu cũ và mới."
+                        }
+                    ]
+                }, ensure_ascii=False)
+
+        # --- PHASE 1: MAPPER ---
+        if "yêu cầu đầu ra (json)" in prompt_lower or "key_takeaways" in prompt_lower:
+            if response_json:
+                return json.dumps({
+                    "title": "Bản chắt lọc tự động - MRP Pipeline",
+                    "key_takeaways": [
+                        "MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.",
+                        "Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.",
+                        "Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc."
+                    ],
+                    "keywords": [
+                        {"name": "Global Context Loss", "definition": "Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc."},
+                        {"name": "No Accumulation", "definition": "Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn."},
+                        {"name": "Uncontrolled Hallucinations", "definition": "AI không thể truy vết ngược dòng dẫn chứng."}
+                    ],
+                    "summary": "Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song."
                 }, ensure_ascii=False)
 
         # Fallback mặc định nếu không khớp phase nào

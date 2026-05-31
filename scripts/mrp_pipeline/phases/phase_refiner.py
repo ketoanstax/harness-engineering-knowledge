@@ -72,12 +72,12 @@ class PhaseRefiner:
             with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Cập nhật định nghĩa
+            # Cập nhật định nghĩa (chỉ khớp phần định nghĩa trước tiêu đề tiếp theo)
             if mn.get("updated_definition"):
                 import re
-                old_def_match = re.search(r"## 💡 Định nghĩa & Nội dung Cốt lõi\n(.+)", content, re.DOTALL)
+                old_def_match = re.search(r"(## 💡 Định nghĩa & Nội dung Cốt lõi\n)(.+?)(?=\n##|\Z)", content, re.DOTALL)
                 if old_def_match:
-                    old_def = old_def_match.group(1).strip()
+                    old_def = old_def_match.group(2).strip()
                     content = content.replace(f"## 💡 Định nghĩa & Nội dung Cốt lõi\n{old_def}",
                                               f"## 💡 Định nghĩa & Nội dung Cốt lõi\n{mn['updated_definition']}")
 

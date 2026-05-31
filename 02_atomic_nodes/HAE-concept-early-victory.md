@@ -14,7 +14,7 @@ parent: null
 # Khắc Phục Hiện Tượng Tuyên Bố Thành Công Quá Sớm của Agent
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Agent thường có xu hướng 'tự mãn' tuyên bố tính năng đã hoàn thành ngay khi viết xong code mà chưa qua bất kỳ bước chạy thực tế hay kiểm thử logic nào. Harness cần thiết lập các chốt chặn xác thực bắt buộc.
+Ngăn chặn Agent tự mãn tuyên bố thành công sớm và mở rộng thêm khả năng phát hiện ảo tưởng ngữ nghĩa (hallucinations) từ các nguồn dữ liệu phân mảnh.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - **Phân tách Viết code và Xác thực:**  Viết code xong mới chỉ là 50% chặng đường. 50% còn lại thuộc về việc chứng minh code đó hoạt động chính xác.
@@ -41,3 +41,5 @@ Agent thường có xu hướng 'tự mãn' tuyên bố tính năng đã hoàn t
 
 - **Đúc kết vĩ mô (Distilled Thoughts):**
   - [Tuyên ngôn Harness Engineering](04_distilled/harness-engineering-manifesto.md)
+
+- **Mở rộng phát hiện:**  Không chỉ tuyên bố thành công sớm, Agent còn ảo tưởng khi đọc các chunk dữ liệu rời rạc.

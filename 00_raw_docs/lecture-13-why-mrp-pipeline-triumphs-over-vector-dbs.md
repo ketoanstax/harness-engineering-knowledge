@@ -6,7 +6,7 @@ tags:
   - raw-source
   - lecture
 date: 2026-05-31
-status: to-process
+status: processed
 ---
 
 # Lecture 13 - Tại sao quy trình MRP Pipeline chiến thắng Vector DBs truyền thống
