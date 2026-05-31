@@ -128,9 +128,20 @@ class PhaseRefiner:
                     else:
                         print(f"  ⚠️ Không tìm thấy section children trong [{slug}.md], thêm thủ công vào cuối frontmatter chưa được thực hiện.")
 
+            # TỰ ĐỘNG CẬP NHẬT DANH SÁCH DẪN CHỨNG NGUỒN (EVIDENCE & CONTEXT) KHI MERGE
+            # Tự động chèn liên kết của file processed mới làm vết tri thức
+            evidence_structured_ref = f"01_structured_docs/{self.o.source_slug}-processed.md"
+            if evidence_structured_ref not in content:
+                evidence_section_marker = "- **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:"
+                if evidence_section_marker in content:
+                    new_evidence_links = f"""{evidence_section_marker}
+  - [Ghi chú cấu trúc: {self.o.source_slug.replace('-', ' ').title()}](01_structured_docs/{self.o.source_slug}-processed.md)
+  - [Ghi chú thô: {self.o.source_slug.replace('-', ' ').title()}](00_raw_docs/{self.o.source_slug}.md)"""
+                    content = content.replace(evidence_section_marker, new_evidence_links)
+
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-            print(f"  ✅ Cập nhật nốt hiện có: [{slug}.md]")
+            print(f"  ✅ Cập nhật nốt hiện có và nối dẫn chứng nguồn mới: [{slug}.md]")
 
         print(f"  ✅ Hoàn tất tạo/cập nhật {len(new_nodes)} nốt mới + {len(merge_nodes)} nốt merge.")
         self.o.state["refined"] = True
