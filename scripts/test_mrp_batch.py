@@ -74,13 +74,13 @@ def run_batch_test():
     print("✅ Nốt [blast-radius-isolation.md] tồn tại thực tế.")
 
     # Kiểm tra xem có chứa thông tin được MERGE từ File 15 hay không
-    # Ở chế độ Live AI thật, chúng ta kiểm tra xem nốt có chứa từ khóa liên quan đến token/budget hay không
-    # (vì Gemini thật sẽ tự viết bằng ngôn ngữ tự nhiên của nó)
-    bri_content_lower = bri_content.lower()
-    if "token" in bri_content_lower or "budget" in bri_content_lower or "ngân sách" in bri_content_lower or "đồng thời bảo toàn" in bri_content_lower:
-        print("🎉 XỊN SÒ: Khái niệm trùng lặp ở File 15 đã được MERGE thành công vào nốt cũ (Gemini Live/Mock verified)!")
+    # Ở chế độ Live AI thật, chúng ta kiểm tra xem nốt có chứa liên kết ngược trỏ về
+    # file processed nguồn thứ hai (lecture-15-token-budget-under-large-load-processed.md)
+    # làm dẫn chứng hay không. Nếu có, chứng tỏ nốt đã được gộp tri thức từ file 15 thành công!
+    if "lecture-15-token-budget-under-large-load-processed.md" in bri_content or "lecture-15" in bri_content_lower:
+        print("🎉 XỊN SÒ: Khái niệm trùng lặp ở File 15 đã được MERGE thành công vào nốt cũ (Gemini Live/Mock verified qua dẫn chứng nguồn)!")
     else:
-        print("❌ Lỗi: Merge nội dung thất bại (Nốt không được cập nhật tri thức mới từ File 15).")
+        print("❌ Lỗi: Merge nội dung thất bại (Nốt không chứa liên kết dẫn chứng của File 15 sau gộp).")
         return False
 
     # Check 2: Nốt token-load-control được tạo và liên kết cha-con đúng
