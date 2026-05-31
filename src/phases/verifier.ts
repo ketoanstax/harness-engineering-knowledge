@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import matter from 'gray-matter';
-import { DIR_ATOMIC, VAULT_ROOT } from '../core/config.ts';
+import { DIR_ATOMIC, VAULT_ROOT, DIR_VAULT } from '../core/config.ts';
 
 /**
  * Thu thập đệ quy tất cả các file markdown trong một thư mục
@@ -30,7 +30,7 @@ function getAllMarkdownFiles(dir: string): string[] {
  */
 export function auditLinks(): { brokenLinks: number; checkedFiles: number; portabilityViolations: number } {
   console.log('\n=== BẮT ĐẦU KIỂM TOÁN LIÊN KẾT (LINK AUDIT) ===');
-  const allFiles = getAllMarkdownFiles(VAULT_ROOT);
+  const allFiles = getAllMarkdownFiles(DIR_VAULT);
 
   // Bản đồ tên file -> đường dẫn
   const fileMap = new Map<string, string>();
@@ -45,7 +45,7 @@ export function auditLinks(): { brokenLinks: number; checkedFiles: number; porta
   let portabilityViolations = 0;
 
   for (const filePath of allFiles) {
-    const relPath = path.relative(VAULT_ROOT, filePath);
+    const relPath = path.relative(DIR_VAULT, filePath);
 
     // Bỏ qua kiểm tra liên kết cho Templates và tài liệu thiết kế/context handoff
     if (relPath.startsWith('Templates/') || relPath.startsWith('docs/')) {

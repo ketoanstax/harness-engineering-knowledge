@@ -4,7 +4,8 @@ import re
 import yaml
 
 VAULT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FEEDBACK_LOG_PATH = os.path.join(VAULT_ROOT, "memory", "feedback_log.md")
+DIR_VAULT = os.path.join(VAULT_ROOT, "vault")
+FEEDBACK_LOG_PATH = os.path.join(DIR_VAULT, "memory", "feedback_log.md")
 CLAUDE_MD_PATH = os.path.join(VAULT_ROOT, "CLAUDE.md")
 
 def read_file(path):
@@ -25,27 +26,27 @@ def route_rule(rule_text):
 
     # 02_atomic_nodes/RULE.md
     if any(k in rule_lower for k in ["cây", "expansion", "phẳng", "flat", "parent", "children", "cha", "con", "atomic", "nốt nguyên tử"]):
-        return os.path.join(VAULT_ROOT, "02_atomic_nodes", "RULE.md")
+        return os.path.join(DIR_VAULT, "02_atomic_nodes", "RULE.md")
 
     # 00_raw_docs/RULE.md
     if any(k in rule_lower for k in ["thô", "raw", "scrape", "cào"]):
-        return os.path.join(VAULT_ROOT, "00_raw_docs", "RULE.md")
+        return os.path.join(DIR_VAULT, "00_raw_docs", "RULE.md")
 
     # 01_structured_docs/RULE.md
     if any(k in rule_lower for k in ["chắt lọc", "cấu trúc", "processed", "takeaways", "structured"]):
-        return os.path.join(VAULT_ROOT, "01_structured_docs", "RULE.md")
+        return os.path.join(DIR_VAULT, "01_structured_docs", "RULE.md")
 
     # 03_neural_map/RULE.md
     if any(k in rule_lower for k in ["bản đồ", "routing", "index", "chỉ mục", "neural", "định tuyến"]):
-        return os.path.join(VAULT_ROOT, "03_neural_map", "RULE.md")
+        return os.path.join(DIR_VAULT, "03_neural_map", "RULE.md")
 
     # 04_distilled/RULE.md
     if any(k in rule_lower for k in ["đúc kết", "distilled", "tuyên ngôn", "manifesto", "synthesis"]):
-        return os.path.join(VAULT_ROOT, "04_distilled", "RULE.md")
+        return os.path.join(DIR_VAULT, "04_distilled", "RULE.md")
 
     # memory/RULE.md
     if any(k in rule_lower for k in ["bộ nhớ", "memory", "feedback", "đồng bộ", "sync", "user", "roadmap", "hồ sơ"]):
-        return os.path.join(VAULT_ROOT, "memory", "RULE.md")
+        return os.path.join(DIR_VAULT, "memory", "RULE.md")
 
     # Mặc định đi vào CLAUDE.md gốc nếu là hiến pháp chung
     return CLAUDE_MD_PATH
@@ -117,7 +118,7 @@ def sync_rules():
 def audit_links():
     print("\n=== BẮT ĐẦU KIỂM TOÁN LIÊN KẾT (LINK AUDIT) ===")
     all_files = []
-    for root, dirs, files in os.walk(VAULT_ROOT):
+    for root, dirs, files in os.walk(DIR_VAULT):
         # Bỏ qua các thư mục ẩn trừ .agent
         parts = root.split(os.sep)
         if any(part.startswith('.') and part != '.agent' for part in parts):
@@ -138,7 +139,7 @@ def audit_links():
     portability_violations = 0
 
     for file_path in all_files:
-        rel_path = os.path.relpath(file_path, VAULT_ROOT)
+        rel_path = os.path.relpath(file_path, DIR_VAULT)
 
         # Bỏ qua kiểm tra liên kết cho Templates và tài liệu thiết kế/context handoff
         if rel_path.startswith(("Templates/", "docs/")):
@@ -188,7 +189,7 @@ def audit_links():
 
 def audit_tree_integrity():
     print("\n=== BẮT ĐẦU KIỂM TOÁN CÂY TRI THỨC (TREE INTEGRITY AUDIT) ===")
-    atomic_dir = os.path.join(VAULT_ROOT, "02_atomic_nodes")
+    atomic_dir = os.path.join(DIR_VAULT, "02_atomic_nodes")
     if not os.path.exists(atomic_dir):
         print("Không tìm thấy thư mục 02_atomic_nodes")
         return
