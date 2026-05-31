@@ -9,6 +9,9 @@ __pycache__/
 *.pyo
 *.pyd
 
+# --- Local secrets & Configuration ---
+.env
+
 # --- MRP Pipeline checkpoints (auto-generated on crash, safe to delete) ---
 05_journal/mrp_checkpoint_*.json
 
