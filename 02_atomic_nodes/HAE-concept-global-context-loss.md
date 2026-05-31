@@ -6,6 +6,8 @@ tags:
   - global-context-loss
   - vector-db
   - context-fragmentation
+children:
+  - no-accumulation
 date: 2026-05-31
 parent: harness-definition
 ---

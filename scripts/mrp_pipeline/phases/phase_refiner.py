@@ -61,6 +61,34 @@ class PhaseRefiner:
                 f.write(node.to_markdown())
             print(f"  ✅ Tạo nốt mới: [{node.full_slug}.md]")
 
+            # TỰ ĐỘNG CẬP NHẬT TRƯỜNG CHILDREN CỦA NODE CHA
+            if node.parent:
+                parent_filepath = f"{DIR_ATOMIC}/HAE-concept-{node.parent}.md"
+                if os.path.exists(parent_filepath):
+                    with open(parent_filepath, "r", encoding="utf-8") as pf:
+                        p_content = pf.read()
+
+                    # Thêm slug con vào section children trong YAML
+                    child_slug = node.slug
+                    if f"- {child_slug}" not in p_content and f"- '{child_slug}'" not in p_content:
+                        import re
+                        # Tìm và thêm vào block children
+                        children_match = re.search(r"(children:\s*\n(?:  - .*\n?)*)(?:\n|$)", p_content)
+                        if children_match:
+                            children_section = children_match.group(1)
+                            new_section = children_section.rstrip("\n") + f"\n  - {child_slug}\n"
+                            p_content = p_content.replace(children_section, new_section)
+                        else:
+                            # Nếu chưa có children:, chèn vào trước dòng date:
+                            if "date:" in p_content:
+                                p_content = p_content.replace("date:", f"children:\n  - {child_slug}\ndate:")
+                            else:
+                                p_content = p_content.replace("---", f"children:\n  - {child_slug}\n---", 1)
+
+                        with open(parent_filepath, "w", encoding="utf-8") as pf:
+                            pf.write(p_content)
+                        print(f"  🔗 Đã tự động nối nốt con [{child_slug}] vào nốt cha [{node.parent}]")
+
         # 2. Cập nhật các nốt hiện có (Merge)
         for mn in merge_nodes:
             slug = mn["slug"]
