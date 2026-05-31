@@ -129,6 +129,49 @@ class MRPOrchestrator:
 
         return False
 
+    def run_auto_to_end(self) -> bool:
+        """Chạy tự động hoàn toàn từ đầu đến cuối không dừng (auto-approve)."""
+        print(f"⚡ Đang chạy tự động hoàn toàn (Auto-Approve Mode)...")
+        # Phải chạy lần lượt: MAP -> REDUCE -> PLAN -> REFINE -> VERIFY -> COMMIT
+        try:
+            if self.state["current_phase"] == "MAP":
+                if not self.run_map(): return False
+                self.state["current_phase"] = "REDUCE"
+                self.save_checkpoint()
+            if self.state["current_phase"] == "REDUCE":
+                if not self.run_reduce(): return False
+                self.state["current_phase"] = "PLAN"
+                self.save_checkpoint()
+            if self.state["current_phase"] == "PLAN":
+                if not self.run_plan(): return False
+                # Tự động approve kế hoạch
+                plan_timestamp = self.timestamp
+                plan_filepath = os.path.join(DIR_JOURNAL, f"mrp_plan_{plan_timestamp}.md")
+                if os.path.exists(plan_filepath):
+                    with open(plan_filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    content = content.replace("Trạng thái: `pending`", "Trạng thái: `approved`")
+                    with open(plan_filepath, "w", encoding="utf-8") as f:
+                        f.write(content)
+                self.state["current_phase"] = "REFINE"
+                self.save_checkpoint()
+            if self.state["current_phase"] == "REFINE":
+                if not self.run_refine(): return False
+                self.state["current_phase"] = "VERIFY"
+                self.save_checkpoint()
+            if self.state["current_phase"] == "VERIFY":
+                if not self.run_verify(): return False
+                self.state["current_phase"] = "COMMIT"
+                self.save_checkpoint()
+            if self.state["current_phase"] == "COMMIT":
+                if not self.run_commit(): return False
+                self.clear_checkpoint()
+                return True
+        except Exception as e:
+            print(f"❌ Lỗi thực thi tự động Pipeline: {e}")
+            raise e
+        return False
+
     def run_map(self) -> bool:
         """Pha MAP: Chắt lọc nội dung tài liệu thô thành StructuredDoc mẫu."""
         from scripts.mrp_pipeline.phases.phase_mapper import PhaseMapper
@@ -164,3 +207,88 @@ class MRPOrchestrator:
         from scripts.mrp_pipeline.phases.phase_committer import PhaseCommitter
         committer = PhaseCommitter(self)
         return committer.execute()
+
+
+class MRPBatchOrchestrator:
+    """
+    📦 BỘ ĐIỀU PHỐI HÀNG ĐỢI TUẦN TỰ (Sequential Batch Orchestrator)
+    - Quét toàn bộ file status: to-process
+    - Sắp xếp chronological (Cũ nhất trước)
+    - Xử lý tuần tự tích lũy để tri thức hội tụ thống nhất, không trùng lặp chéo.
+    """
+    def __init__(self, directory: str, auto_approve: bool = False):
+        self.directory = directory
+        self.auto_approve = auto_approve
+
+    def scan_and_sort_files(self) -> List[str]:
+        """Quét và sắp xếp file chronological theo mtime."""
+        if not os.path.exists(self.directory):
+            return []
+
+        files_to_process = []
+        for file in os.listdir(self.directory):
+            if file.endswith(".md"):
+                filepath = os.path.join(self.directory, file)
+                # Đọc lướt qua để check frontmatter status: to-process
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    if "status: to-process" in content:
+                        mtime = os.path.getmtime(filepath)
+                        files_to_process.append((mtime, filepath))
+                except Exception:
+                    pass
+
+        # Sắp xếp theo mtime tăng dần (cũ nhất đứng trước)
+        files_to_process.sort(key=lambda x: x[0])
+        return [f[1] for f in files_to_process]
+
+    def run(self) -> bool:
+        files = self.scan_and_sort_files()
+        if not files:
+            print("\n🎉 Không có tài liệu thô nào cần xử lý (status: to-process)!")
+            return True
+
+        print(f"\n=======================================================")
+        print(f"📦 BẮT ĐẦU CHẠY BATCH TUẦN TỰ CHO {len(files)} FILES")
+        print(f"   (Sắp xếp theo thứ tự thời gian sửa đổi cũ -> mới)")
+        print(f"=======================================================")
+
+        for i, filepath in enumerate(files, 1):
+            filename = os.path.basename(filepath)
+            print(f"\n[TIẾN TRÌNH {i}/{len(files)}] ───────────────")
+            print(f"👉 Đang xử lý: {filename}")
+
+            orchestrator = MRPOrchestrator(filepath)
+
+            # Reset checkpoint cũ nếu chạy batch mới để đảm bảo tính tuần tự sạch
+            if not self.auto_approve and orchestrator.state["current_phase"] in ("REFINE", "VERIFY", "COMMIT"):
+                # Nếu không auto-approve và checkpoint đang ở nửa sau -> tiếp tục (user vừa approve thủ công)
+                pass
+            else:
+                # Nếu chạy từ đầu hoặc auto-approve -> reset checkpoint
+                if os.path.exists(orchestrator.checkpoint_path):
+                    os.remove(orchestrator.checkpoint_path)
+                orchestrator.state["current_phase"] = "MAP"
+                orchestrator.save_checkpoint()
+
+            if self.auto_approve:
+                # Chạy một mạch từ đầu đến cuối không dừng
+                success = orchestrator.run_auto_to_end()
+                if not success:
+                    print(f"❌ Lỗi: Chạy tự động thất bại tại file: {filename}")
+                    return False
+            else:
+                # Dừng ở PLAN, chờ duyệt thủ công
+                success = orchestrator.run()
+                if not success:
+                    return False
+
+                # Sau khi xuất plan, chúng ta phải dừng Batch
+                print(f"\n⏸️ Hàng đợi Batch tạm dừng tại [{filename}].")
+                print(f"👉 Vui lòng duyệt kế hoạch trước khi Batch tự động chuyển sang file tiếp theo.")
+                break
+
+        if self.auto_approve:
+            print(f"\n🎉 HOÀN THÀNH TOÀN BỘ BÀN BATCH TỰ ĐỘNG THÀNH CÔNG!")
+        return True

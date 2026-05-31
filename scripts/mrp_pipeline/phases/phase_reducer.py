@@ -3,6 +3,7 @@ import json
 from typing import List, Dict, Any
 
 from scripts.mrp_pipeline.core.config import DIR_ATOMIC
+from scripts.mrp_pipeline.core.context_filter import filter_relevant_nodes
 
 ##############################
 #                            #
@@ -14,44 +15,12 @@ from scripts.mrp_pipeline.core.config import DIR_ATOMIC
 
 class PhaseReducer:
     """
-    Phase R (Reduce): So sánh keywords từ Mapper với các nốt nguyên tử hiện có.
+    Phase R (Reduce): So sánh keywords từ Mapper với các nốt nguyên tử liên quan nhất.
+    Sử dụng Active Context Filtering để tối ưu hóa context window.
     Tìm kiếm xung đột, trùng lặp và đề xuất: nốt nào tạo mới, nốt nào trộn (merge).
     """
     def __init__(self, orchestrator):
         self.o = orchestrator
-
-    def _get_existing_atomic_nodes(self) -> List[Dict[str, Any]]:
-        """Đọc toàn bộ các nốt nguyên tử hiện có trong 02_atomic_nodes/."""
-        existing_nodes = []
-        if not os.path.exists(DIR_ATOMIC):
-            return []
-
-        for file in os.listdir(DIR_ATOMIC):
-            if file.endswith(".md") and file.startswith("HAE-concept-"):
-                filepath = os.path.join(DIR_ATOMIC, file)
-                slug = file.replace("HAE-concept-", "").replace(".md", "")
-                title = ""
-                definition = ""
-
-                # Phân tích nội dung thô đơn giản
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        lines = f.readlines()
-                    for line in lines:
-                        if line.startswith("title:"):
-                            title = line.split(":", 1)[1].strip().strip('"').strip("'")
-                        elif line.startswith("# "):
-                            if not title:
-                                title = line.replace("# ", "").strip()
-                except Exception:
-                    pass
-
-                existing_nodes.append({
-                    "slug": slug,
-                    "title": title or slug,
-                    "filename": file
-                })
-        return existing_nodes
 
     def execute(self) -> bool:
         print(f"\n{'='*50}")
@@ -69,14 +38,16 @@ class PhaseReducer:
             self.o.state["reduced_data"] = {"conflicts": [], "new_concepts": []}
             return True
 
-        existing_nodes = self._get_existing_atomic_nodes()
-        print(f"  🔍 Phát hiện {len(existing_nodes)} nốt nguyên tử hiện có trong hệ thống.")
+        # 🔥 ÁP DỤNG ACTIVE CONTEXT FILTERING:
+        # Thay vì nạp toàn bộ nốt, chỉ nạp các nốt liên quan nhất để tiết kiệm token
+        relevant_nodes = filter_relevant_nodes(keywords, max_results=12)
+        print(f"  🧠 Active Context: Chỉ chọn {len(relevant_nodes)} nốt liên quan nhất để so khớp LLM.")
 
         llm_prompt = f"""Bạn là một Lead Architect chuyên gia về hệ thống tri thức.
 Chúng tôi chuẩn bị nạp thêm các khái niệm mới vào kho tri thức, nhưng cần đảm bảo cấu trúc lưu trữ phẳng và không có trùng lặp (deduplication).
 
-Các khái niệm hiện tại trong hệ thống:
-{json.dumps(existing_nodes, ensure_ascii=False, indent=2)}
+Các khái niệm liên quan hiện tại trong hệ thống:
+{json.dumps(relevant_nodes, ensure_ascii=False, indent=2)}
 
 Các khái niệm mới muốn nạp thêm:
 {json.dumps(keywords, ensure_ascii=False, indent=2)}

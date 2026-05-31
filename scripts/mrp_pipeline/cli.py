@@ -1,6 +1,6 @@
 import os
 import argparse
-from scripts.mrp_pipeline.orchestrator import MRPOrchestrator
+from scripts.mrp_pipeline.orchestrator import MRPOrchestrator, MRPBatchOrchestrator
 from scripts.mrp_pipeline.core.config import DIR_JOURNAL, DIR_RAW
 from scripts.mrp_pipeline.models.plan_item import PlanFile
 
@@ -20,6 +20,20 @@ def cmd_run(args):
             return 1
 
     orchestrator = MRPOrchestrator(source_path)
+    success = orchestrator.run()
+    return 0 if success else 1
+
+def cmd_batch(args):
+    """Lệnh chạy batch hàng loạt file to-process theo thứ tự chronological."""
+    directory = args.dir
+    if not os.path.isabs(directory):
+        directory = os.path.abspath(directory)
+
+    if not os.path.exists(directory):
+        print(f"❌ Lỗi: Thư mục không tồn tại [{directory}]")
+        return 1
+
+    orchestrator = MRPBatchOrchestrator(directory, auto_approve=args.auto_approve)
     success = orchestrator.run()
     return 0 if success else 1
 
@@ -108,6 +122,17 @@ def main():
         help="Đường dẫn file thô ở 00_raw_docs (hoặc tên file)"
     )
 
+    # Command: batch
+    parser_batch = subparsers.add_parser("batch", help="Chạy Batch Ingestion Pipeline tuần tự chronological")
+    parser_batch.add_argument(
+        "--dir", "-d", default=DIR_RAW,
+        help="Thư mục chứa file thô (mặc định: 00_raw_docs)"
+    )
+    parser_batch.add_argument(
+        "--auto-approve", "-a", action="store_true",
+        help="Cờ chạy tự động từ đầu đến cuối không dừng (Auto-Approve)"
+    )
+
     # Command: approve
     parser_app = subparsers.add_parser("approve", help="Phê duyệt kế hoạch và thực thi gộp nốt")
     parser_app.add_argument(
@@ -126,6 +151,8 @@ def main():
 
     if args.command == "run":
         return cmd_run(args)
+    elif args.command == "batch":
+        return cmd_batch(args)
     elif args.command == "approve":
         return cmd_approve(args)
     elif args.command == "reject":

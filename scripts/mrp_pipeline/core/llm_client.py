@@ -139,18 +139,201 @@ class LLMClient:
 
     def _mock_generate(self, prompt: str, response_json: bool) -> str:
         """
-        Giả lập thông minh đầu ra để phục vụ test cục bộ mà không tốn tiền API key.
-        Sử dụng phân tích cấu trúc prompt tuyệt đối chính xác để định tuyến pha:
-        - Planner: prompt chứa "Kỹ sư trưởng" (đặc trưng Planner)
-        - Reducer: prompt chứa "Lead Architect" hoặc "existing_nodes" (đặc trưng Reducer)
-        - Mapper: prompt chứa "Yêu cầu đầu ra (JSON)" và "key_takeaways" (đặc trưng Mapper)
+        Giả lập thông minh đầu ra cho test E2E Batch Sequential.
+        Cấu trúc phân cấp tối ưu: NHÓM THEO TÀI LIỆU trước, sau đó phân tách theo PHA.
+        Điều này đảm bảo không bao giờ bị chồng lấn (overlap) hoặc cướp cò prompt!
         """
         prompt_lower = prompt.lower()
 
-        # --- PHASE 3: PLANNER ---
-        # Kiểm tra trước để tránh Mapper cướp cò vì prompt Planner có thể chứa keyword Mapper
-        if "kỹ sư trưởng" in prompt_lower or "khái niệm tạo mới:" in prompt_lower:
-            if response_json:
+        # =====================================================================
+        # 📂 HỒ SƠ 1: LECTURE 14 (BLAST RADIUS ADVANCED)
+        # =====================================================================
+        if "lecture-14-blast-radius-advanced" in prompt_lower or "lecture 14" in prompt_lower or "blast radius isolation" in prompt_lower:
+            # 1. PLANNER 14
+            if "kỹ sư trưởng" in prompt_lower:
+                return json.dumps({
+                    "new_nodes": [
+                        {
+                            "slug": "blast-radius-isolation",
+                            "title": "Blast Radius Isolation - Cô lập rủi ro thực thi của Agent",
+                            "category": "Guardrails & Safety",
+                            "tags": ["blast-radius", "sandbox", "isolation"],
+                            "definition": "Cô lập cứng môi trường thực thi của Agent sử dụng container hoặc worktree để giới hạn phạm vi ảnh hưởng phá hoại.",
+                            "principles": [
+                                "Dựng container dùng một lần cho các tác vụ nhạy cảm.",
+                                "Giới hạn tài nguyên phần cứng để chống Agent lặp vô tận."
+                            ],
+                            "parent": "agent-overreach",
+                            "children": [],
+                            "causal_core": "agent-overreach",
+                            "causal_supporting": ["clean-state"],
+                            "causal_derivative": ["token-load-control"]
+                        }
+                    ],
+                    "merge_nodes": [],
+                    "reasoning": "Tạo nốt mới Blast Radius Isolation để bổ trợ cho nốt agent-overreach."
+                }, ensure_ascii=False)
+
+            # 2. REDUCER 14
+            if "lead architect" in prompt_lower:
+                return json.dumps({
+                    "conflicts": [],
+                    "new_concepts": [
+                        {
+                            "name": "Blast Radius Isolation",
+                            "suggested_slug": "blast-radius-isolation",
+                            "definition": "Cô lập cứng môi trường thực thi của Agent để bảo toàn hệ thống."
+                        }
+                    ]
+                }, ensure_ascii=False)
+
+            # 3. MAPPER 14 (Mặc định nếu là Mapper)
+            return json.dumps({
+                "title": "Bản chắt lọc tự động - Lecture 14",
+                "key_takeaways": [
+                    "Blast Radius Isolation cô lập cứng rủi ro hoạt động của Agent.",
+                    "Sandbox Containerization cô lập môi trường thực thi cục bộ."
+                ],
+                "keywords": [
+                    {"name": "Blast Radius Isolation", "definition": "Cô lập cứng môi trường thực thi của Agent để bảo toàn hệ thống."}
+                ],
+                "summary": "Bài giảng trình bày các nguyên lý nâng cao để kiểm soát blast radius."
+            }, ensure_ascii=False)
+
+        # =====================================================================
+        # 📂 HỒ SƠ 2: LECTURE 15 (TOKEN BUDGET UNDER LARGE LOAD)
+        # =====================================================================
+        elif "lecture-15-token-budget-under-large-load" in prompt_lower or "lecture 15" in prompt_lower or "token load control" in prompt_lower:
+            # 1. PLANNER 15
+            if "kỹ sư trưởng" in prompt_lower:
+                return json.dumps({
+                    "new_nodes": [
+                        {
+                            "slug": "token-load-control",
+                            "title": "Token Load Control - Kiểm soát tải token",
+                            "category": "Cognitive Management",
+                            "tags": ["token-budget", "load-control"],
+                            "definition": "Cơ chế quản lý tải token bằng cách giới hạn số lượng request API tối đa trong một phiên.",
+                            "principles": [
+                                "Tự động ngắt kết nối nếu Agent gọi API liên tục vượt ngưỡng cho phép.",
+                                "Giới hạn Token budget cứng theo cấu hình."
+                            ],
+                            "parent": "token-budget",
+                            "children": [],
+                            "causal_core": "token-budget",
+                            "causal_supporting": ["blast-radius-isolation"],
+                            "causal_derivative": []
+                        }
+                    ],
+                    "merge_nodes": [
+                        {
+                            "slug": "blast-radius-isolation",
+                            "updated_definition": "Cô lập cứng môi trường thực thi của Agent và giới hạn request mạng để đồng thời bảo toàn Token Budget.",
+                            "added_principles": [
+                                "Giới hạn request mạng tối đa ở Sandbox để tránh rò rỉ token."
+                            ],
+                            "added_children": ["token-load-control"],
+                            "updated_causal_derivative": ["token-load-control"]
+                        }
+                    ],
+                    "reasoning": "Merge ý nghĩa bảo vệ token budget vào nốt blast-radius-isolation, và tạo nốt mới token-load-control nối cha với token-budget."
+                }, ensure_ascii=False)
+
+            # 2. REDUCER 15
+            if "lead architect" in prompt_lower:
+                return json.dumps({
+                    "conflicts": [
+                        {
+                            "keyword": "Blast Radius Isolation",
+                            "existing_slug": "blast-radius-isolation",
+                            "action": "merge",
+                            "reason": "Khái niệm này vừa được tạo bởi nốt blast-radius-isolation, cần merge thêm ý nghĩa quản trị token."
+                        }
+                    ],
+                    "new_concepts": [
+                        {
+                            "name": "Token Load Control",
+                            "suggested_slug": "token-load-control",
+                            "definition": "Kiểm soát tải token bằng cách giới hạn request API tối đa của Agent."
+                        }
+                    ]
+                }, ensure_ascii=False)
+
+            # 3. MAPPER 15
+            return json.dumps({
+                "title": "Bản chắt lọc tự động - Lecture 15",
+                "key_takeaways": [
+                    "Token Budget của Agent dễ bị cạn kiệt khi tải lớn.",
+                    "Blast Radius Isolation lớp mạng lưới giúp bảo vệ ngân sách token."
+                ],
+                "keywords": [
+                    {"name": "Blast Radius Isolation", "definition": "Cô lập cứng môi trường thực thi của Agent để bảo toàn hệ thống."},
+                    {"name": "Token Load Control", "definition": "Kiểm soát tải token bằng cách giới hạn request API tối đa của Agent."}
+                ],
+                "summary": "Bài giảng phân tích cách quản trị token budget dưới tải lớn."
+            }, ensure_ascii=False)
+
+        # =====================================================================
+        # 📂 HỒ SƠ 3: LECTURE 16 (CAUSAL WEB VISUALIZATION)
+        # =====================================================================
+        elif "lecture-16-causal-web-visualization" in prompt_lower or "lecture 16" in prompt_lower or "semantic-graph-visualization" in prompt_lower:
+            # 1. PLANNER 16
+            if "kỹ sư trưởng" in prompt_lower:
+                return json.dumps({
+                    "new_nodes": [
+                        {
+                            "slug": "semantic-graph-visualization",
+                            "title": "Semantic Graph Visualization - Trực quan hóa đồ thị ngữ nghĩa phẳng",
+                            "category": "Workflow Architecture",
+                            "tags": ["graph-view", "visualization", "causal-web"],
+                            "definition": "Trực quan hóa đồ thị ngữ nghĩa thông qua các mối liên kết markdown phẳng và Causal Web.",
+                            "principles": [
+                                "Sử dụng Obsidian Graph View để theo dõi vết liên kết.",
+                                "Phát hiện nhanh các nốt mồ côi (orphan nodes) bằng đồ thị trực quan."
+                            ],
+                            "parent": "three-tier-memory-architecture",
+                            "children": [],
+                            "causal_core": "three-tier-memory-architecture",
+                            "causal_supporting": [],
+                            "causal_derivative": []
+                        }
+                    ],
+                    "merge_nodes": [],
+                    "reasoning": "Tạo nốt mới Semantic Graph Visualization để bổ trợ trực quan."
+                }, ensure_ascii=False)
+
+            # 2. REDUCER 16
+            if "lead architect" in prompt_lower:
+                return json.dumps({
+                    "conflicts": [],
+                    "new_concepts": [
+                        {
+                            "name": "Semantic Graph Visualization",
+                            "suggested_slug": "semantic-graph-visualization",
+                            "definition": "Trực quan đồ thị ngữ nghĩa qua các mối liên kết phẳng."
+                        }
+                    ]
+                }, ensure_ascii=False)
+
+            # 3. MAPPER 16
+            return json.dumps({
+                "title": "Bản chắt lọc tự động - Lecture 16",
+                "key_takeaways": [
+                    "Trực quan hóa Causal Web phẳng qua Obsidian Graph View.",
+                    "Semantic Graph Visualization hỗ trợ kiểm soát vết tiến hóa."
+                ],
+                "keywords": [
+                    {"name": "Semantic Graph Visualization", "definition": "Trực quan đồ thị ngữ nghĩa qua các mối liên kết phẳng."}
+                ],
+                "summary": "Bài giảng trình bày cách trực quan hóa mạng lưới đồ thị phẳng."
+            }, ensure_ascii=False)
+
+        # =====================================================================
+        # 📂 HỒ SƠ MẶC ĐỊNH: LECTURE 13 (MRP VS VECTOR DBS)
+        # =====================================================================
+        else:
+            # 1. PLANNER 13
+            if "kỹ sư trưởng" in prompt_lower:
                 return json.dumps({
                     "new_nodes": [
                         {
@@ -200,9 +383,8 @@ class LLMClient:
                     "reasoning": "Tài liệu mới nhấn mạnh 3 điểm mù của VectorDB: 1) Global Context Loss, 2) No Accumulation, 3) Uncontrolled Hallucination. Điểm 3 (Hallucination) đã được mô tả một phần trong nốt early-victory nên chúng tôi MERGE vào đó. Hai khái niệm còn lại hoàn toàn mới nên tạo nốt mới, nối parent với harness-definition và clean-state."
                 }, ensure_ascii=False)
 
-        # --- PHASE 2: REDUCER ---
-        if "lead architect" in prompt_lower or "các khái niệm hiện tại trong hệ thống:" in prompt_lower:
-            if response_json:
+            # 2. REDUCER 13
+            if "lead architect" in prompt_lower:
                 return json.dumps({
                     "conflicts": [
                         {
@@ -226,25 +408,18 @@ class LLMClient:
                     ]
                 }, ensure_ascii=False)
 
-        # --- PHASE 1: MAPPER ---
-        if "yêu cầu đầu ra (json)" in prompt_lower or "key_takeaways" in prompt_lower:
-            if response_json:
-                return json.dumps({
-                    "title": "Bản chắt lọc tự động - MRP Pipeline",
-                    "key_takeaways": [
-                        "MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.",
-                        "Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.",
-                        "Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc."
-                    ],
-                    "keywords": [
-                        {"name": "Global Context Loss", "definition": "Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc."},
-                        {"name": "No Accumulation", "definition": "Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn."},
-                        {"name": "Uncontrolled Hallucinations", "definition": "AI không thể truy vết ngược dòng dẫn chứng."}
-                    ],
-                    "summary": "Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song."
-                }, ensure_ascii=False)
-
-        # Fallback mặc định nếu không khớp phase nào
-        if response_json:
-            return "{}"
-        return "Giả lập phản hồi văn bản thông thường từ LLM."
+            # 3. MAPPER 13
+            return json.dumps({
+                "title": "Bản chắt lọc tự động - Lecture 13",
+                "key_takeaways": [
+                    "MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.",
+                    "Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.",
+                    "Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc."
+                ],
+                "keywords": [
+                    {"name": "Global Context Loss", "definition": "Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc."},
+                    {"name": "No Accumulation", "definition": "Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn."},
+                    {"name": "Uncontrolled Hallucinations", "definition": "AI không thể truy vết ngược dòng dẫn chứng."}
+                ],
+                "summary": "Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song."
+            }, ensure_ascii=False)
