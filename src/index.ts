@@ -9,6 +9,8 @@ import { MRPOrchestrator, MRPBatchOrchestrator } from './core/orchestrator.ts';
 import { DIR_JOURNAL, DIR_RAW } from './core/config.ts';
 import { PlanFile } from './models/plan.ts';
 
+let isInteractiveShell = false;
+
 const program = new Command();
 
 program
@@ -39,13 +41,13 @@ program
         sourcePath = testPath;
       } else {
         console.error(`❌ Lỗi: Không tìm thấy file [${options.source}]`);
-        process.exit(1);
+        safeExit(1);
       }
     }
 
     const orchestrator = new MRPOrchestrator(sourcePath);
     const success = await orchestrator.run();
-    process.exit(success ? 0 : 1);
+    safeExit(success ? 0 : 1);
   });
 
 // Lệnh: batch
@@ -62,12 +64,12 @@ program
 
     if (!fs.existsSync(directory)) {
       console.error(`❌ Lỗi: Thư mục không tồn tại [${directory}]`);
-      process.exit(1);
+      safeExit(1);
     }
 
     const orchestrator = new MRPBatchOrchestrator(directory, options.autoApprove);
     const success = await orchestrator.run();
-    process.exit(success ? 0 : 1);
+    safeExit(success ? 0 : 1);
   });
 
 // Lệnh: approve
@@ -82,7 +84,7 @@ program
 
     if (!fs.existsSync(planFilepath)) {
       console.error(`❌ Lỗi: Không tìm thấy kế hoạch [${planFilename}]`);
-      process.exit(1);
+      safeExit(1);
     }
 
     // Đọc nội dung plan để trích xuất source_slug
@@ -90,13 +92,13 @@ program
     const sourceSlug = PlanFile.parseSourceSlug(content);
     if (!sourceSlug) {
       console.error('❌ Lỗi: Không thể phân tích tên tài liệu nguồn từ file kế hoạch.');
-      process.exit(1);
+      safeExit(1);
     }
 
     const sourcePath = path.join(DIR_RAW, `${sourceSlug}.md`);
     if (!fs.existsSync(sourcePath)) {
       console.error(`❌ Lỗi: Không tìm thấy tài liệu nguồn gốc [${sourceSlug}.md]`);
-      process.exit(1);
+      safeExit(1);
     }
 
     // Khởi tạo Orchestrator từ checkpoint hoặc tạo mới để chạy tiếp
@@ -113,7 +115,7 @@ program
 
     // Chạy nốt các pha còn lại
     const success = await orchestrator.run();
-    process.exit(success ? 0 : 1);
+    safeExit(success ? 0 : 1);
   });
 
 // Lệnh: reject
@@ -128,7 +130,7 @@ program
 
     if (!fs.existsSync(planFilepath)) {
       console.error(`❌ Lỗi: Không tìm thấy kế hoạch [${planFilename}]`);
-      process.exit(1);
+      safeExit(1);
     }
 
     // Đọc nội dung
@@ -149,7 +151,7 @@ program
     }
 
     console.log(`❌ Đã từ chối kế hoạch [${planFilename}]. Đã dọn dẹp checkpoint.`);
-    process.exit(0);
+    safeExit(0);
   });
 
 // Lệnh: guide
@@ -221,7 +223,7 @@ program
 // Xử lý khi không nhận diện được command
 program.on('command:*', () => {
   console.error('Lệnh không hợp lệ: %s\nXem --help để biết các lệnh được hỗ trợ.', program.args.join(' '));
-  process.exit(1);
+  safeExit(1);
 });
 
 // =============================
@@ -351,7 +353,6 @@ async function interactiveSelect(options: string[], prompt: string): Promise<num
     function cleanup() {
       stdin.removeListener('data', onData);
       stdin.setRawMode(isRaw);
-      stdin.pause();
 
       // Vẽ lại kết quả cuối cùng
       stdout.write(`\x1b[${options.length + 2}B`); // xuống cuối
@@ -426,7 +427,7 @@ async function runShell(): Promise<void> {
       const args = trimmed.split(/\s+/);
       await program.parseAsync(['node', 'mrp', ...args], { from: 'user' });
     } catch (e: any) {
-      // Commander ném CommanderError thay vì process.exit() khi dùng exitOverride
+      // Commander ném CommanderError thay vì safeExit() khi dùng exitOverride
       // Chỉ hiển thị lỗi nếu không phải exit code 0 (thoát bình thường)
       if (e.code !== 'commander.exit' || e.exitCode !== 0) {
         console.error(`⚠️ Lỗi: ${e.message}`);
@@ -437,7 +438,7 @@ async function runShell(): Promise<void> {
 
   rl.on('close', () => {
     console.log('\n👋 Tạm biệt!');
-    process.exit(0);
+    safeExit(0);
   });
 
   rl.prompt();
@@ -448,8 +449,17 @@ async function runShell(): Promise<void> {
 if (process.argv.length <= 2) {
   runShell().catch((e) => {
     console.error(`❌ Shell error: ${e.message}`);
-    process.exit(1);
+    safeExit(1);
   });
 } else {
   program.parse(process.argv);
+}
+
+// Hàm thoát an toàn: Nếu ở trong shell thì ném lỗi (để shell catch lại), nếu ở ngoài thì exit thật.
+function safeExit(code: number): void {
+  if (isInteractiveShell) {
+    if (code !== 0) throw new Error(`Lệnh bị hủy hoặc thất bại (Mã: ${code})`);
+  } else {
+    process.exit(code);
+  }
 }
