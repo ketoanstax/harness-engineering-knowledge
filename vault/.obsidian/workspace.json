@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "02_atomic_nodes/HAE-concept-hon-tram-thuy-mien.md",
+                "file": "1-Journal/2026/06/2026-06-01-Monday.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "HAE-concept-hon-tram-thuy-mien"
+              "title": "2026-06-01-Monday"
             }
           }
         ]
@@ -235,9 +235,12 @@
   },
   "active": "cd833a49cf61a9c3",
   "lastOpenFiles": [
-    "04_distilled/nikaya-distilled.md",
+    "02_atomic_nodes/HAE-concept-hon-tram-thuy-mien.md",
     "1-Journal/2026/06/2026-06-01-Monday.md",
     "1-Journal/2026/06",
+    "1-Journal/2026",
+    "1-Journal",
+    "04_distilled/nikaya-distilled.md",
     "02_atomic_nodes/HAE-concept-harness-quantified-metrics.md",
     "02_atomic_nodes/HAE-concept-five-stage-deployment.md",
     "02_atomic_nodes/HAE-concept-six-harness-layers.md",
@@ -266,11 +269,8 @@
     "02_atomic_nodes/HAE-concept-early-victory.md",
     "scripts/sync_rules_and_memory.py.tmp.157861.d75e2fbad07b",
     "scripts/migrate_to_causal_web.py",
-    "scripts/migrate_to_causal_web.py.tmp.157861.e9d9c0d20611",
-    "docs/context/20260524_causal_web_handoff.md.tmp.157861.29152987de88",
     "docs/context/20260524_causal_web_handoff.md",
     "memory/RULE.md",
-    "01_structured_docs/RULE.md",
     "Excalidraw/Scripts/Downloaded/Organic Line Legacy.svg",
     "Excalidraw/Scripts/Downloaded/Organic Line.svg",
     "Canvas/tesing for fun.canvas",
