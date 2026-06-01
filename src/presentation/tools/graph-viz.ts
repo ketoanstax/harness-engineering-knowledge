@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
+import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
@@ -29,25 +30,8 @@ function loadNodes(fs: IFileSystem, config: IConfigProvider): NodeInfo[] {
     const fp = path.join(atomicDir, f);
     try {
       const content = fs.readFile(fp);
-
-      // Parse frontmatter without gray-matter (Presentation tools)
-      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-      const data: Record<string, any> = {};
-      if (fmMatch) {
-        for (const line of fmMatch[1].split('\n')) {
-          const sep = line.indexOf(':');
-          if (sep > 0) {
-            const key = line.slice(0, sep).trim();
-            const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
-            // Handle children array: "child1, child2"
-            if (key === 'children' && val.includes(',')) {
-              data.children = val.split(',').map((s: string) => s.trim());
-            } else {
-              data[key] = val;
-            }
-          }
-        }
-      }
+      const parsed = matter(content);
+      const data = parsed.data || {};
 
       const slug = f.replace(prefix, '').replace('.md', '');
       nodes.push({

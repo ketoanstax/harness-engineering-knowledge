@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
+import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
@@ -69,19 +70,10 @@ function scanAtomic(fs: IFileSystem, config: IConfigProvider): AtomicStats {
 
     try {
       const content = fs.readFile(path.join(atomicDir, f));
-      // Parse parent from frontmatter without gray-matter
-      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-      let hasParent = false;
-      if (fmMatch) {
-        for (const line of fmMatch[1].split('\n')) {
-          if (line.trim().startsWith('parent:') && line.trim() !== 'parent:') {
-            hasParent = true;
-            break;
-          }
-        }
-      }
+      const parsed = matter(content);
+      const data = parsed.data || {};
 
-      if (hasParent) {
+      if (data.parent) {
         withParent++;
       } else {
         withoutParent++;
@@ -113,8 +105,8 @@ function countToProcess(fs: IFileSystem, config: IConfigProvider): number {
           walk(fp);
         } else if (e.endsWith('.md')) {
           const content = fs.readFile(fp);
-          const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-          if (fmMatch && fmMatch[1].includes('status: to-process')) {
+          const parsed = matter(content);
+          if (String(parsed.data?.status || '').trim() === 'to-process') {
             count++;
           }
         }

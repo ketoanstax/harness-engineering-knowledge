@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
+import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
@@ -67,28 +68,17 @@ export function scanDomains(fs: IFileSystem, config: IConfigProvider): DomainSca
           const fp = path.join(fullPath, f);
           try {
             const content = fs.readFile(fp);
-            // Simple frontmatter detection (no gray-matter needed for tools)
-            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-            const frontmatter: Record<string, any> = {};
-            if (fmMatch) {
-              for (const line of fmMatch[1].split('\n')) {
-                const sep = line.indexOf(':');
-                if (sep > 0) {
-                  const key = line.slice(0, sep).trim();
-                  const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
-                  frontmatter[key] = val;
-                }
-              }
-            }
+            const parsed = matter(content);
+            const data = parsed.data || {};
 
-            if (String(frontmatter.status || '').trim() === 'to-process') {
+            if (String(data.status || '').trim() === 'to-process') {
               info.toProcess++;
               totalToProcess++;
-            } else if (String(frontmatter.status || '').trim() === 'processed') {
+            } else if (String(data.status || '').trim() === 'processed') {
               info.processed++;
             }
 
-            if (!frontmatter.domain) {
+            if (!data.domain) {
               info.withoutDomainField++;
             }
           } catch {
@@ -102,19 +92,9 @@ export function scanDomains(fs: IFileSystem, config: IConfigProvider): DomainSca
         legacyFiles++;
         totalAll++;
         const content = fs.readFile(fullPath);
-        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-        const frontmatter: Record<string, any> = {};
-        if (fmMatch) {
-          for (const line of fmMatch[1].split('\n')) {
-            const sep = line.indexOf(':');
-            if (sep > 0) {
-              const key = line.slice(0, sep).trim();
-              const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
-              frontmatter[key] = val;
-            }
-          }
-        }
-        if (String(frontmatter.status || '').trim() === 'to-process') {
+        const parsed = matter(content);
+        const data = parsed.data || {};
+        if (String(data.status || '').trim() === 'to-process') {
           totalToProcess++;
         }
       }

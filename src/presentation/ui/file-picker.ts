@@ -1,5 +1,6 @@
 import { intro, outro, select, isCancel, confirm } from '@clack/prompts';
 import chalk from 'chalk';
+import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import * as path from 'node:path';
@@ -19,20 +20,12 @@ export async function pickFileForPipeline(fs: IFileSystem, config: IConfigProvid
       const filepath = path.join(config.dirRaw, f);
       try {
         const content = fs.readFile(filepath);
-        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-        const data: Record<string, any> = {};
-        if (fmMatch) {
-          for (const line of fmMatch[1].split('\n')) {
-            const sep = line.indexOf(':');
-            if (sep > 0) { data[line.slice(0, sep).trim()] = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, ''); }
-          }
-        }
-        const frontmatter = { data };
+        const parsed = matter(content);
         return {
           filename: f,
           filepath,
-          title: frontmatter.data?.title || f,
-          status: frontmatter.data?.status || 'unknown',
+          title: parsed.data?.title || f,
+          status: parsed.data?.status || 'unknown',
         };
       } catch {
         return null;
@@ -145,13 +138,8 @@ export async function pickFileForPipeline(fs: IFileSystem, config: IConfigProvid
           let title = f;
           try {
             const content = fs.readFile(fp);
-            const fmMatch2 = content.match(/^---\n([\s\S]*?)\n---/);
-            let parsedTitle = '';
-            if (fmMatch2) {
-              const titleLine = fmMatch2[1].split('\n').find((l: string) => l.trim().startsWith('title:'));
-              if (titleLine) parsedTitle = titleLine.split(':').slice(1).join(':').trim().replace(/^['"]|['"]$/g, '');
-            }
-            if (parsedTitle) title = parsedTitle;
+            const parsed = matter(content);
+            if (parsed.data?.title) title = parsed.data.title;
           } catch { /* skip */ }
 
           items.push({ label: chalk.green(` 📄 ${title}`), value: fp, hint: chalk.gray(`📝 ${f}`) });
