@@ -1,5 +1,5 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
-import { DIR_ATOMIC, DIR_VAULT, ATOMIC_PREFIX, DIR_STRUCTURED } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { VerificationResult } from './_types.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
@@ -11,16 +11,18 @@ import * as path from 'node:path';
 export class VerifierPhase {
   private fs: IFileSystem;
   private mdGenerator: MarkdownGenerator;
+  private config: IConfigProvider;
 
-  constructor(fs: IFileSystem) {
+  constructor(fs: IFileSystem, config: IConfigProvider) {
     this.fs = fs;
     this.mdGenerator = new MarkdownGenerator();
+    this.config = config;
   }
 
   execute(): VerificationResult {
     console.log('\n=== BẮT ĐẦU KIỂM TOÁN & TỰ VÁ ĐỒ THỊ (GRAPH HEALING) ===');
 
-    const allFiles = this.getAllMarkdownFiles(DIR_VAULT);
+    const allFiles = this.getAllMarkdownFiles(this.config.dirVault);
 
     // Bản đồ tên file -> đường dẫn
     const fileMap = new Map<string, string>();
@@ -35,7 +37,7 @@ export class VerifierPhase {
     let portabilityViolations = 0;
 
     for (const filePath of allFiles) {
-      const relPath = path.relative(DIR_VAULT, filePath);
+      const relPath = path.relative(this.config.dirVault, filePath);
 
       if (relPath.startsWith('Templates/') || relPath.startsWith('docs/')) continue;
 
@@ -98,11 +100,12 @@ export class VerifierPhase {
    */
   private healBrokenLink(link: string): void {
     const filename = path.basename(link);
+    const prefix = this.config.atomicPrefix;
 
     // Hướng 1: Trỏ tới 02_atomic_nodes
-    if (link.includes('02_atomic_nodes') || filename.startsWith(ATOMIC_PREFIX)) {
-      const slug = filename.replace(ATOMIC_PREFIX, '').replace('.md', '');
-      const filepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${slug}.md`);
+    if (link.includes('02_atomic_nodes') || filename.startsWith(prefix)) {
+      const slug = filename.replace(prefix, '').replace('.md', '');
+      const filepath = path.join(this.config.dirAtomic, `${prefix}${slug}.md`);
 
       if (!this.fs.fileExists(filepath)) {
         const title = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -124,7 +127,7 @@ export class VerifierPhase {
     // Hướng 2: Trỏ tới 01_structured_docs
     else if (link.includes('01_structured_docs') || filename.endsWith('-processed.md')) {
       const slug = filename.replace('.md', '');
-      const filepath = path.join(DIR_STRUCTURED, `${slug}.md`);
+      const filepath = path.join(this.config.dirStructured, `${slug}.md`);
 
       if (!this.fs.fileExists(filepath)) {
         const title = slug.replace('-processed', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -147,19 +150,20 @@ export class VerifierPhase {
    */
   private healTreeIntegrity(): number {
     console.log('\n=== BẮT ĐẦU TỰ VÁ CÂY CHA-CON (TREE INTEGRITY HEALING) ===');
-    if (!this.fs.fileExists(DIR_ATOMIC)) {
+    if (!this.fs.fileExists(this.config.dirAtomic)) {
       return 0;
     }
 
+    const prefix = this.config.atomicPrefix;
     const nodes = new Map<string, { file: string; parent?: string; children: string[]; filepath: string }>();
-    const files = this.fs.readdir(DIR_ATOMIC);
+    const files = this.fs.readdir(this.config.dirAtomic);
 
     for (const file of files) {
-      if (!file.endsWith('.md') || !file.startsWith('HAE-concept-')) continue;
+      if (!file.endsWith('.md') || !file.startsWith(prefix)) continue;
 
-      const filepath = path.join(DIR_ATOMIC, file);
+      const filepath = path.join(this.config.dirAtomic, file);
       const content = this.fs.readFile(filepath);
-      const slug = file.replace('HAE-concept-', '').replace('.md', '');
+      const slug = file.replace(prefix, '').replace('.md', '');
 
       let parent: string | undefined;
       let children: string[] = [];
@@ -169,8 +173,9 @@ export class VerifierPhase {
         const data = parsed.data || {};
         parent = data.parent || undefined;
         children = Array.isArray(data.children) ? data.children : [];
-      } catch (e: any) {
-        console.log(`⚠️ Lỗi cú pháp YAML tại [02_atomic_nodes/${file}]: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.log(`⚠️ Lỗi cú pháp YAML tại [02_atomic_nodes/${file}]: ${msg}`);
       }
 
       nodes.set(slug, { file, parent, children, filepath });
@@ -182,7 +187,7 @@ export class VerifierPhase {
       if (info.parent) {
         if (!nodes.has(info.parent)) {
           // Tạo parent placeholder
-          this.healBrokenLink(`02_atomic_nodes/${ATOMIC_PREFIX}${info.parent}.md`);
+          this.healBrokenLink(`02_atomic_nodes/${prefix}${info.parent}.md`);
           inconsistencies++;
         } else {
           // Parent có tồn tại, nhưng parent không có slug này trong children -> Vá parent
@@ -198,7 +203,7 @@ export class VerifierPhase {
       // 2. Kiểm tra children
       for (const child of info.children) {
         if (!nodes.has(child)) {
-          this.healBrokenLink(`02_atomic_nodes/${ATOMIC_PREFIX}${child}.md`);
+          this.healBrokenLink(`02_atomic_nodes/${prefix}${child}.md`);
           inconsistencies++;
         } else {
           // Con tồn tại, nhưng con khai báo parent khác slug này -> Vá con

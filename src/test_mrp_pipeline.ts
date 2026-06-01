@@ -5,8 +5,14 @@ import { LLMClient } from './infrastructure/llm/llm-client.ts';
 import { IngestDocumentUseCase } from './application/use-cases/ingest-document.use-case.ts';
 import { NodeFileSystem } from './infrastructure/fs/node-file-system.ts';
 import { MarkdownGenerator } from './infrastructure/formatters/markdown.generator.ts';
+import { ConfigProvider } from './infrastructure/config/config-provider.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
 import { VerifierPhase } from './application/phases/verifier.phase.ts';
+import { MapperPhase } from './application/phases/mapper.phase.ts';
+import { ReducerPhase } from './application/phases/reducer.phase.ts';
+import { PlannerPhase } from './application/phases/planner.phase.ts';
+import { RefinerPhase } from './application/phases/refiner.phase.ts';
+import { CommitterPhase } from './application/phases/committer.phase.ts';
 
 const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
 
@@ -126,7 +132,26 @@ async function runBatchTest(): Promise<boolean> {
   const testFs = new NodeFileSystem();
   const testLlm = LLMClient.createFromEnv();
   const testMd = new MarkdownGenerator();
-  const useCase = new IngestDocumentUseCase(testFs, testLlm, testMd);
+  const configProvider = new ConfigProvider();
+
+  const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider);
+  const reducer = new ReducerPhase(testLlm);
+  const planner = new PlannerPhase(testLlm, configProvider);
+  const refiner = new RefinerPhase(testFs, testMd, configProvider);
+  const testVerifier = new VerifierPhase(testFs, configProvider);
+  const committer = new CommitterPhase(testFs, testMd, configProvider);
+
+  const useCase = new IngestDocumentUseCase(
+    mapper,
+    reducer,
+    planner,
+    refiner,
+    testVerifier,
+    committer,
+    testFs,
+    testMd,
+    configProvider,
+  );
 
   const success = await useCase.runBatch(TEST_DIR_RAW, true);
   if (!success) {
@@ -183,7 +208,7 @@ async function runBatchTest(): Promise<boolean> {
 
   // 5. CHẠY BỘ KIỂM TOÁN TĨNH XÁC NHẬN 0 LỖI
   console.log('\n--- BƯỚC 5: CHẠY BỘ KIỂM TOÁN TĨNH ---');
-  const verifier = new VerifierPhase(new NodeFileSystem());
+  const verifier = new VerifierPhase(new NodeFileSystem(), configProvider);
   const { brokenLinks, portabilityViolations, inconsistencies } = verifier.execute();
 
   // 6. DỌN DẸP SAU KHI TEST (BẢO VỆ VAULT TRỐNG CHO NIKAYA)

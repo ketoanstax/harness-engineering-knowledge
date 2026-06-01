@@ -1,18 +1,21 @@
 import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
-import { loadCategories } from '../../core/config.ts';
-import type { MappedData, ReducedData, PlanResult, NewNodeOutput, MergeNodeOutput } from './_types.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import { type MappedData, type ReducedData, type PlanResult, type NewNodeOutput, type MergeNodeOutput, PlanResultSchema } from './_types.ts';
+import { extractJson } from './_utils.ts';
 
 export class PlannerPhase {
   private llm: ILLMProvider;
+  private config: IConfigProvider;
 
-  constructor(llm: ILLMProvider) {
+  constructor(llm: ILLMProvider, config: IConfigProvider) {
     this.llm = llm;
+    this.config = config;
   }
 
   async execute(reducedData: ReducedData, mappedData: MappedData): Promise<PlanResult> {
     const conflicts = reducedData.conflicts || [];
     const newConcepts = reducedData.new_concepts || [];
-    const categories = loadCategories();
+    const categories = this.config.loadCategories();
     const categoriesStr = categories.map(c => c.name).join(' / ');
 
     console.log('  🔄 Đang thiết kế chi tiết các nốt và cấu trúc đồ thị nhân quả...');
@@ -61,34 +64,36 @@ Yêu cầu thiết kế:
 }`;
 
       const response = await this.llm.generate(llmPrompt, '', true);
-      const parsed = JSON.parse(response);
+      const rawJson = extractJson(response);
+      const parsed = PlanResultSchema.parse(rawJson);
 
-      const newNodes: NewNodeOutput[] = (parsed.new_nodes || []).map((nn: any) => ({
-        slug: nn.slug || '',
-        title: nn.title || '',
-        category: nn.category || 'Harness Core Concept',
-        tags: nn.tags || [],
-        definition: nn.definition || '',
-        principles: nn.principles || [],
-        parent: nn.parent || undefined,
-        children: nn.children || [],
-        causal_core: nn.causal_core || undefined,
-        causal_supporting: nn.causal_supporting || [],
-        causal_derivative: nn.causal_derivative || [],
+      const newNodes: NewNodeOutput[] = parsed.new_nodes.map((nn) => ({
+        slug: nn.slug,
+        title: nn.title,
+        category: nn.category,
+        tags: nn.tags,
+        definition: nn.definition,
+        principles: nn.principles,
+        parent: nn.parent,
+        children: nn.children,
+        causal_core: nn.causal_core,
+        causal_supporting: nn.causal_supporting,
+        causal_derivative: nn.causal_derivative,
       }));
 
-      const mergeNodes: MergeNodeOutput[] = (parsed.merge_nodes || []).map((mn: any) => ({
-        slug: mn.slug || '',
-        updated_definition: mn.updated_definition || undefined,
-        added_principles: mn.added_principles || [],
-        added_children: mn.added_children || [],
-        updated_causal_derivative: mn.updated_causal_derivative || [],
+      const mergeNodes: MergeNodeOutput[] = parsed.merge_nodes.map((mn) => ({
+        slug: mn.slug,
+        updated_definition: mn.updated_definition,
+        added_principles: mn.added_principles,
+        added_children: mn.added_children,
+        updated_causal_derivative: mn.updated_causal_derivative,
       }));
 
       console.log('  ✅ Đã thiết kế xong cấu trúc chi tiết bằng LLM.');
-      return { new_nodes: newNodes, merge_nodes: mergeNodes, reasoning: parsed.reasoning || '' };
-    } catch (e: any) {
-      console.log(`  ⚠️ Lỗi thiết kế LLM: ${e.message}. Tạo plan cơ bản...`);
+      return { new_nodes: newNodes, merge_nodes: mergeNodes, reasoning: parsed.reasoning };
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      console.log(`  ⚠️ Lỗi thiết kế LLM: ${err}. Tạo plan cơ bản...`);
       return this.fallbackPlan(newConcepts);
     }
   }

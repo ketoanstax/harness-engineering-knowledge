@@ -1,16 +1,18 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
-import { DIR_JOURNAL, PATH_INDEX, ATOMIC_PREFIX, loadCategories } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
 export class CommitterPhase {
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
+  private config: IConfigProvider;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
+    this.config = config;
   }
 
   execute(planResult: PlanResult, sourcePath: string, planTimestamp: string): void {
@@ -37,7 +39,7 @@ export class CommitterPhase {
   private archivePlanFile(planTimestamp: string): void {
     if (!planTimestamp) return;
 
-    const planFilepath = path.join(DIR_JOURNAL, `mrp_plan_${planTimestamp}.md`);
+    const planFilepath = path.join(this.config.dirJournal, `mrp_plan_${planTimestamp}.md`);
     if (!this.fs.fileExists(planFilepath)) return;
 
     let content = this.fs.readFile(planFilepath);
@@ -50,18 +52,19 @@ export class CommitterPhase {
   }
 
   private updateIndexFile(planResult: PlanResult): void {
-    if (!this.fs.fileExists(PATH_INDEX)) return;
+    if (!this.fs.fileExists(this.config.pathIndex)) return;
 
     const newNodes = planResult.new_nodes || [];
     if (newNodes.length === 0) return;
 
-    let content = this.fs.readFile(PATH_INDEX);
-    const categories = loadCategories();
+    let content = this.fs.readFile(this.config.pathIndex);
+    const categories = this.config.loadCategories();
+    const prefix = this.config.atomicPrefix;
 
     for (const nn of newNodes) {
       const slug = nn.slug;
       const title = nn.title || slug;
-      const linkStr = `- [${title}](02_atomic_nodes/${ATOMIC_PREFIX}${slug}.md)`;
+      const linkStr = `- [${title}](02_atomic_nodes/${prefix}${slug}.md)`;
 
       if (content.includes(linkStr)) continue;
 
@@ -76,12 +79,12 @@ export class CommitterPhase {
       if (content.includes(marker)) {
         content = content.replace(
           marker,
-          `${marker}\n- [${title}](02_atomic_nodes/${ATOMIC_PREFIX}${slug}.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.`,
+          `${marker}\n- [${title}](02_atomic_nodes/${prefix}${slug}.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.`,
         );
       }
     }
 
-    this.fs.writeFile(PATH_INDEX, content);
+    this.fs.writeFile(this.config.pathIndex, content);
     console.log('  ✅ Đã tự động cập nhật INDEX.md.');
   }
 }

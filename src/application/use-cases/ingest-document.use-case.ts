@@ -1,27 +1,25 @@
 import * as path from 'node:path';
-import * as fs from 'node:fs';
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
-import { DIR_JOURNAL, DIR_RAW } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
-import { MapperPhase } from '../phases/mapper.phase.ts';
-import { ReducerPhase } from '../phases/reducer.phase.ts';
-import { PlannerPhase } from '../phases/planner.phase.ts';
-import { RefinerPhase } from '../phases/refiner.phase.ts';
-import { VerifierPhase } from '../phases/verifier.phase.ts';
-import { CommitterPhase } from '../phases/committer.phase.ts';
-import type { PlanResult } from '../phases/_types.ts';
+import type { MapperPhase } from '../phases/mapper.phase.ts';
+import type { ReducerPhase } from '../phases/reducer.phase.ts';
+import type { PlannerPhase } from '../phases/planner.phase.ts';
+import type { RefinerPhase } from '../phases/refiner.phase.ts';
+import type { VerifierPhase } from '../phases/verifier.phase.ts';
+import type { CommitterPhase } from '../phases/committer.phase.ts';
+import type { PlanResult, MappedData, ReducedData } from '../phases/_types.ts';
 
 interface PipelineState {
   source_slug: string;
   source_path: string;
   current_phase: string;
   timestamp: string;
-  mapped_data: any;
-  reduced_data: any;
+  mapped_data: MappedData | null;
+  reduced_data: ReducedData | null;
   plan_timestamp: string | null;
-  plan_item_data: any;
+  plan_item_data: PlanResult | null;
   refined: boolean;
   verified: boolean;
   committed: boolean;
@@ -35,19 +33,29 @@ export class IngestDocumentUseCase {
   private verifier: VerifierPhase;
   private committer: CommitterPhase;
   private fs: IFileSystem;
-  private llm: ILLMProvider;
   private mdGenerator: IMarkdownGenerator;
+  private config: IConfigProvider;
 
-  constructor(fs: IFileSystem, llm: ILLMProvider, mdGenerator: IMarkdownGenerator) {
+  constructor(
+    mapper: MapperPhase,
+    reducer: ReducerPhase,
+    planner: PlannerPhase,
+    refiner: RefinerPhase,
+    verifier: VerifierPhase,
+    committer: CommitterPhase,
+    fs: IFileSystem,
+    mdGenerator: IMarkdownGenerator,
+    config: IConfigProvider,
+  ) {
+    this.mapper = mapper;
+    this.reducer = reducer;
+    this.planner = planner;
+    this.refiner = refiner;
+    this.verifier = verifier;
+    this.committer = committer;
     this.fs = fs;
-    this.llm = llm;
     this.mdGenerator = mdGenerator;
-    this.mapper = new MapperPhase(llm, fs, mdGenerator);
-    this.reducer = new ReducerPhase(llm);
-    this.planner = new PlannerPhase(llm);
-    this.refiner = new RefinerPhase(fs, mdGenerator);
-    this.verifier = new VerifierPhase(fs);
-    this.committer = new CommitterPhase(fs, mdGenerator);
+    this.config = config;
   }
 
   async execute(
@@ -75,6 +83,10 @@ export class IngestDocumentUseCase {
 
       // Phase REDUCE
       if (state.current_phase === 'REDUCE') {
+        if (!state.mapped_data) {
+          console.log('❌ Lỗi: Không tìm thấy dữ liệu Mapped.');
+          return false;
+        }
         const reducedData = await this.reducer.execute(state.mapped_data);
         state.reduced_data = reducedData;
         state.current_phase = 'PLAN';
@@ -83,6 +95,10 @@ export class IngestDocumentUseCase {
 
       // Phase PLAN
       if (state.current_phase === 'PLAN') {
+        if (!state.reduced_data || !state.mapped_data) {
+          console.log('❌ Lỗi: Thiếu dữ liệu Mapped/Reduced.');
+          return false;
+        }
         const planResult = await this.planner.execute(state.reduced_data, state.mapped_data);
         state.plan_item_data = planResult;
         state.plan_timestamp = state.timestamp;
@@ -98,7 +114,7 @@ export class IngestDocumentUseCase {
           }],
           state.timestamp,
         );
-        const destPlanPath = path.join(DIR_JOURNAL, planFile.filename);
+        const destPlanPath = path.join(this.config.dirJournal, planFile.filename);
         this.fs.writeFile(destPlanPath, this.mdGenerator.generatePlan(planFile));
 
         this.saveCheckpoint(state);
@@ -176,13 +192,18 @@ Vui lòng chọn hành động tiếp theo:
       // Phase COMMIT
       if (state.current_phase === 'COMMIT') {
         const planResult = state.plan_item_data as PlanResult;
+        if (!planResult) {
+          console.log('❌ Lỗi: Không tìm thấy dữ liệu Planning.');
+          return false;
+        }
         this.committer.execute(planResult, sourcePath, state.timestamp);
         this.clearCheckpoint(state);
         console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
         return true;
       }
-    } catch (e: any) {
-      console.log(`❌ Lỗi thực thi Pipeline: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      console.log(`❌ Lỗi thực thi Pipeline: ${err}`);
       this.saveCheckpoint(state);
       throw e;
     }
@@ -205,12 +226,14 @@ Vui lòng chọn hành động tiếp theo:
       }
 
       if (state.current_phase === 'REDUCE') {
+        if (!state.mapped_data) return false;
         state.reduced_data = await this.reducer.execute(state.mapped_data);
         state.current_phase = 'PLAN';
         this.saveCheckpoint(state);
       }
 
       if (state.current_phase === 'PLAN') {
+        if (!state.reduced_data || !state.mapped_data) return false;
         const planResult = await this.planner.execute(state.reduced_data, state.mapped_data);
         state.plan_item_data = planResult;
         state.plan_timestamp = state.timestamp;
@@ -225,7 +248,7 @@ Vui lòng chọn hành động tiếp theo:
           }],
           state.timestamp,
         );
-        const destPlanPath = path.join(DIR_JOURNAL, planFile.filename);
+        const destPlanPath = path.join(this.config.dirJournal, planFile.filename);
         this.fs.writeFile(destPlanPath, this.mdGenerator.generatePlan(planFile));
 
         // Tự động approve
@@ -238,6 +261,7 @@ Vui lòng chọn hành động tiếp theo:
       }
 
       if (state.current_phase === 'REFINE') {
+        if (!state.plan_item_data) return false;
         this.refiner.execute(state.plan_item_data as PlanResult, state.source_slug);
         state.current_phase = 'VERIFY';
         this.saveCheckpoint(state);
@@ -258,13 +282,15 @@ Vui lòng chọn hành động tiếp theo:
       }
 
       if (state.current_phase === 'COMMIT') {
+        if (!state.plan_item_data) return false;
         this.committer.execute(state.plan_item_data as PlanResult, sourcePath, state.timestamp);
         this.clearCheckpoint(state);
         console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
         return true;
       }
-    } catch (e: any) {
-      console.log(`❌ Lỗi thực thi tự động: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      console.log(`❌ Lỗi thực thi tự động: ${err}`);
       throw e;
     }
     return false;
@@ -295,12 +321,8 @@ Vui lòng chọn hành động tiếp theo:
     return this.loadCheckpoint(state);
   }
 
-  private get checkpointPath(): string {
-    return '';
-  }
-
   private getCheckpointPath(state: PipelineState): string {
-    return path.join(DIR_JOURNAL, `mrp_checkpoint_${state.source_slug}.json`);
+    return path.join(this.config.dirJournal, `mrp_checkpoint_${state.source_slug}.json`);
   }
 
   private loadCheckpoint(state: PipelineState): PipelineState {
@@ -310,8 +332,9 @@ Vui lòng chọn hành động tiếp theo:
         const saved = JSON.parse(this.fs.readFile(cpPath));
         console.log(`🔄 Khôi phục checkpoint! Pha hiện tại: ${saved.current_phase}`);
         return { ...state, ...saved };
-      } catch (e: any) {
-        console.log(`⚠️ Không thể đọc checkpoint: ${e.message}. Tạo mới.`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.log(`⚠️ Không thể đọc checkpoint: ${msg}. Tạo mới.`);
       }
     }
     return state;
@@ -321,8 +344,9 @@ Vui lòng chọn hành động tiếp theo:
     const cpPath = this.getCheckpointPath(state);
     try {
       this.fs.writeFile(cpPath, JSON.stringify(state, null, 2));
-    } catch (e: any) {
-      console.log(`⚠️ Lỗi lưu checkpoint: ${e.message}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(`⚠️ Lỗi lưu checkpoint: ${msg}`);
     }
   }
 
@@ -331,8 +355,9 @@ Vui lòng chọn hành động tiếp theo:
     if (this.fs.fileExists(cpPath)) {
       try {
         this.fs.unlink(cpPath);
-      } catch (e: any) {
-        console.log(`⚠️ Lỗi xóa checkpoint: ${e.message}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.log(`⚠️ Lỗi xóa checkpoint: ${msg}`);
       }
     }
   }

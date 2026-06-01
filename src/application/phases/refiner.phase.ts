@@ -1,17 +1,19 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
-import { DIR_ATOMIC, ATOMIC_PREFIX } from '../../core/config.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
 export class RefinerPhase {
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
+  private config: IConfigProvider;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
+    this.config = config;
   }
 
   execute(planResult: PlanResult, sourceSlug: string): void {
@@ -44,7 +46,7 @@ export class RefinerPhase {
         [sourceSlug],
       );
 
-      const filepath = path.join(DIR_ATOMIC, `${node.fullSlug}.md`);
+      const filepath = path.join(this.config.dirAtomic, `${node.fullSlug}.md`);
       this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
       console.log(`  ✅ Tạo nốt mới: [${node.fullSlug}.md]`);
 
@@ -60,7 +62,7 @@ export class RefinerPhase {
       for (const ac of (mn.added_children || [])) this.ensurePlaceholderNode(ac);
       for (const ucd of (mn.updated_causal_derivative || [])) this.ensurePlaceholderNode(ucd);
 
-      const filepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${mn.slug}.md`);
+      const filepath = path.join(this.config.dirAtomic, `${this.config.atomicPrefix}${mn.slug}.md`);
       if (!this.fs.fileExists(filepath)) {
         console.log(`  ⚠️ Nốt [${mn.slug}.md] không tồn tại (skipped).`);
         continue;
@@ -114,7 +116,7 @@ export class RefinerPhase {
 
   private ensurePlaceholderNode(slug?: string): void {
     if (!slug) return;
-    const filepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${slug}.md`);
+    const filepath = path.join(this.config.dirAtomic, `${this.config.atomicPrefix}${slug}.md`);
     if (this.fs.fileExists(filepath)) return;
 
     const title = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -135,7 +137,7 @@ export class RefinerPhase {
   }
 
   private updateParentChildren(parentSlug: string, childSlug: string): void {
-    const parentFilepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${parentSlug}.md`);
+    const parentFilepath = path.join(this.config.dirAtomic, `${this.config.atomicPrefix}${parentSlug}.md`);
     if (!this.fs.fileExists(parentFilepath)) return;
 
     let pContent = this.fs.readFile(parentFilepath);

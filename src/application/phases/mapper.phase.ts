@@ -3,18 +3,21 @@ import type { IFileSystem } from '../../domain/interfaces/file-system.interface.
 import { SourceDoc } from '../../domain/entities/source-doc.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
-import { DIR_STRUCTURED } from '../../core/config.ts';
-import type { MappedData } from './_types.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import { type MappedData, LLMStructuredResponseSchema, type KeywordItem } from './_types.ts';
+import { extractJson } from './_utils.ts';
 
 export class MapperPhase {
   private llm: ILLMProvider;
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
+  private config: IConfigProvider;
 
-  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
     this.llm = llm;
     this.fs = fs;
     this.mdGenerator = mdGenerator;
+    this.config = config;
   }
 
   async execute(sourcePath: string): Promise<MappedData | null> {
@@ -52,24 +55,32 @@ export class MapperPhase {
       slug,
     );
 
-    let parsed: any = null;
+    let keywords: KeywordItem[] = [];
     try {
-      parsed = await this.callLLM(rawContent, frontmatter.title);
+      const parsed = await this.callLLM(rawContent);
       structuredDoc.title = parsed.title || structuredDoc.title;
       structuredDoc.keyTakeaways = parsed.key_takeaways || [];
-      structuredDoc.keywords = (parsed.keywords || []).map(
-        (k: any) => ({ name: k.name || '', definition: k.definition || '' }),
+
+      const parsedKeywords = parsed.keywords || [];
+      structuredDoc.keywords = parsedKeywords.map(
+        (k) => ({ name: k.name || '', definition: k.definition || '' }),
       );
+      keywords = parsedKeywords.map(
+        (k) => ({ name: k.name || '', definition: k.definition || '' }),
+      );
+
       structuredDoc.summary = parsed.summary || '';
       console.log('  ✅ Chắt lọc thành công!');
-    } catch (e: any) {
-      console.log(`  ⚠️ Không thể gọi LLM: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      console.log(`  ⚠️ Không thể gọi LLM: ${err}`);
       console.log('  ⏭️ Fallback suy luận cơ bản...');
       this.fallbackStructuredDoc(structuredDoc, rawContent, frontmatter.title);
+      keywords = structuredDoc.keywords.map(k => ({ name: k.name, definition: k.definition }));
     }
 
     // Ghi file structured doc
-    const outputPath = `${DIR_STRUCTURED}/${slug}-processed.md`;
+    const outputPath = `${this.config.dirStructured}/${slug}-processed.md`;
     this.fs.writeFile(outputPath, this.mdGenerator.generateStructuredDoc(structuredDoc));
 
     console.log(`  ✅ Đã tạo structured doc: [${outputPath}]`);
@@ -80,14 +91,13 @@ export class MapperPhase {
       structured_slug: `${slug}-processed`,
       title: structuredDoc.title,
       key_takeaways: structuredDoc.keyTakeaways,
-      keywords: parsed
-        ? (parsed.keywords || []).map((k: any) => ({ name: k.name || '', definition: k.definition || '' }))
-        : structuredDoc.keywords.map(k => ({ name: k.name, definition: k.definition })),
+      keywords,
     };
   }
 
-  private async callLLM(rawContent: string, _title: string): Promise<any> {
+  private async callLLM(rawContent: string) {
     const llmPrompt = `Hãy phân tích bài kinh Phật giáo Nikaya hoặc tài liệu nghiên cứu dưới đây và trả về kết quả dưới dạng JSON.
+
 
 Tài liệu:
 ${rawContent.slice(0, 6000)}
@@ -108,7 +118,8 @@ Yêu cầu đầu ra (JSON):
 }`;
 
     const response = await this.llm.generate(llmPrompt, '', true);
-    return JSON.parse(response);
+    const rawJson = extractJson(response);
+    return LLMStructuredResponseSchema.parse(rawJson);
   }
 
   private fallbackStructuredDoc(doc: StructuredDoc, rawContent: string, title: string): void {
