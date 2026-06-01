@@ -10,6 +10,40 @@ export class PhaseRefiner {
     this.o = orchestrator;
   }
 
+  private ensurePlaceholderNode(slug: string, categoryDefault = 'Giáo lý Khác (Other Dharma)'): void {
+    if (!slug) return;
+    const filepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${slug}.md`);
+    if (fs.existsSync(filepath)) {
+      return;
+    }
+
+    // Tự sinh tiêu đề đẹp từ slug (vd: vo-minh -> Vô Minh)
+    const title = slug
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+
+    const placeholderNode = new AtomicNode({
+      slug,
+      title,
+      category: categoryDefault,
+      tags: ['placeholder', 'draft'],
+      definition: 'Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.',
+      principles: ['Khái niệm này đang ở trạng thái chờ nạp dữ liệu chi tiết.'],
+      parent: undefined,
+      children: [],
+      causalWeb: {
+        causalCore: undefined,
+        supportingConditions: [],
+        derivativeEffects: [],
+      },
+      evidenceStructured: [],
+      evidenceRaw: [],
+    });
+
+    fs.writeFileSync(filepath, placeholderNode.toMarkdown(), 'utf-8');
+    console.log(`  🔗 Tự động phục hồi đồ thị: Đã tạo nốt nháp [${placeholderNode.fullSlug}.md]`);
+  }
+
   async execute(): Promise<boolean> {
     console.log(`\n${'='.repeat(50)}`);
     console.log(`🛠️  Phase R - REFINER: Thực thi kế hoạch (Tạo mới & Trộn)`);
@@ -27,6 +61,14 @@ export class PhaseRefiner {
     // 1. Tạo các nốt mới
     for (const nn of newNodes) {
       const slug = nn.slug;
+
+      // Bảo đảm các nốt liên quan trong parent và causal web tồn tại
+      if (nn.parent) this.ensurePlaceholderNode(nn.parent);
+      if (nn.causal_core) this.ensurePlaceholderNode(nn.causal_core);
+      for (const sc of (nn.causal_supporting || [])) this.ensurePlaceholderNode(sc);
+      for (const de of (nn.causal_derivative || [])) this.ensurePlaceholderNode(de);
+      for (const ch of (nn.children || [])) this.ensurePlaceholderNode(ch);
+
       const node = new AtomicNode({
         slug,
         title: nn.title || slug,
@@ -81,6 +123,12 @@ export class PhaseRefiner {
     // 2. Cập nhật các nốt hiện có (Merge)
     for (const mn of mergeNodes) {
       const slug = mn.slug;
+
+      // Bảo đảm nốt cần merge và các liên kết mới tồn tại
+      this.ensurePlaceholderNode(slug);
+      for (const ac of (mn.added_children || [])) this.ensurePlaceholderNode(ac);
+      for (const ucd of (mn.updated_causal_derivative || [])) this.ensurePlaceholderNode(ucd);
+
       const filepath = path.join(DIR_ATOMIC, `${ATOMIC_PREFIX}${slug}.md`);
       if (!fs.existsSync(filepath)) {
         console.log(`  ⚠️ Nốt [${slug}.md] không tồn tại (skipped).`);

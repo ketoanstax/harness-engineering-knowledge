@@ -63,7 +63,7 @@ export class PlanFile {
       for (const nn of item.new_nodes) {
         newNodesStr += `  - **Tạo mới**: \`${nn.slug}.md\`
     - Tiêu đề: *${nn.title}*
-    - Danh mục: {nn.category}
+    - Danh mục: ${nn.category}
     - Thẻ: ${nn.tags.join(', ')}
     - Parent: ${nn.parent || 'Không có'}
     - Children: ${nn.children && nn.children.length > 0 ? nn.children.join(', ') : 'Không có'}

@@ -1,33 +1,31 @@
-# 00_raw_docs/RULE.md - Quy tắc Vận hành Tài liệu Thô (Layer 1)
+# 00_nikaya_raw/RULE.md - Quy tắc Vận hành Kinh văn Gốc (Layer 1)
 
-Quy tắc này quản lý cách thu thập, lưu trữ và bảo vệ dữ liệu tri thức nguyên bản trước khi đưa vào xử lý.
+Quy tắc này quản lý cách cào, lưu trữ và bảo vệ Kinh văn nguyên bản (bản dịch của HT Thích Minh Châu) trước khi đưa vào xử lý.
 
 ## 📋 Quy tắc Cốt lõi
 
-1. **Giữ nguyên bản tuyệt đối:** 
-   - Không được sửa đổi nội dung nguồn của dữ liệu thô (web scrape, transcript, paper...).
-   - Mọi chỉnh sửa, sửa lỗi chính tả hay bổ sung sẽ được thực hiện ở các layer phía sau.
+1. **Bảo toàn nguyên bản tuyệt đối:** 
+   - Không được tự ý chỉnh sửa nội dung nguồn của Kinh tạng.
+   - Mọi sửa lỗi chính tả hay bổ sung giải thích từ ngữ sẽ được thực hiện ở các layer phía sau.
 
 2. **Cấu trúc YAML Frontmatter:**
-   Mỗi file thô bắt buộc phải có frontmatter đúng định dạng để quản lý trạng thái:
+   Mỗi file Kinh văn gốc bắt buộc phải có frontmatter để quản lý trạng thái:
    ```yaml
    ---
-   id: {{source-slug}}
-   title: "{{source-title}}"
-   category: "Raw Knowledge Source"
+   id: sutta-mn-{{số_kinh}}
+   title: "{{tên_bài_kinh}}"
+   category: "Nikaya Raw Sutta"
    tags:
      - raw-source
-     - {{source-type}} (ví dụ: website, video, paper)
-   date: 2026-05-24
+     - nikaya
+     - trung-bo-kinh
+   date: 2026-05-25
    status: processed # Hoặc processed sau khi đã cấu trúc hóa
    ---
    ```
 
-3. **Ghi chú về nguồn:**
-   Ở cuối file thô luôn phải ghi rõ URL gốc, thời gian cào dữ liệu, hoặc thông tin tác giả để đảm bảo tính minh bạch về nguồn gốc.
+3. **Ghi chú về nguồn dịch:**
+   Ở cuối file luôn phải ghi rõ: "Bản dịch của Hòa thượng Thích Minh Châu" và nguồn trích dẫn (ví dụ: Kinh Trung Bộ, Viện Nghiên Cứu Phật Học Việt Nam).
 
 4. **Đặt tên file sạch:**
-   Sử dụng slug viết thường, nối nhau bằng dấu gạch ngang (ví dụ: `nine-core-harness-components.md`). Tuyệt đối không dùng ký tự đặc biệt hoặc khoảng trắng.
-
----
-*Quy tắc này được thiết lập để đảm bảo tính toàn vẹn của dữ liệu gốc. Tuân thủ tuyệt đối.*
+   Sử dụng slug viết thường, nối nhau bằng dấu gạch ngang (ví dụ: `sutta-mn-01.md`). Tuyệt đối không dùng ký tự đặc biệt hoặc khoảng trắng.

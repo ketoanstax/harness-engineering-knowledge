@@ -18,20 +18,20 @@ program
 program
   .command('run')
   .description('Chạy Ingestion Pipeline cho file thô')
-  .requiredOption('--source -s <source>', 'Đường dẫn file thô ở 00_raw_docs (hoặc tên file)')
+  .requiredOption('-s, --source <source>', 'Đường dẫn file thô ở 00_raw_docs (hoặc tên file)')
   .action(async (options) => {
-    let sourcePath = options.s;
+    let sourcePath = options.source;
     if (!path.isAbsolute(sourcePath)) {
       sourcePath = path.resolve(sourcePath);
     }
 
     if (!fs.existsSync(sourcePath)) {
       // Thử tìm trong 00_raw_docs
-      const testPath = path.join(DIR_RAW, options.s);
+      const testPath = path.join(DIR_RAW, options.source);
       if (fs.existsSync(testPath)) {
         sourcePath = testPath;
       } else {
-        console.error(`❌ Lỗi: Không tìm thấy file [${options.s}]`);
+        console.error(`❌ Lỗi: Không tìm thấy file [${options.source}]`);
         process.exit(1);
       }
     }
@@ -45,10 +45,10 @@ program
 program
   .command('batch')
   .description('Chạy Batch Ingestion Pipeline tuần tự chronological')
-  .option('--dir -d <dir>', 'Thư mục chứa file thô (mặc định: 00_raw_docs)', DIR_RAW)
-  .option('--auto-approve -a', 'Cờ chạy tự động từ đầu đến cuối không dừng (Auto-Approve)', false)
+  .option('-d, --dir <dir>', 'Thư mục chứa file thô (mặc định: 00_raw_docs)', DIR_RAW)
+  .option('-a, --auto-approve', 'Cờ chạy tự động từ đầu đến cuối không dừng (Auto-Approve)', false)
   .action(async (options) => {
-    let directory = options.d;
+    let directory = options.dir;
     if (!path.isAbsolute(directory)) {
       directory = path.resolve(directory);
     }
@@ -58,7 +58,7 @@ program
       process.exit(1);
     }
 
-    const orchestrator = new MRPBatchOrchestrator(directory, options.a);
+    const orchestrator = new MRPBatchOrchestrator(directory, options.autoApprove);
     const success = await orchestrator.run();
     process.exit(success ? 0 : 1);
   });
@@ -67,9 +67,9 @@ program
 program
   .command('approve')
   .description('Phê duyệt kế hoạch và thực thi gộp nốt')
-  .requiredOption('--timestamp -t <timestamp>', 'Mã thời gian của kế hoạch (vd: 20260531_220000)')
+  .requiredOption('-t, --timestamp <timestamp>', 'Mã thời gian của kế hoạch (vd: 20260531_220000)')
   .action(async (options) => {
-    const timestamp = options.t;
+    const timestamp = options.timestamp;
     const planFilename = `mrp_plan_${timestamp}.md`;
     const planFilepath = path.join(DIR_JOURNAL, planFilename);
 
@@ -113,9 +113,9 @@ program
 program
   .command('reject')
   .description('Từ chối và dọn dẹp kế hoạch')
-  .requiredOption('--timestamp -t <timestamp>', 'Mã thời gian của kế hoạch')
+  .requiredOption('-t, --timestamp <timestamp>', 'Mã thời gian của kế hoạch')
   .action((options) => {
-    const timestamp = options.t;
+    const timestamp = options.timestamp;
     const planFilename = `mrp_plan_${timestamp}.md`;
     const planFilepath = path.join(DIR_JOURNAL, planFilename);
 

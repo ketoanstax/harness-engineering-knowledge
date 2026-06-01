@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { DIR_JOURNAL, PATH_INDEX, ATOMIC_PREFIX } from '../core/config.ts';
+import { DIR_JOURNAL, PATH_INDEX, ATOMIC_PREFIX, loadCategories } from '../core/config.ts';
 
 export class PhaseCommitter {
   private o: any;
@@ -75,20 +75,13 @@ export class PhaseCommitter {
 
       // Tìm danh mục phù hợp
       const category = nn.category || '';
-      let marker = '';
-      if (category.includes('Core')) {
-        marker = '### 1. Khung gá cốt lõi (Harness Core Concepts)';
-      } else if (category.includes('Cognitive')) {
-        marker = '### 2. Quản lý Nhận thức (Cognitive & Context Management)';
-      } else if (category.includes('Workflow')) {
-        marker = '### 3. Kiến trúc Quy trình làm việc (Workflow Architecture)';
-      } else if (category.includes('Guardrails')) {
-        marker = '### 4. Rào chắn An toàn (Guardrails & Safety)';
-      } else if (category.includes('Verification')) {
-        marker = '### 5. Xác thực & Đo lường chất lượng (Verification)';
-      } else {
-        marker = '### 1. Khung gá cốt lõi (Harness Core Concepts)';
-      }
+      const categories = loadCategories();
+      const matchedCategory = categories.find((c: any) =>
+        category.toLowerCase().includes(c.id.toLowerCase()) ||
+        category.toLowerCase().includes(c.name.toLowerCase()) ||
+        c.keywords.some((k: any) => category.toLowerCase().includes(k.toLowerCase()))
+      );
+      const marker = matchedCategory ? matchedCategory.marker : categories[0].marker;
 
       if (content.includes(marker)) {
         content = content.replace(

@@ -135,7 +135,7 @@ ${subnodesSection}
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
 ${evidenceStr.trimEnd()}
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
-  - [Tuyên ngôn Harness Engineering](04_distilled/harness-engineering-manifesto.md)
+  - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
 `;
   }
 }

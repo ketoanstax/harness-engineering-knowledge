@@ -42,7 +42,7 @@ Mỗi node phải tuân theo cấu trúc phẳng, cực kỳ súc tích:
 
 ### 4. Định dạng Đường Dẫn
 - **Tuyệt đối chỉ dùng Workspace-Relative:** Chỉ dùng đường dẫn tương đối từ gốc vault.
-  - Định dạng ĐÚNG: `[Outer Loop](02_atomic_nodes/HAE-concept-outer-loop.md)`
+  - Định dạng ĐÚNG: `[Quy tắc Nốt](02_atomic_nodes/RULE.md)`
   - Định dạng SAI: Không được chứa dấu gạch chéo đầu (như `/02_atomic_nodes/`) hoặc chứa đường dẫn tương đối leo ngược (như `../02_atomic_nodes/`).
 
 *   **Định nghĩa Harness trực quan: "Harness là môi trường được dựng lên để AI Agent nhảy lên đó hoạt động tự động, an toàn mà ít hoặc không cần con người phải can thiệp hay canh chừng".** (Được phát hiện vào 2026-05-24 từ FB-012).

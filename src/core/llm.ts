@@ -1,5 +1,6 @@
 import * as process from 'node:process';
 import Anthropic from '@anthropic-ai/sdk';
+import axios from 'axios';
 
 export class LLMClient {
   private apiProvider: 'anthropic' | 'openai' | 'gemini' | 'mock';
@@ -62,35 +63,77 @@ export class LLMClient {
     return '';
   }
 
-  private async callAnthropic(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
-    if (!this.anthropicClient) {
-      throw new Error('Anthropic client is not initialized');
-    }
-
+  private async callAnthropicDirect(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
+    const url = `${this.baseUrl}/messages`;
     let promptContent = prompt;
     if (responseJson) {
       promptContent += '\n\nIMPORTANT: Return ONLY a valid JSON object. Do not include markdown code block syntax (like ```json) in your final response.';
     }
 
+    const payload = {
+      model: this.model,
+      max_tokens: 4000,
+      system: systemPrompt || undefined,
+      messages: [{ role: 'user', content: promptContent }],
+      stream: true
+    };
+
     try {
-      const response = await this.anthropicClient.messages.create({
-        model: this.model,
-        max_tokens: 4000,
-        stream: false,
-        system: systemPrompt || undefined,
-        messages: [{ role: 'user', content: promptContent }],
+      const res = await axios.post(url, payload, {
+        headers: {
+          'x-api-key': this.apiKey || '',
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        },
+        responseType: 'text'
       });
 
-      // Anthropic trả về nội dung text
-      if (response.content && response.content[0] && response.content[0].type === 'text') {
-        return response.content[0].text.trim();
+      const rawBody = res.data;
+
+      let text = '';
+      const lines = rawBody.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data:')) {
+          const dataStr = trimmed.slice(5).trim();
+          if (dataStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(dataStr);
+            // 1. Anthropic stream: content_block_delta -> delta -> text
+            if (parsed.delta && parsed.delta.text) {
+              text += parsed.delta.text;
+            }
+            // 2. OpenAI/Raw stream: choices[0] -> delta -> content
+            else if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+              text += parsed.choices[0].delta.content;
+            }
+            // 3. Anthropic completion
+            else if (parsed.completion) {
+              text += parsed.completion;
+            }
+          } catch (e) {
+            // Bỏ qua dòng lỗi parse JSON
+          }
+        }
       }
 
-      throw new Error('Unsupported response type from Anthropic');
-    } catch (error) {
-      console.error(`❌ Lỗi gọi API Anthropic Gateway:`, error);
+      if (text.trim()) {
+        return text.trim();
+      }
+
+      return rawBody.trim();
+    } catch (error: any) {
+      console.error(`❌ Lỗi gọi API Anthropic Gateway Direct:`, error.message);
       throw error;
     }
+  }
+
+  private async callAnthropic(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
+    if (!this.anthropicClient) {
+      throw new Error('Anthropic client is not initialized');
+    }
+
+    return this.callAnthropicDirect(prompt, systemPrompt, responseJson);
   }
 
   private async callOpenai(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {

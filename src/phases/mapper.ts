@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { SourceDoc } from '../models/source-doc.ts';
-import { StructuredDoc, type KeywordDefinition } from '../models/structured-doc.ts';
+import { StructuredDoc } from '../models/structured-doc.ts';
 import { DIR_STRUCTURED } from '../core/config.ts';
 
 export class PhaseMapper {
@@ -51,7 +51,7 @@ export class PhaseMapper {
     console.log('  🔄 Đang chắt lọc...');
     const rawContent = content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
 
-    const llmPrompt = `Hãy phân tích tài liệu kỹ thuật dưới đây và trả về kết quả dưới dạng JSON.
+    const llmPrompt = `Hãy phân tích bài kinh Phật giáo Nikaya hoặc tài liệu nghiên cứu dưới đây và trả về kết quả dưới dạng JSON.
 
 Tài liệu:
 ${rawContent.slice(0, 6000)}

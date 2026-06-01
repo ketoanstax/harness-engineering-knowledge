@@ -1,0 +1,44 @@
+[
+  {
+    "id": "tu-thanh-de",
+    "name": "Tứ Thánh Đế (Four Noble Truths)",
+    "marker": "### 1. Tứ Thánh Đế (Four Noble Truths)",
+    "keywords": ["Tứ Thánh Đế", "Noble Truths", "Khổ", "Tập", "Diệt", "Đạo", "Core"]
+  },
+  {
+    "id": "duyen-khoi",
+    "name": "Duyên Khởi (Dependent Origination)",
+    "marker": "### 2. Duyên Khởi (Dependent Origination)",
+    "keywords": ["Duyên Khởi", "Dependent Origination", "Duyên", "Cognitive", "Context"]
+  },
+  {
+    "id": "bat-chanh-dao",
+    "name": "Bát Chánh Đạo (Noble Eightfold Path)",
+    "marker": "### 3. Bát Chánh Đạo (Noble Eightfold Path)",
+    "keywords": ["Bát Chánh Đạo", "Noble Path", "Chánh Kiến", "Workflow"]
+  },
+  {
+    "id": "ngu-uan",
+    "name": "Ngũ Uẩn (Five Aggregates)",
+    "marker": "### 4. Ngũ Uẩn (Five Aggregates)",
+    "keywords": ["Ngũ Uẩn", "Aggregates", "Sắc", "Thọ", "Tưởng", "Hành", "Thức", "Guardrails", "Safety"]
+  },
+  {
+    "id": "gioi-dinh-tue",
+    "name": "Giới Định Tuệ (Virtue, Concentration, Wisdom)",
+    "marker": "### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)",
+    "keywords": ["Giới Định Tuệ", "Virtue", "Concentration", "Wisdom", "Giới", "Định", "Tuệ", "Verification"]
+  },
+  {
+    "id": "vo-thuong-kho-vo-nga",
+    "name": "Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)",
+    "marker": "### 6. Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)",
+    "keywords": ["Vô Thường", "Khổ", "Vô Ngã", "Three Marks", "Anicca", "Dukkha", "Anatta"]
+  },
+  {
+    "id": "giao-ly-khac",
+    "name": "Giáo lý Khác (Other Dharma)",
+    "marker": "### 7. Giáo lý Khác (Other Dharma)",
+    "keywords": ["Khác", "Other", "Dharma"]
+  }
+]

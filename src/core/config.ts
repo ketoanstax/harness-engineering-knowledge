@@ -30,6 +30,59 @@ export const DIR_JOURNAL = path.join(DIR_VAULT, '05_journal');
 export const PATH_INDEX = path.join(DIR_NEURAL_MAP, 'INDEX.md');
 export const PATH_ROUTING = path.join(DIR_NEURAL_MAP, 'AI_ROUTING_TABLE.md');
 export const PATH_FEEDBACK = path.join(DIR_VAULT, 'memory', 'feedback_log.md');
+export const PATH_CATEGORIES = path.join(DIR_NEURAL_MAP, 'categories.json');
+
+export interface EngineCategory {
+  id: string;
+  name: string;
+  marker: string;
+  keywords: string[];
+}
+
+export function loadCategories(): EngineCategory[] {
+  if (fs.existsSync(PATH_CATEGORIES)) {
+    try {
+      const data = fs.readFileSync(PATH_CATEGORIES, 'utf-8');
+      return JSON.parse(data) as EngineCategory[];
+    } catch (e: any) {
+      console.log(`⚠️ Lỗi đọc tệp categories.json: ${e.message}`);
+    }
+  }
+
+  // Cấu hình mặc định của Harness (tương thích ngược)
+  return [
+    {
+      id: 'core',
+      name: 'Harness Core Concept',
+      marker: '### 1. Khung gá cốt lõi (Harness Core Concepts)',
+      keywords: ['Core']
+    },
+    {
+      id: 'cognitive',
+      name: 'Cognitive Management',
+      marker: '### 2. Quản lý Nhận thức (Cognitive & Context Management)',
+      keywords: ['Cognitive']
+    },
+    {
+      id: 'workflow',
+      name: 'Workflow Architecture',
+      marker: '### 3. Kiến trúc Quy trình làm việc (Workflow Architecture)',
+      keywords: ['Workflow']
+    },
+    {
+      id: 'guardrails',
+      name: 'Guardrails & Safety',
+      marker: '### 4. Rào chắn An toàn (Guardrails & Safety)',
+      keywords: ['Guardrails']
+    },
+    {
+      id: 'verification',
+      name: 'Verification',
+      marker: '### 5. Xác thực & Đo lường chất lượng (Verification)',
+      keywords: ['Verification']
+    }
+  ];
+}
 
 // Các định dạng chuẩn
 export const ATOMIC_PREFIX = 'HAE-concept-';

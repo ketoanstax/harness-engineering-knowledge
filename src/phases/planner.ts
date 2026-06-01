@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PlanFile } from '../models/plan.ts';
+import { loadCategories } from '../core/config.ts';
 
 export class PhasePlanner {
   private o: any;
@@ -23,6 +24,8 @@ export class PhasePlanner {
 
     const conflicts = reducedData.conflicts || [];
     const newConcepts = reducedData.new_concepts || [];
+    const categories = loadCategories();
+    const categoriesStr = categories.map(c => c.name).join(' / ');
 
     console.log('  🔄 Đang thiết kế chi tiết các nốt và cấu trúc đồ thị nhân quả...');
 
@@ -42,7 +45,7 @@ Yêu cầu thiết kế:
     {
       "slug": "slug-nốt-mới (không chứa HAE-concept-)",
       "title": "Tiêu đề nốt",
-      "category": "Harness Core Concept / Cognitive Management / Workflow Architecture / Guardrails & Safety / Verification",
+      "category": "${categoriesStr}",
       "tags": ["tag1", "tag2"],
       "definition": "Định nghĩa sâu sắc nhất (2-3 câu)",
       "principles": [

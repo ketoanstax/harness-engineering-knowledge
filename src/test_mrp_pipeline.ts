@@ -5,10 +5,51 @@ import { MRPBatchOrchestrator } from './core/orchestrator.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
 import { auditLinks, auditTreeIntegrity } from './phases/verifier.ts';
 
+const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
+
 function setupChronologicalTimes(): void {
-  const f14 = path.join(DIR_RAW, 'lecture-14-blast-radius-advanced.md');
-  const f15 = path.join(DIR_RAW, 'lecture-15-token-budget-under-large-load.md');
-  const f16 = path.join(DIR_RAW, 'lecture-16-causal-web-visualization.md');
+  // Đảm bảo thư mục test tạm thời tồn tại
+  if (!fs.existsSync(TEST_DIR_RAW)) {
+    fs.mkdirSync(TEST_DIR_RAW, { recursive: true });
+  }
+
+  const f14 = path.join(TEST_DIR_RAW, 'lecture-14-blast-radius-advanced.md');
+  const f15 = path.join(TEST_DIR_RAW, 'lecture-15-token-budget-under-large-load.md');
+  const f16 = path.join(TEST_DIR_RAW, 'lecture-16-causal-web-visualization.md');
+
+  // Tự động tạo các file mock nếu chưa tồn tại
+  if (!fs.existsSync(f14)) {
+    fs.writeFileSync(f14, `---\ntitle: "Lecture 14 - Kỹ thuật nâng cao kiểm soát Blast Radius trong Hệ thống AI"\nstatus: to-process\n---\nNội dung bài giảng 14`, 'utf-8');
+  }
+  if (!fs.existsSync(f15)) {
+    fs.writeFileSync(f15, `---\ntitle: "Lecture 15 - Quản trị Token Budget dưới tải lớn"\nstatus: to-process\n---\nNội dung bài giảng 15`, 'utf-8');
+  }
+  if (!fs.existsSync(f16)) {
+    fs.writeFileSync(f16, `---\ntitle: "Lecture 16 - Trực quan hóa Mạng lưới Nhân Duyên Quả (Causal Web)"\nstatus: to-process\n---\nNội dung bài giảng 16`, 'utf-8');
+  }
+
+  // Tự động tạo các nốt cha mock tạm thời để vượt qua kiểm toán liên kết
+  const parentAO = path.join(DIR_ATOMIC, 'HAE-concept-agent-overreach.md');
+  const parentTB = path.join(DIR_ATOMIC, 'HAE-concept-token-budget.md');
+  const parentTM = path.join(DIR_ATOMIC, 'HAE-concept-three-tier-memory-architecture.md');
+  const parentCS = path.join(DIR_ATOMIC, 'HAE-concept-clean-state.md');
+  const manifesto = path.join(path.dirname(DIR_ATOMIC), '04_distilled', 'nikaya-distilled.md');
+
+  if (!fs.existsSync(parentAO)) {
+    fs.writeFileSync(parentAO, `---\nid: HAE-concept-agent-overreach\ntitle: "Agent Overreach"\nchildren:\n  - blast-radius-isolation\n---\nMock parent`, 'utf-8');
+  }
+  if (!fs.existsSync(parentTB)) {
+    fs.writeFileSync(parentTB, `---\nid: HAE-concept-token-budget\ntitle: "Token Budget"\nchildren:\n  - token-load-control\n---\nMock parent`, 'utf-8');
+  }
+  if (!fs.existsSync(parentTM)) {
+    fs.writeFileSync(parentTM, `---\nid: HAE-concept-three-tier-memory-architecture\ntitle: "Three Tier Memory Architecture"\nchildren:\n  - semantic-graph-visualization\n---\nMock parent`, 'utf-8');
+  }
+  if (!fs.existsSync(parentCS)) {
+    fs.writeFileSync(parentCS, `---\nid: HAE-concept-clean-state\ntitle: "Clean State"\nchildren: []\n---\nMock parent`, 'utf-8');
+  }
+  if (!fs.existsSync(manifesto)) {
+    fs.writeFileSync(manifesto, `# Đúc kết Kinh điển Nikaya Mock`, 'utf-8');
+  }
 
   // Đảm bảo status của các file này là 'to-process' để test có thể chạy được
   for (const filepath of [f14, f15, f16]) {
@@ -72,7 +113,7 @@ async function runBatchTest(): Promise<boolean> {
 
   // 3. Kích hoạt Batch Orchestrator ở chế độ Auto-Approve
   console.log('\n🚀 BẮT ĐẦU CHẠY BATCH SEQUENTIAL...');
-  const batchOrchestrator = new MRPBatchOrchestrator(DIR_RAW, true);
+  const batchOrchestrator = new MRPBatchOrchestrator(TEST_DIR_RAW, true);
 
   const success = await batchOrchestrator.run();
   if (!success) {
@@ -131,6 +172,80 @@ async function runBatchTest(): Promise<boolean> {
   console.log('\n--- BƯỚC 5: CHẠY BỘ KIỂM TOÁN TĨNH ---');
   const { brokenLinks, portabilityViolations } = auditLinks();
   const inconsistencies = auditTreeIntegrity();
+
+  // 6. DỌN DẸP SAU KHI TEST (BẢO VỆ VAULT TRỐNG CHO NIKAYA)
+  console.log('\n--- BƯỚC 6: DỌN DẸP SAU KHI TEST (CLEANUP) ---');
+  // Raw files
+  if (fs.existsSync(TEST_DIR_RAW)) {
+    fs.rmSync(TEST_DIR_RAW, { recursive: true, force: true });
+    console.log(`🧹 Đã dọn dẹp thư mục tạm: ${TEST_DIR_RAW}`);
+  }
+  // Structured files
+  const DIR_STRUCTURED = path.join(path.dirname(DIR_ATOMIC), '01_structured_docs');
+  for (const slug of ['lecture-14-blast-radius-advanced', 'lecture-15-token-budget-under-large-load', 'lecture-16-causal-web-visualization']) {
+    const sPath = path.join(DIR_STRUCTURED, `${slug}-processed.md`);
+    if (fs.existsSync(sPath)) {
+      fs.unlinkSync(sPath);
+    }
+  }
+  // Atomic files
+  const allAtomicToDelete = [
+    ...testNodes.map(slug => `HAE-concept-${slug}.md`),
+    'HAE-concept-agent-overreach.md',
+    'HAE-concept-token-budget.md',
+    'HAE-concept-three-tier-memory-architecture.md',
+    'HAE-concept-clean-state.md'
+  ];
+  for (const filename of allAtomicToDelete) {
+    const briPath = path.join(DIR_ATOMIC, filename);
+    if (fs.existsSync(briPath)) {
+      fs.unlinkSync(briPath);
+    }
+  }
+  // Manifesto mock
+  const manifesto = path.join(path.dirname(DIR_ATOMIC), '04_distilled', 'harness-engineering-manifesto.md');
+  if (fs.existsSync(manifesto)) {
+    fs.unlinkSync(manifesto);
+  }
+  // Journal plans
+  if (fs.existsSync(DIR_JOURNAL)) {
+    const files = fs.readdirSync(DIR_JOURNAL);
+    for (const f of files) {
+      if (f.startsWith('mrp_plan_') || f.startsWith('mrp_checkpoint_')) {
+        fs.unlinkSync(path.join(DIR_JOURNAL, f));
+      }
+    }
+  }
+  // Reset INDEX.md
+  const realPathIndex = path.join(path.dirname(DIR_ATOMIC), '03_neural_map', 'INDEX.md');
+  if (fs.existsSync(realPathIndex)) {
+    fs.writeFileSync(realPathIndex, `# Bản đồ Chỉ mục Tri thức Trung bộ kinh - Tạng Nikaya (Knowledge Index)
+
+Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thức về Kinh điển Nikaya - Trung bộ kinh. Dưới đây là phân loại chi tiết các nốt nguyên tử theo chủ đề, danh mục và từ khóa (tags).
+
+---
+
+## 🗂️ Phân loại theo Danh mục (Categories)
+
+### 1. Tứ Thánh Đế (Four Noble Truths)
+
+### 2. Duyên Khởi (Dependent Origination)
+
+### 3. Bát Chánh Đạo (Noble Eightfold Path)
+
+### 4. Ngũ Uẩn (Five Aggregates)
+
+### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)
+
+### 6. Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)
+
+### 7. Giáo lý Khác (Other Dharma)
+
+---
+
+## 🏷️ Chỉ mục theo Thẻ (Tags Index)
+`, 'utf-8');
+  }
 
   if (brokenLinks !== 0 || portabilityViolations !== 0 || inconsistencies !== 0) {
     console.error('❌ Lỗi: Kiểm toán tĩnh thất bại.');

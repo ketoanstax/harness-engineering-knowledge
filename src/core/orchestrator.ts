@@ -123,6 +123,7 @@ export class MRPOrchestrator {
       if (this.state.current_phase === 'PLAN') {
         const success = await this.runPlan();
         if (!success) return false;
+        this.saveCheckpoint();
         // DỪNG LẠI tại đây, chờ duyệt
         console.log(`\n⏸️ PIPELINE ĐÃ DỪNG ĐỂ CHỜ DUYỆT.`);
         console.log(`👉 Vui lòng kiểm tra file kế hoạch tại:`);
