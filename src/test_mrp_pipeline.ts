@@ -1,7 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as process from 'node:process';
-import { MRPBatchOrchestrator } from './core/orchestrator.ts';
+import { LLMClient } from './infrastructure/llm/llm-client.ts';
+import { IngestDocumentUseCase } from './application/use-cases/ingest-document.use-case.ts';
+import { NodeFileSystem } from './infrastructure/fs/node-file-system.ts';
+import { MarkdownGenerator } from './infrastructure/formatters/markdown.generator.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
 import { auditLinks, auditTreeIntegrity } from './phases/verifier.ts';
 
@@ -111,11 +114,21 @@ async function runBatchTest(): Promise<boolean> {
     }
   }
 
-  // 3. Kích hoạt Batch Orchestrator ở chế độ Auto-Approve
+  // 3. Kích hoạt Use Case ở chế độ Auto-Approve
   console.log('\n🚀 BẮT ĐẦU CHẠY BATCH SEQUENTIAL...');
-  const batchOrchestrator = new MRPBatchOrchestrator(TEST_DIR_RAW, true);
 
-  const success = await batchOrchestrator.run();
+  // Xóa mọi checkpoint cũ để test chạy sạch
+  for (const slug of ['lecture-14-blast-radius-advanced', 'lecture-15-token-budget-under-large-load', 'lecture-16-causal-web-visualization']) {
+    const cpPath = path.join(DIR_JOURNAL, `mrp_checkpoint_${slug}.json`);
+    if (fs.existsSync(cpPath)) fs.unlinkSync(cpPath);
+  }
+
+  const testFs = new NodeFileSystem();
+  const testLlm = LLMClient.createFromEnv();
+  const testMd = new MarkdownGenerator();
+  const useCase = new IngestDocumentUseCase(testFs, testLlm, testMd);
+
+  const success = await useCase.runBatch(TEST_DIR_RAW, true);
   if (!success) {
     console.error('❌ Lỗi: Chạy batch thất bại.');
     return false;

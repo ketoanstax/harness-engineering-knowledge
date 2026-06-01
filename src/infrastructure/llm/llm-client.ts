@@ -1,0 +1,55 @@
+import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import { AnthropicSDKProvider } from './anthropic-sdk.provider.ts';
+import { AnthropicRESTProvider } from './anthropic-rest.provider.ts';
+import { OpenAIProvider } from './openai.provider.ts';
+import { GeminiProvider } from './gemini.provider.ts';
+import { MockProvider } from './mock.provider.ts';
+import { repairJsonString } from './repair-json.ts';
+
+export class LLMClient implements ILLMProvider {
+  constructor(private provider: ILLMProvider) {}
+
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+    const result = await this.provider.generate(prompt, systemPrompt, responseJson);
+    if (responseJson && result) {
+      return repairJsonString(result);
+    }
+    return result;
+  }
+
+  /** Factory method — tự động chọn provider dựa trên biến môi trường */
+  static createFromEnv(): LLMClient {
+    const anthropicKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY;
+
+    if (anthropicKey) {
+      const model = process.env.ANTHROPIC_MODEL || 'KhaBoDo_1.0';
+      const baseUrl = (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').replace(/\/+$/, '');
+      const mode = process.env.ANTHROPIC_CONNECTION_MODE || 'sdk';
+
+      if (mode === 'rest') {
+        console.log(`🤖 [Anthropic] Khởi tạo REST Provider - Model: ${model}`);
+        return new LLMClient(new AnthropicRESTProvider(anthropicKey, baseUrl, model));
+      }
+      console.log(`🤖 [Anthropic] Khởi tạo SDK Provider - Model: ${model}`);
+      return new LLMClient(new AnthropicSDKProvider(anthropicKey, baseUrl, model));
+    }
+
+    if (process.env.OPENAI_API_KEY) {
+      const model = process.env.OPENAI_MODEL || 'gpt-4o';
+      console.log(`🤖 Khởi tạo OpenAI Provider - Model: ${model}`);
+      return new LLMClient(new OpenAIProvider(process.env.OPENAI_API_KEY, 'https://api.openai.com/v1', model));
+    }
+
+    if (process.env.GEMINI_API_KEY) {
+      const model = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+      console.log(`🤖 Khởi tạo Gemini Provider - Model: ${model}`);
+      return new LLMClient(
+        new GeminiProvider(process.env.GEMINI_API_KEY, 'https://generativelanguage.googleapis.com/v1beta', model),
+      );
+    }
+
+    const model = 'mock-model';
+    console.log('⚠️ Không phát hiện API key. Chạy chế độ giả lập (MOCK MODE).');
+    return new LLMClient(new MockProvider(model));
+  }
+}
