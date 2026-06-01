@@ -261,20 +261,29 @@ async function pickFileForPipeline(): Promise<void> {
     return;
   }
 
-  const selected = await interactiveSelect(
-    files.map(f => f.title),
-    '📋 Chọn file để chạy pipeline (↑↓ + Enter, Esc để hủy):'
-  );
+  // Thay thế toàn bộ hàm interactiveSelect cũ bằng đoạn này:
+  const chosenFilepath = await select({
+    message: '📋 Chọn tài liệu thô để nạp vào hệ thống:',
+    options: files.map(f => ({
+      value: f.filepath,
+      label: f.title,
+      hint: chalk.gray(f.filename) // Chữ mờ phụ họa
+    })),
+    maxItems: 10,
+  });
 
-  if (selected === -1) {
-    console.log('  ⏭️ Đã hủy.');
+  // Nếu người dùng bấm ESC hoặc Ctrl+C
+  if (isCancel(chosenFilepath)) {
+    outro(chalk.gray('Đã hủy thao tác.'));
     return;
   }
 
-  const chosen = files[selected];
-  console.log(`\n  ✅ Đã chọn: ${chosen.title}`);
-  const orchestrator = new MRPOrchestrator(chosen.filepath);
+  // Chạy pipeline
+  const orchestrator = new MRPOrchestrator(chosenFilepath as string);
   await orchestrator.run();
+  
+  outro(chalk.green('✅ Hoàn tất luồng công việc!'));
+
 }
 
 async function interactiveSelect(options: string[], prompt: string): Promise<number> {
