@@ -8,6 +8,25 @@ import { askPlanAction } from './plan-displayer.ts';
 import { spinner } from '@clack/prompts';
 import chalk from 'chalk';
 
+// Hàm render markdown tối giản, an toàn cho Terminal
+function renderMarkdown(md: string): string {
+  return md
+    // H1, H2, H3
+    .replace(/^# (.*$)/gim, (_, p1) => chalk.bold.yellow(`\n⭐ ${p1}\n`))
+    .replace(/^## (.*$)/gim, (_, p1) => chalk.bold.cyan(`\n🔹 ${p1}\n`))
+    .replace(/^### (.*$)/gim, (_, p1) => chalk.bold.underline(`\n🔸 ${p1}\n`))
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, (_, p1) => chalk.bold(p1))
+    // Italic
+    .replace(/\*(.*?)\*/g, (_, p1) => chalk.italic(p1))
+    // Code block inline `code`
+    .replace(/`(.*?)`/g, (_, p1) => chalk.bgGray.black(` ${p1} `))
+    // Link [text](url) -> text (url)
+    .replace(/\[(.*?)\]\((.*?)\)/g, (_, p1, p2) => `${chalk.bold.blue(p1)} (${chalk.dim(p2)})`)
+    // List item -
+    .replace(/^- (.*$)/gim, (_, p1) => `  • ${p1}`);
+}
+
 let activeProgram: Command | null = null;
 let currentInput = '';
 
@@ -136,9 +155,9 @@ async function handleQuery(input: string, useCase: IngestDocumentUseCase): Promi
     s.stop(chalk.green('✅ Trả lời xong!'));
 
     console.log(chalk.cyan('\n' + '━'.repeat(56)));
-    console.log(result.answer);
+    console.log(renderMarkdown(result.answer));
     if (result.tokensUsed) {
-      console.log(chalk.dim(`\n🔤 Token tiêu tốn: ${result.tokensUsed}`));
+      console.log(chalk.dim(`\n🔤 Token: ${result.tokensUsed}`));
     }
     console.log(chalk.cyan('━'.repeat(56)) + '\n');
   } catch (e: unknown) {
@@ -191,35 +210,42 @@ export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFile
     });
   });
 
-  // Main loop — dùng sự kiện line
-  await new Promise<void>((resolve) => {
-    rl.on('line', async (line) => {
-      const input = line.trim();
+  // Main loop — vòng lặp xử lý câu lệnh vô hạn
+  rl.on('line', async (line) => {
+    const input = line.trim();
 
-      // Vẽ lại prompt cho dòng tiếp theo
-      currentInput = '';
+    // Vẽ lại prompt cho dòng tiếp theo
+    currentInput = '';
 
-      if (!input) {
-        process.stdout.write(chalk.bold.magenta('mrp❯ '));
-        rl.resume();
-        return;
-      }
-
-      // Xác định: lệnh / hay câu hỏi?
-      if (input.startsWith('/') || input === 'help' || input === 'run') {
-        await handleCommand(input, useCase, fileSystem);
-      } else {
-        await handleQuery(input, useCase);
-      }
-
-      // Vẽ lại prompt
-      process.stdout.write('\n' + chalk.bold.magenta('mrp❯ '));
+    if (!input) {
+      process.stdout.write(chalk.bold.magenta('mrp❯ '));
       rl.resume();
-    });
+      return;
+    }
 
-    // Vẽ prompt ban đầu
-    process.stdout.write(chalk.bold.magenta('mrp❯ '));
+    // Xác định: lệnh / hay câu hỏi?
+    if (input.startsWith('/') || input === 'help' || input === 'run') {
+      await handleCommand(input, useCase, fileSystem);
+    } else {
+      await handleQuery(input, useCase);
+    }
+
+    // Vẽ lại prompt cho lần nhập tiếp theo
+    process.stdout.write('\n' + chalk.bold.magenta('mrp❯ '));
+    rl.resume();
   });
+
+  // === QUAN TRỌNG: Ngăn không cho readline đóng khi không có lệnh exit ===
+  rl.on('close', () => {
+    // Không làm gì — chương trình không thoát trừ khi /exit
+    // Ctrl+C đã được xử lý riêng ở keypress handler
+  });
+
+  // Vẽ prompt ban đầu
+  process.stdout.write(chalk.bold.magenta('mrp❯ '));
+
+  // Giữ tiến trình tồn tại mãi mãi — dùng Promise never resolves
+  await new Promise<never>(() => {});
 }
 
 export function safeExit(code: number): void {
