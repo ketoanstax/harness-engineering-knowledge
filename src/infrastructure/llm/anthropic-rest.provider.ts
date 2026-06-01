@@ -1,4 +1,4 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class AnthropicRESTProvider implements ILLMProvider {
   private apiKey: string;
@@ -36,7 +36,35 @@ export class AnthropicRESTProvider implements ILLMProvider {
     return text.trim() || rawBody.trim();
   }
 
-  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+  private parseUsage(rawBody: string): { inputTokens: number; outputTokens: number } | undefined {
+    let usage;
+    const lines = rawBody.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const dataStr = trimmed.slice(5).trim();
+      if (dataStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(dataStr);
+        if (parsed.type === 'message_delta' && parsed.usage) {
+          usage = {
+            inputTokens: parsed.usage.input_tokens || 0,
+            outputTokens: parsed.usage.output_tokens || 0,
+          };
+        } else if (parsed.usage) {
+          usage = {
+            inputTokens: parsed.usage.input_tokens || parsed.usage.prompt_tokens || 0,
+            outputTokens: parsed.usage.output_tokens || parsed.usage.completion_tokens || 0,
+          };
+        }
+      } catch {
+        // skip
+      }
+    }
+    return usage;
+  }
+
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<LLMResponse> {
     const url = `${this.baseUrl}/messages`;
     const promptContent = responseJson
       ? prompt +
@@ -64,7 +92,18 @@ export class AnthropicRESTProvider implements ILLMProvider {
 
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const rawText = await res.text();
-      return this.parseStreamBody(rawText);
+
+      const content = this.parseStreamBody(rawText);
+      const usage = this.parseUsage(rawText);
+
+      return {
+        content,
+        usage: usage ? {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens: usage.inputTokens + usage.outputTokens,
+        } : undefined,
+      };
     } catch (error: any) {
       console.error(`❌ Lỗi gọi API Anthropic Gateway Direct:`, error.message);
       throw error;

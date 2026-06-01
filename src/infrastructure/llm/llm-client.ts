@@ -1,4 +1,4 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse } from '../../domain/interfaces/llm-provider.interface.ts';
 import { AnthropicSDKProvider } from './anthropic-sdk.provider.ts';
 import { AnthropicRESTProvider } from './anthropic-rest.provider.ts';
 import { OpenAIProvider } from './openai.provider.ts';
@@ -13,10 +13,13 @@ export class LLMClient implements ILLMProvider {
     this.provider = provider;
   }
 
-  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<LLMResponse> {
     const result = await this.provider.generate(prompt, systemPrompt, responseJson);
-    if (responseJson && result) {
-      return repairJsonString(result);
+    if (responseJson && result.content) {
+      return {
+        content: repairJsonString(result.content),
+        usage: result.usage,
+      };
     }
     return result;
   }

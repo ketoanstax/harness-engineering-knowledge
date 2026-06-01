@@ -1,4 +1,5 @@
 import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import { SourceDoc } from '../../domain/entities/source-doc.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
@@ -20,7 +21,7 @@ export class MapperPhase {
     this.config = config;
   }
 
-  async execute(sourcePath: string): Promise<MappedData | null> {
+  async execute(sourcePath: string, onTokenUsed?: (usage: LLMUsage) => void): Promise<MappedData | null> {
     const slug = this.extractSlug(sourcePath);
 
     // Đọc file thô
@@ -57,7 +58,7 @@ export class MapperPhase {
 
     let keywords: KeywordItem[] = [];
     try {
-      const parsed = await this.callLLM(rawContent);
+      const parsed = await this.callLLM(rawContent, onTokenUsed);
       structuredDoc.title = parsed.title || structuredDoc.title;
       structuredDoc.keyTakeaways = parsed.key_takeaways || [];
 
@@ -95,7 +96,7 @@ export class MapperPhase {
     };
   }
 
-  private async callLLM(rawContent: string) {
+  private async callLLM(rawContent: string, onTokenUsed?: (usage: LLMUsage) => void) {
     const llmPrompt = `Hãy phân tích bài kinh Phật giáo Nikaya hoặc tài liệu nghiên cứu dưới đây và trả về kết quả dưới dạng JSON.
 
 
@@ -118,7 +119,10 @@ Yêu cầu đầu ra (JSON):
 }`;
 
     const response = await this.llm.generate(llmPrompt, '', true);
-    const rawJson = extractJson(response);
+    if (response.usage && onTokenUsed) {
+      onTokenUsed(response.usage);
+    }
+    const rawJson = extractJson(response.content);
     return LLMStructuredResponseSchema.parse(rawJson);
   }
 

@@ -1,4 +1,4 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class GeminiProvider implements ILLMProvider {
   private apiKey: string;
@@ -11,7 +11,7 @@ export class GeminiProvider implements ILLMProvider {
     this.model = model;
   }
 
-  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<LLMResponse> {
     const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
     const payload: any = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -35,7 +35,16 @@ export class GeminiProvider implements ILLMProvider {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const result: any = await res.json();
-      return result.candidates[0].content.parts[0].text.trim();
+      const text = result.candidates[0].content.parts[0].text.trim();
+
+      const usageMeta = result.usageMetadata;
+      const usage = usageMeta ? {
+        inputTokens: usageMeta.promptTokenCount || 0,
+        outputTokens: usageMeta.candidatesTokenCount || 0,
+        totalTokens: usageMeta.totalTokenCount || 0,
+      } : undefined;
+
+      return { content: text, usage };
     } catch (error) {
       console.error('❌ Lỗi gọi API Gemini:', error);
       throw error;

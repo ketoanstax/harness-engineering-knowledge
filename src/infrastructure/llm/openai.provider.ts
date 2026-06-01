@@ -1,4 +1,4 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class OpenAIProvider implements ILLMProvider {
   private apiKey: string;
@@ -11,7 +11,7 @@ export class OpenAIProvider implements ILLMProvider {
     this.model = model;
   }
 
-  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<LLMResponse> {
     const url = `${this.baseUrl}/chat/completions`;
     const messages = systemPrompt
       ? [{ role: 'system' as const, content: systemPrompt }, { role: 'user' as const, content: prompt }]
@@ -35,7 +35,14 @@ export class OpenAIProvider implements ILLMProvider {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const result: any = await res.json();
-      return result.choices[0].message.content.trim();
+      const content = result.choices[0].message.content.trim();
+      const usage = result.usage ? {
+        inputTokens: result.usage.prompt_tokens || 0,
+        outputTokens: result.usage.completion_tokens || 0,
+        totalTokens: result.usage.total_tokens || 0,
+      } : undefined;
+
+      return { content, usage };
     } catch (error) {
       console.error('❌ Lỗi gọi API OpenAI:', error);
       throw error;

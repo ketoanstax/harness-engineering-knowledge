@@ -6,6 +6,8 @@ import { IngestDocumentUseCase } from './application/use-cases/ingest-document.u
 import { NodeFileSystem } from './infrastructure/fs/node-file-system.ts';
 import { MarkdownGenerator } from './infrastructure/formatters/markdown.generator.ts';
 import { ConfigProvider } from './infrastructure/config/config-provider.ts';
+import { TokenTracker } from './application/services/token-tracker.ts';
+import { PipelineDashboard } from './presentation/ui/pipeline-dashboard.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
 import { VerifierPhase } from './application/phases/verifier.phase.ts';
 import { MapperPhase } from './application/phases/mapper.phase.ts';
@@ -133,6 +135,8 @@ async function runBatchTest(): Promise<boolean> {
   const testLlm = LLMClient.createFromEnv();
   const testMd = new MarkdownGenerator();
   const configProvider = new ConfigProvider();
+  const tokenTracker = new TokenTracker();
+  const pipelineDashboard = new PipelineDashboard(tokenTracker);
 
   const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider);
   const reducer = new ReducerPhase(testLlm);
@@ -151,6 +155,8 @@ async function runBatchTest(): Promise<boolean> {
     testFs,
     testMd,
     configProvider,
+    tokenTracker,
+    pipelineDashboard,
   );
 
   const success = await useCase.runBatch(TEST_DIR_RAW, true);

@@ -1,6 +1,7 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import { filterRelevantNodes } from '../../core/context-filter.ts';
 import type { MappedData, ReducedData } from './_types.ts';
+import { extractJson } from './_utils.ts';
 
 export class ReducerPhase {
   private llm: ILLMProvider;
@@ -9,7 +10,7 @@ export class ReducerPhase {
     this.llm = llm;
   }
 
-  async execute(mappedData: MappedData): Promise<ReducedData> {
+  async execute(mappedData: MappedData, onTokenUsed?: (usage: LLMUsage) => void): Promise<ReducedData> {
     const keywords = mappedData.keywords || [];
 
     if (keywords.length === 0) {
@@ -57,7 +58,10 @@ So sánh đối đầu giữa các khái niệm MỚI và CŨ.
 }`;
 
       const response = await this.llm.generate(llmPrompt, '', true);
-      const parsed = JSON.parse(response);
+      if (response.usage && onTokenUsed) {
+        onTokenUsed(response.usage);
+      }
+      const parsed: any = extractJson(response.content);
       const result: ReducedData = {
         conflicts: parsed.conflicts || [],
         new_concepts: parsed.new_concepts || [],
@@ -65,8 +69,9 @@ So sánh đối đầu giữa các khái niệm MỚI và CŨ.
 
       console.log(`  ✅ Đã phát hiện ${result.conflicts.length} xung đột/cập nhật và ${result.new_concepts.length} nốt mới!`);
       return result;
-    } catch (e: any) {
-      console.log(`  ⚠️ Lỗi phân tích trùng lặp LLM: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      console.log(`  ⚠️ Lỗi phân tích trùng lặp LLM: ${err}`);
       console.log('  ⏭️ Chuyển sang chế độ gộp mặc định (Tất cả tạo mới)...');
 
       const newConcepts = keywords.map(kw => {

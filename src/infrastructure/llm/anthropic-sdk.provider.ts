@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMResponse } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class AnthropicSDKProvider implements ILLMProvider {
   private client: Anthropic;
@@ -10,7 +10,7 @@ export class AnthropicSDKProvider implements ILLMProvider {
     this.model = model;
   }
 
-  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<LLMResponse> {
     let promptContent = prompt;
     if (responseJson) {
       promptContent +=
@@ -18,21 +18,27 @@ export class AnthropicSDKProvider implements ILLMProvider {
     }
 
     try {
-      const stream = await this.client.messages.create({
+      const response = await this.client.messages.create({
         model: this.model,
         max_tokens: 4000,
         system: systemPrompt || undefined,
         messages: [{ role: 'user', content: promptContent }],
-        stream: true,
+        stream: false, // Tắt stream để dễ lấy usage trực tiếp từ response
       });
 
-      let text = '';
-      for await (const chunk of stream) {
-        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          text += chunk.delta.text;
-        }
-      }
-      return text.trim();
+      const text = response.content
+        .filter((c): c is Anthropic.TextBlock => c.type === 'text')
+        .map(c => c.text)
+        .join('')
+        .trim();
+
+      const usage = response.usage ? {
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+      } : undefined;
+
+      return { content: text, usage };
     } catch (error: any) {
       console.error(`❌ Lỗi gọi API Anthropic SDK:`, error.message);
       throw error;

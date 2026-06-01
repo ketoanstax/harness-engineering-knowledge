@@ -1,4 +1,4 @@
-import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import { type MappedData, type ReducedData, type PlanResult, type NewNodeOutput, type MergeNodeOutput, PlanResultSchema } from './_types.ts';
 import { extractJson } from './_utils.ts';
@@ -12,7 +12,7 @@ export class PlannerPhase {
     this.config = config;
   }
 
-  async execute(reducedData: ReducedData, mappedData: MappedData): Promise<PlanResult> {
+  async execute(reducedData: ReducedData, mappedData: MappedData, onTokenUsed?: (usage: LLMUsage) => void): Promise<PlanResult> {
     const conflicts = reducedData.conflicts || [];
     const newConcepts = reducedData.new_concepts || [];
     const categories = this.config.loadCategories();
@@ -64,7 +64,10 @@ Yêu cầu thiết kế:
 }`;
 
       const response = await this.llm.generate(llmPrompt, '', true);
-      const rawJson = extractJson(response);
+      if (response.usage && onTokenUsed) {
+        onTokenUsed(response.usage);
+      }
+      const rawJson = extractJson(response.content);
       const parsed = PlanResultSchema.parse(rawJson);
 
       const newNodes: NewNodeOutput[] = parsed.new_nodes.map((nn) => ({
