@@ -156,4 +156,201 @@ const PipelineDashboard = ({ status, file }) => (
 **Tóm lại:** Bạn hãy thay thế `interactiveSelect` bằng `@clack/prompts`, thay `console.log` thông thường thành `spinner()` khi gọi LLM, dự án của bạn sẽ chuyên nghiệp lên một tầm cao mới ngay lập tức!
 
 
-##
+## Tối ưu lại dự án để đạt tiêu chuẩn Clean Architecture và Clean Code. Lưu ý không tự ý bùa phép code mà phải code theo tiêu chuẩn (clean)
+
+Để tái cấu trúc (refactor) dự án theo đúng chuẩn **Clean Architecture** và **Clean Code** (nguyên tắc SOLID, không dùng "bùa phép" / hacks, không sửa state ẩn), chúng ta cần nhìn thẳng vào những "mùi code" (code smells) hiện tại trong dự án của bạn và giải quyết chúng tận gốc.
+
+Dưới đây là bản thiết kế kiến trúc chuẩn mực và cách refactor từng phần.
+
+---
+
+### 1. Phân tích các vi phạm Clean Code hiện tại
+
+1. **State Mutation (Đột biến trạng thái ẩn):** Các Phase (Mapper, Reducer...) nhận nguyên cục `orchestrator` (chứa state chung) và tự ý sửa đổi bên trong (`this.o.state.mapped_data = ...`). Đây là tối kỵ trong Clean Code vì nó tạo ra **side-effects**, khiến code không thể test độc lập và cực kỳ khó debug.
+2. **Tight Coupling (Ghép nối chặt):** `Orchestrator` tự khởi tạo `new LLMClient()`, tự gọi `node:fs`. Nó bị trói buộc với cơ sở hạ tầng (Infrastructure).
+3. **Domain trộn lẫn Infrastructure:** Các model (`AtomicNode`, `StructuredDoc`) chứa logic sinh Markdown. Theo Clean Architecture, Entity chỉ chứa dữ liệu và rule nghiệp vụ, việc format ra Markdown hay JSON là việc của Infrastructure/Presentation.
+4. **God Object:** File `index.ts` vừa làm CLI Routing, vừa chứa logic UI (Interactive Shell), vừa đọc file hệ thống.
+
+---
+
+### 2. Sơ đồ thư mục chuẩn Clean Architecture
+
+Bạn nên cấu trúc lại thư mục như sau để tách biệt rõ 4 lớp (Layers):
+
+```text
+src/
+├── domain/                  # Lớp cốt lõi: Không phụ thuộc vào thư viện ngoài
+│   ├── entities/            # AtomicNode, Plan, StructuredDoc (Chỉ chứa data & core rules)
+│   └── interfaces/          # IFileSystem, ILLMProvider, IRepository
+├── application/             # Lớp nghiệp vụ (Use Cases)
+│   ├── use-cases/           # IngestDocumentUseCase, ApprovePlanUseCase
+│   └── phases/              # Mapper, Reducer (Là pure functions/classes, nhận Input -> trả Output)
+├── infrastructure/          # Lớp hạ tầng (Implementations)
+│   ├── fs/                  # NodeFileSystem (implement IFileSystem)
+│   ├── llm/                 # AnthropicProvider (implement ILLMProvider)
+│   └── formatters/          # MarkdownGenerator (chuyển Entity -> Text)
+└── presentation/            # Lớp giao diện (CLI)
+    ├── cli/                 # Các lệnh Commander
+    └── ui/                  # @clack/prompts, shell logic
+```
+
+---
+
+### 3. Hướng dẫn Refactor chi tiết (Nguyên tắc: Không bùa phép)
+
+#### Bước 1: Loại bỏ "God Object Orchestrator" và "State Mutation" ở các Phase
+*Nguyên tắc:* Dữ liệu phải chảy theo một luồng rõ ràng (Pipeline). Các Phase là các hàm thuần túy (Pure classes): Nhận Input, trả Output, KHÔNG chạm vào biến toàn cục.
+
+**TRƯỚC KHI REFACTOR (Bad):**
+```typescript
+class PhaseMapper {
+  constructor(private o: any) {}
+  async execute() {
+    const raw = fs.readFileSync(this.o.sourcePath); // Phụ thuộc cứng vào fs
+    this.o.state.mapped_data = parsedData; // Đột biến state ẩn (Side-effect)
+  }
+}
+```
+
+**SAU KHI REFACTOR (Clean Code):**
+```typescript
+// application/phases/mapper.ts
+import { ILLMProvider } from '../../domain/interfaces/llm.interface';
+import { RawDocument, StructuredData } from '../../domain/entities';
+
+export class MapperPhase {
+  // Dependency Injection (Tiêm phụ thuộc)
+  constructor(private llm: ILLMProvider) {}
+
+  // Nhận Input chuẩn, Trả Output chuẩn. Không tác động bên ngoài.
+  async execute(rawDoc: RawDocument): Promise<StructuredData> {
+    const prompt = this.buildPrompt(rawDoc.content);
+    const response = await this.llm.generate(prompt, '', true);
+    
+    // Validate và trả về DTO/Entity
+    return this.parseResponse(response); 
+  }
+}
+```
+
+#### Bước 2: Đảo ngược phụ thuộc (Dependency Inversion) cho Use Case
+*Nguyên tắc:* `Orchestrator` (bây giờ gọi là Use Case) không được tự `new LLMClient()` hay dùng `node:fs`. Nó chỉ nhận các Interfaces do bạn định nghĩa.
+
+**application/use-cases/ingest-document.use-case.ts**
+```typescript
+import { ILLMProvider, IFileSystem, IMarkdownGenerator } from '../../domain/interfaces';
+import { MapperPhase, ReducerPhase, PlannerPhase } from '../phases';
+
+export class IngestDocumentUseCase {
+  // DI: Nhận vào các giao diện trừu tượng, không phải implementation cụ thể
+  constructor(
+    private fs: IFileSystem,
+    private llm: ILLMProvider,
+    private markdownFormatter: IMarkdownGenerator
+  ) {}
+
+  async execute(sourceFilePath: string): Promise<void> {
+    // 1. Đọc file thông qua Interface
+    const rawContent = await this.fs.readFile(sourceFilePath);
+    const rawDoc = { path: sourceFilePath, content: rawContent };
+
+    // 2. Chạy Phase 1 (Mapper)
+    const mapper = new MapperPhase(this.llm);
+    const mappedData = await mapper.execute(rawDoc); // Trả về dữ liệu sạch
+
+    // 3. Chạy Phase 2 (Reducer)
+    const reducer = new ReducerPhase(this.llm, this.fs); // Tương tự
+    const reducedData = await reducer.execute(mappedData);
+
+    // 4. Lưu trạng thái / Checkpoint thông qua Interface
+    await this.fs.saveCheckpoint(sourceFilePath, { mappedData, reducedData });
+
+    // ... tiếp tục các pha
+  }
+}
+```
+
+#### Bước 3: Tách Logic UI ra khỏi Domain
+Các model như `AtomicNode` hiện đang chứa logic render Markdown. Hãy gỡ nó ra.
+
+**domain/entities/atomic-node.entity.ts (Chỉ chứa Data)**
+```typescript
+export class AtomicNode {
+  constructor(
+    public readonly slug: string,
+    public readonly title: string,
+    public readonly tags: string[],
+    public readonly definition: string,
+    // ...
+  ) {
+    // Validation rule đặt ở đây
+    if (!slug) throw new Error('Slug is required');
+  }
+}
+```
+
+**infrastructure/formatters/markdown.generator.ts (Chịu trách nhiệm format)**
+```typescript
+import { AtomicNode } from '../../domain/entities/atomic-node.entity';
+import { IMarkdownGenerator } from '../../domain/interfaces';
+
+export class MarkdownGenerator implements IMarkdownGenerator {
+  generateAtomicNode(node: AtomicNode): string {
+    return `---
+id: ${node.slug}
+title: "${node.title}"
+tags:
+${node.tags.map(t => `  - ${t}`).join('\n')}
+---
+# ${node.title}
+
+## 💡 Định nghĩa
+${node.definition}
+`;
+  }
+}
+```
+
+#### Bước 4: Lắp ráp mọi thứ ở lớp vỏ ngoài cùng (Composition Root / CLI)
+Chỉ tại điểm bắt đầu của ứng dụng (`index.ts` hoặc tệp cấu hình DI), chúng ta mới gọi chữ `new` để tạo các Implementation và "bơm" (inject) chúng vào Use Case.
+
+**presentation/cli/index.ts**
+```typescript
+import { Command } from 'commander';
+import { NodeFileSystem } from '../../infrastructure/fs/node-fs';
+import { AnthropicProvider } from '../../infrastructure/llm/anthropic-provider';
+import { MarkdownGenerator } from '../../infrastructure/formatters/markdown.generator';
+import { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case';
+
+const program = new Command();
+
+program
+  .command('run <file>')
+  .action(async (file) => {
+    // 1. Khởi tạo Hạ tầng (Infrastructure)
+    const fsService = new NodeFileSystem();
+    const llmService = new AnthropicProvider(process.env.ANTHROPIC_KEY);
+    const mdGenerator = new MarkdownGenerator();
+
+    // 2. Tiêm (Inject) hạ tầng vào Lớp Nghiệp vụ (Use Case)
+    const useCase = new IngestDocumentUseCase(fsService, llmService, mdGenerator);
+
+    // 3. Thực thi
+    try {
+      await useCase.execute(file);
+      console.log('✅ Hoàn tất!');
+    } catch (error) {
+      console.error('❌ Lỗi:', error.message);
+    }
+  });
+
+program.parse();
+```
+
+---
+
+### Tóm tắt lợi ích của cách làm này (Tại sao nó "Clean")
+
+1. **Khả năng Test (Testability):** Bạn muốn test `MapperPhase`? Bạn không cần phải chuẩn bị thư mục hay file thật. Bạn chỉ cần truyền một đối tượng Mock (giả) của `ILLMProvider` vào constructor là test được ngay lập tức (không cần "bùa" file `core/llm.ts`).
+2. **Khả năng thay thế (Replaceability):** Ngày mai bạn muốn đổi từ Markdown sang lưu vào database PostgreSQL? Bạn không cần đụng vào Core Logic (các Use Cases hay Entities). Bạn chỉ cần viết một `PostgresRepository` mới implement Interface `IFileSystem` và gắn nó vào `index.ts`.
+3. **Luồng dữ liệu tường minh:** Không còn `this.o.state...` nhảy múa toán loạn. Mỗi Phase nhận một Input rõ ràng và trả về một Output rõ ràng. Nếu lỗi, bạn nhìn Stack Trace là biết ngay nó đứt ở Phase nào.
