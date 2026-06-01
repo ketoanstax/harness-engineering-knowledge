@@ -1,19 +1,14 @@
 ---
-id: HAE-concept-giới-định-tuệ
-title: "GiớI địNh Tuệ"
+id: HAE-concept-tam-thuc-yeu
+title: "Tam Thuc Yeu"
 category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
   - draft
-children:
-  - cay-guom
-  - bay-su-thanh-tinh
-  - pham-hanh
-
 date: 2026-06-01
 ---
 
-# GiớI địNh Tuệ
+# Tam Thuc Yeu
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
 Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.

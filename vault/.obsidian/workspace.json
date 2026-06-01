@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "7735fa1309f259f5",
+        "id": "2e2739396959c692",
         "type": "tabs",
         "children": [
           {
-            "id": "85cacc44247cf624",
+            "id": "4f0f2cd183aabe3c",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -74,7 +74,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 286.5
+    "width": 286.5,
+    "collapsed": true
   },
   "right": {
     "id": "4e55de5a67a5a6f3",
@@ -229,8 +230,10 @@
       "daily-nav:Insert ID Link": false
     }
   },
-  "active": "85cacc44247cf624",
+  "active": "4f0f2cd183aabe3c",
   "lastOpenFiles": [
+    "04_distilled/nikaya-distilled.md",
+    "02_atomic_nodes/HAE-concept-mat-chinh-niem.md",
     "1-Journal/2026/06/2026-06-01-Monday.md",
     "02_atomic_nodes/HAE-concept-semantic-graph-visualization.md",
     "01_structured_docs/lecture-16-causal-web-visualization-processed.md",
@@ -258,8 +261,6 @@
     "01_structured_docs/sutta-mn-006-processed.md",
     "02_atomic_nodes/HAE-concept-phi-nhu-ly-tac-.md",
     "02_atomic_nodes/HAE-concept-nhu-that-tue-tri.md",
-    "02_atomic_nodes/HAE-concept-uu-thang.md",
-    "02_atomic_nodes/HAE-concept-nhu-ly-tac-y.md",
     "05_journal/mrp_checkpoint_sutta-mn-005.json",
     "1-Journal/2026/06",
     "1-Journal/2026",

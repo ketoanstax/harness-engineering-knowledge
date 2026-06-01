@@ -5,6 +5,9 @@ import type { IFileSystem } from '../../domain/interfaces/file-system.interface.
 import type { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case.ts';
 import { pickFileForPipeline } from './file-picker.ts';
 import { askPlanAction } from './plan-displayer.ts';
+import { displayDomainStats } from '../tools/domain-scanner.ts';
+import { displayGraphViz } from '../tools/graph-viz.ts';
+import { displayVaultStats } from '../tools/vault-stats.ts';
 import chalk from 'chalk';
 
 let activeProgram: Command | null = null;
@@ -81,6 +84,10 @@ const COMMANDS = [
   { command: '/batch --auto-approve', description: 'Chạy batch tự động' },
   { command: '/guide', description: 'Xem hướng dẫn vận hành' },
   { command: '/doctor', description: 'Kiểm tra sức khỏe Vault' },
+  { command: '/scan', description: 'Quét domain subdirs 00_raw_docs' },
+  { command: '/domain', description: 'Liệt kê domain subdirectories' },
+  { command: '/graph', description: 'Xem cây tri thức ASCII' },
+  { command: '/status', description: 'Tổng quan Vault' },
   { command: '/exit', description: 'Thoát shell' },
 ];
 
@@ -168,12 +175,72 @@ async function handleCommand(input: string, useCase: IngestDocumentUseCase, file
   if (input === '/doctor') {
     const s = createTerminalSpinner('Chạy Diagnostics Vault...');
     const { execSync } = await import('node:child_process');
+    let hasError = false;
+
+    // 1. Validate domain raw docs
     try {
-      execSync('python3 scripts/sync_rules_and_memory.py', { stdio: 'inherit' });
-      s.stop(chalk.green('✅ Kiểm tra hoàn tất!'));
+      console.log(chalk.cyan('\n  🔍 Bước 1: Validate domain raw docs...'));
+      execSync('python3 scripts/validate_raw_docs.py', { stdio: 'inherit' });
+      console.log(chalk.green('  ✅ Domain validation OK'));
     } catch {
-      s.stop(chalk.red('⚠️ Script kiểm tra không chạy được.'));
+      console.log(chalk.red('  ⚠️ Domain validation có vấn đề (có thể do file legacy thiếu domain field)'));
+      hasError = true;
     }
+
+    // 2. Sync rules & audit
+    try {
+      console.log(chalk.cyan('\n  🔍 Bước 2: Sync rules & audit...'));
+      execSync('python3 scripts/sync_rules_and_memory.py', { stdio: 'inherit' });
+      console.log(chalk.green('  ✅ Sync & audit OK'));
+    } catch {
+      console.log(chalk.red('  ⚠️ Sync/audit thất bại'));
+      hasError = true;
+    }
+
+    // 3. Check node_modules
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('node_modules')) {
+      console.log(chalk.yellow('  ⚠️ node_modules không tồn tại — chạy pnpm install nếu cần'));
+      hasError = true;
+    } else {
+      console.log(chalk.green('  ✅ node_modules OK'));
+    }
+
+    // 4. Check .env
+    const { readFileSync } = await import('node:fs');
+    try {
+      const envContent = readFileSync('.env', 'utf-8');
+      const hasKey = envContent.includes('API_KEY') || envContent.includes('AUTH_TOKEN');
+      if (hasKey) {
+        console.log(chalk.green('  ✅ .env có API key'));
+      } else {
+        console.log(chalk.yellow('  ⚠️ .env không có API key — chạy mock mode'));
+      }
+    } catch {
+      console.log(chalk.yellow('  ⚠️ .env không tồn tại — chạy mock mode'));
+    }
+
+    s.stop(hasError ? chalk.yellow('⚠️ Diagnostics hoàn tất — 1 số vấn đề cần xem xét') : chalk.green('✅ Diagnostics hoàn tất — mọi thứ OK!'));
+    return;
+  }
+
+  if (input === '/scan') {
+    displayDomainStats(fileSystem);
+    return;
+  }
+
+  if (input === '/domain') {
+    displayDomainStats(fileSystem);
+    return;
+  }
+
+  if (input === '/graph') {
+    displayGraphViz(fileSystem);
+    return;
+  }
+
+  if (input === '/status') {
+    displayVaultStats(fileSystem);
     return;
   }
 

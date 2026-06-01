@@ -20,9 +20,17 @@ Kỹ năng này giám sát chất lượng liên kết, tính toàn vẹn của 
     - Sau khi hoàn tất, đổi trạng thái feedback thành `status: synced`.
 5.  **Kiểm tra Đường dẫn (Path Validation)**:
     - Quét tất cả liên kết markdown để phát hiện đường dẫn tuyệt đối hoặc `../`. Nếu tìm thấy → cảnh báo vi phạm quy tắc portability.
+6.  **Xác thực Domain Raw Docs (Domain Validation)**:
+    - Chạy script `scripts/validate_raw_docs.py` để quét `00_raw_docs/` phát hiện file đặt sai domain subdirectory.
+    - Kiểm tra trường `domain:` trong frontmatter có khớp với tên thư mục cha không.
+    - Kiểm tra mỗi thư mục domain có RULE.md riêng không.
 
 ## 🛠️ Lệnh vận hành đề xuất
 - Để thực hiện kiểm toán và đồng bộ, chạy:
   ```bash
   python3 scripts/sync_rules_and_memory.py
+  ```
+- Để kiểm tra domain raw docs:
+  ```bash
+  python3 scripts/validate_raw_docs.py
   ```

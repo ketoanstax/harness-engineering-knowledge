@@ -1,31 +1,83 @@
-# 00_nikaya_raw/RULE.md - Quy tắc Vận hành Kinh văn Gốc (Layer 1)
+# 00_raw_docs/RULE.md — Quy tắc Tổ chức Tài liệu Thô theo Domain
 
-Quy tắc này quản lý cách cào, lưu trữ và bảo vệ Kinh văn nguyên bản (bản dịch của HT Thích Minh Châu) trước khi đưa vào xử lý.
+Quy tắc này quản lý cách tổ chức tài liệu thô trong `00_raw_docs/` theo mô hình **mỗi thư mục con là một domain tri thức độc lập**, mỗi domain có RULE.md riêng.
 
-## 📋 Quy tắc Cốt lõi
+---
 
-1. **Bảo toàn nguyên bản tuyệt đối:** 
-   - Không được tự ý chỉnh sửa nội dung nguồn của Kinh tạng.
-   - Mọi sửa lỗi chính tả hay bổ sung giải thích từ ngữ sẽ được thực hiện ở các layer phía sau.
+## 🗂️ Kiến trúc Domain Subdirectory
 
-2. **Cấu trúc YAML Frontmatter:**
-   Mỗi file Kinh văn gốc bắt buộc phải có frontmatter để quản lý trạng thái:
-   ```yaml
-   ---
-   id: sutta-mn-{{số_kinh}}
-   title: "{{tên_bài_kinh}}"
-   category: "Nikaya Raw Sutta"
-   tags:
-     - raw-source
-     - nikaya
-     - trung-bo-kinh
-   date: 2026-05-25
-   status: processed # Hoặc processed sau khi đã cấu trúc hóa
-   ---
-   ```
+```
+00_raw_docs/
+├── RULE.md              ← Quy tắc này (tổng quan)
+├── domain-A/            ← Thư mục con = 1 domain
+│   ├── RULE.md          ← Quy tắc riêng cho domain A
+│   └── *.md             ← Tài liệu thô thuộc domain A
+├── domain-B/
+│   ├── RULE.md
+│   └── *.md
+└── ...
+```
 
-3. **Ghi chú về nguồn dịch:**
-   Ở cuối file luôn phải ghi rõ: "Bản dịch của Hòa thượng Thích Minh Châu" và nguồn trích dẫn (ví dụ: Kinh Trung Bộ, Viện Nghiên Cứu Phật Học Việt Nam).
+### Nguyên tắc
+1. **Mỗi thư mục con = 1 domain tri thức độc lập.** Ví dụ: `phat-hoc/`, `khoa-hoc-may-tinh/`, `tam-ly-hoc/`.
+2. **Mỗi thư mục con PHẢI có RULE.md riêng** mô tả:
+   - Domain này thu thập tài liệu gì, từ nguồn nào.
+   - Yêu cầu frontmatter tối thiểu.
+   - Quy tắc đặt tên file.
+   - Quy tắc bảo toàn nội dung gốc.
+3. **Tài liệu thô KHÔNG được đặt ở root `00_raw_docs/`** — root chỉ chứa RULE.md này.
+   - *Ngoại lệ:* Các file legacy hiện tại (`sutta-mn-*.md`, `lecture-*.md`) được giữ nguyên để tránh gãy backlink, nhưng domain mới PHẢI đặt trong subdir.
 
-4. **Đặt tên file sạch:**
-   Sử dụng slug viết thường, nối nhau bằng dấu gạch ngang (ví dụ: `sutta-mn-01.md`). Tuyệt đối không dùng ký tự đặc biệt hoặc khoảng trắng.
+---
+
+## 📋 Quy tắc Frontmatter Chung (Áp dụng cho MỌI domain)
+
+Mỗi file tài liệu thô PHẢI có YAML frontmatter tối thiểu:
+
+```yaml
+---
+title: "{{tên-tài-liệu}}"
+domain: "{{tên-domain-slug}}"    # BẮT BUỘC: domain: phat-hoc | tam-ly-hoc | ...
+status: processed | to-process    # BẮT BUỘC: processed = đã qua xử lý
+source: "{{URL-hoặc-mô-tả-nguồn}}" # Khuyến khích
+date: {{YYYY-MM-DD}}              # Khuyến khích
+---
+```
+
+> **Lưu ý:** Trường `domain:` phải khớp với tên thư mục cha. Ví dụ file trong `phat-hoc/` phải có `domain: phat-hoc`.
+
+---
+
+## 🔗 Liên kết & Truy vết
+
+- Khi `01_structured_docs/` hoặc `02_atomic_nodes/` trỏ về tài liệu thô, đường dẫn PHẢI bao gồm subdir:
+  - ĐÚNG: `00_raw_docs/phat-hoc/sutta-mn-001.md`
+  - SAI: `00_raw_docs/sutta-mn-001.md`
+
+---
+
+## 📂 Danh sách Domain Hiện tại
+
+| Thư mục | Domain | Trạng thái |
+|:---|:---|---|
+| *(root)* | Legacy: Nikaya + Lecture | 🟡 Di sản (giữ nguyên) |
+| `loi_phat_day/` | Giảng giải Phật học (Lời Phật dạy) | 🟢 Hoạt động |
+| `trung_bo_kinh/` | Giảng giải Trung Bộ Kinh | 🟢 Hoạt động |
+
+---
+
+## 🛡️ Cơ chế Phát hiện File Sai Domain (Auto-Detect)
+
+**Script:** `scripts/validate_raw_docs.py`
+
+Khi chạy, script sẽ:
+1. Quét tất cả file `.md` trong mỗi subdir của `00_raw_docs/`.
+2. Kiểm tra trường `domain:` trong frontmatter có khớp với tên thư mục cha không.
+3. Báo cáo file nào bị đặt sai thư mục.
+4. Đề xuất đường dẫn đúng.
+
+> Script này được gọi tự động trong quy trình kiểm toán (Audit Workflow) của `.agent/hae-auditor.md`.
+
+---
+
+*Quy tắc này đảm bảo `00_raw_docs/` có thể mở rộng theo bất kỳ domain tri thức nào mà không phá vỡ cấu trúc hiện tại.*

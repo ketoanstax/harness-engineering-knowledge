@@ -70,7 +70,9 @@ Khi AI cần tìm hiểu một khái niệm trong Vault:
 - [Quy tắc Nốt Nguyên tử](02_atomic_nodes/RULE.md) — Cấu trúc chi tiết của mỗi nốt.
 - [Quy tắc Định tuyến AI](03_neural_map/RULE.md) — Cách định tuyến và tra cứu bản đồ.
 - [Quy tắc Tài liệu Cấu trúc](01_structured_docs/RULE.md) — Cách chắt lọc tài liệu thô.
-- [Quy tắc Tài liệu Thô](00_raw_docs/RULE.md) — Cách quản lý và đánh dấu dữ liệu.
+- [Quy tắc Tài liệu Thô](00_raw_docs/RULE.md) — Cách tổ chức domain subdirectory trong 00_raw_docs.
+- [Quy tắc Domain: Lời Phật dạy](00_raw_docs/loi_phat_day/RULE.md) — Quy tắc riêng cho domain giảng giải Phật học.
+- [Quy tắc Domain: Trung Bộ Kinh](00_raw_docs/trung_bo_kinh/RULE.md) — Quy tắc riêng cho domain giảng giải Trung Bộ Kinh.
 - [Quy tắc Bộ nhớ & Feedback](memory/RULE.md) — Cách ghi nhận phản hồi và quản lý bối cảnh con người.
 
 ---

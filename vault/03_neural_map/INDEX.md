@@ -7,6 +7,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 ## 🗂️ Phân loại theo Danh mục (Categories)
 
 ### 1. Tứ Thánh Đế (Four Noble Truths)
+- [Vô thủ trước Bát-niết-bàn](02_atomic_nodes/HAE-concept-vo-thu-truoc-bat-niet-ban.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Đào lên](02_atomic_nodes/HAE-concept-dao-len.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Tâm từ bi](02_atomic_nodes/HAE-concept-tam-tu-bi.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Sân hận](02_atomic_nodes/HAE-concept-san-han.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
@@ -21,6 +22,8 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Đoạn giảm (Sallekha)](02_atomic_nodes/HAE-concept-doan-giam-sallekha.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 2. Duyên Khởi (Dependent Origination)
+- [Người thợ săn](02_atomic_nodes/HAE-concept-nguoi-tho-san.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Đồ mồi](02_atomic_nodes/HAE-concept-do-moi.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Bốn chấp thủ](02_atomic_nodes/HAE-concept-bon-chap-thu.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Thức ăn (Ahara)](02_atomic_nodes/HAE-concept-thuc-an-ahara.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
@@ -32,6 +35,9 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Cấu uế của tâm](02_atomic_nodes/HAE-concept-cau-ue-cua-tam.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)
+- [Phóng dật](02_atomic_nodes/HAE-concept-phong-dat.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Phạm hạnh](02_atomic_nodes/HAE-concept-pham-hanh.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Bảy sự thanh tịnh (Satta Visuddhi)](02_atomic_nodes/HAE-concept-bay-su-thanh-tinh.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Cây gươm](02_atomic_nodes/HAE-concept-cay-guom.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Người có trí](02_atomic_nodes/HAE-concept-nguoi-co-tri.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Nhất tọa thực](02_atomic_nodes/HAE-concept-nhat-toa-thuc.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.

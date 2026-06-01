@@ -116,35 +116,43 @@ ${doc.summary.trim()}
 
   generatePlan(plan: PlanFile): string {
     const item = plan.items[0];
+    // --- 🟢 ĐÓNG GÓI CONTAINER CHO NỐT TẠO MỚI ---
     let newNodesStr = '';
-    if (item?.new_nodes) {
+    if (item?.new_nodes && item.new_nodes.length > 0) {
       for (const nn of item.new_nodes) {
-        newNodesStr += `  - **Tạo mới**: \`${nn.slug}.md\`
-    - Tiêu đề: *${nn.title}*
-    - Danh mục: ${nn.category}
-    - Thẻ: ${nn.tags.join(', ')}
-    - Parent: ${nn.parent || 'Không có'}
-    - Children: ${nn.children && nn.children.length > 0 ? nn.children.join(', ') : 'Không có'}
-    - Nhân gốc: ${nn.causal_core || 'Không có'}
+        newNodesStr += `
+### 🟢 Tạo mới: \`${nn.slug}.md\`
+> **Tiêu đề**: *${nn.title}*
+> **Danh mục**: ${nn.category}
+> **Thẻ**: ${nn.tags.join(', ')}
+> **Parent**: ${nn.parent || 'Không có'}
+> **Children**: ${nn.children && nn.children.length > 0 ? nn.children.join(', ') : 'Không có'}
+> **Nhân gốc**: ${nn.causal_core || 'Không có'}
 `;
       }
+    } else {
+      newNodesStr = '> Không có nốt mới nào được đề xuất.\n';
     }
 
+    // --- 🟡 ĐÓNG GÓI CONTAINER CHO NỐT CẬP NHẬT ---
     let mergeNodesStr = '';
-    if (item?.merge_nodes) {
+    if (item?.merge_nodes && item.merge_nodes.length > 0) {
       for (const mn of item.merge_nodes) {
-        let mergeStr = `  - **Cập nhật/sửa**: \`${mn.slug}.md\`\n`;
+        mergeNodesStr += `
+### 🟡 Cập nhật: \`${mn.slug}.md\`
+`;
         if (mn.updated_definition) {
-          mergeStr += `    - Định nghĩa cập nhật: ${mn.updated_definition}\n`;
+          mergeNodesStr += `> **Định nghĩa mới**: ${mn.updated_definition}\n`;
         }
         for (const ap of mn.added_principles) {
-          mergeStr += `    - Thêm nguyên lý: ${ap}\n`;
+          mergeNodesStr += `> **Thêm nguyên lý**: ${ap}\n`;
         }
         for (const ac of mn.added_children) {
-          mergeStr += `    - Thêm child: ${ac}\n`;
+          mergeNodesStr += `> **Thêm nốt con**: ${ac}\n`;
         }
-        mergeNodesStr += mergeStr;
       }
+    } else {
+      mergeNodesStr = '> Không có nốt nào cần trộn/cập nhật.\n';
     }
 
     return `# 📋 Kế hoạch MRP Ingestion Plan
@@ -157,24 +165,23 @@ ${doc.summary.trim()}
 ---
 
 ## 🧠 Luận giải (Reasoning)
-${item?.reasoning || 'Không có luận giải.'}
+> ${item?.reasoning || 'Không có luận giải.'}
 
 ---
 
 ## 🚀 Hành động Tạo mới (New Nodes)
-${newNodesStr || '  Không có nốt mới.'}
+${newNodesStr}
 
 ## 🔄 Hành động Cập nhật/Trộn (Merge Nodes)
-${mergeNodesStr || '  Không có nốt cần trộn.'}
+${mergeNodesStr}
 
 ---
 
 ## 📌 Hướng dẫn duyệt
-- Nếu kế hoạch **OK**, user nhập lệnh: \`mrp approve -t <timestamp>\`
-- Nếu kế hoạch **cần chỉnh sửa**, user sửa trực tiếp file này hoặc yêu cầu thay đổi.
-- Nếu kế hoạch **không phù hợp**, user nhập lệnh: \`mrp reject -t <timestamp>\`
+- Nếu kế hoạch **OK**, user chọn \`✅ Duyệt & chạy tiếp\`
+- Nếu kế hoạch **không phù hợp**, user chọn \`❌ Từ chối & dọn dẹp\`
 `;
-  }
+  } 
 
   // --- Helpers ---
 

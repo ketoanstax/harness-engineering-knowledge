@@ -10,6 +10,8 @@ children:
   - lau-hoac
   - thuc-an-ahara
   - bon-chap-thu
+  - do-moi
+  - nguoi-tho-san
 
 date: 2026-06-01
 ---
