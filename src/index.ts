@@ -8,6 +8,8 @@ import matter from 'gray-matter';
 import { MRPOrchestrator, MRPBatchOrchestrator } from './core/orchestrator.ts';
 import { DIR_JOURNAL, DIR_RAW } from './core/config.ts';
 import { PlanFile } from './models/plan.ts';
+import { intro, outro, select, spinner, isCancel } from '@clack/prompts';
+import chalk from 'chalk';
 
 let isInteractiveShell = false;
 
@@ -231,6 +233,10 @@ program.on('command:*', () => {
 // =============================
 
 async function pickFileForPipeline(): Promise<void> {
+
+  // Bắt đầu giao diện xịn xò
+  intro(chalk.bgCyan.black(' 🚀 MRP KNOWLEDGE INGESTION PIPELINE '));
+
   const files = fs.readdirSync(DIR_RAW)
     .filter(f => f.endsWith('.md') && f !== 'RULE.md' && f !== 'index.md')
     .map(f => {
@@ -251,7 +257,7 @@ async function pickFileForPipeline(): Promise<void> {
     .filter((f): f is NonNullable<typeof f> => f !== null && f.status === 'to-process');
 
   if (files.length === 0) {
-    console.log('  📭 Không có file nào ở trạng thái "to-process" trong 00_raw_docs/');
+    console.log(chalk.yellow('  📭 Không có file nào ở trạng thái "to-process" trong 00_raw_docs/'));
     return;
   }
 
@@ -387,6 +393,7 @@ function printShellHelp(): void {
 }
 
 async function runShell(): Promise<void> {
+  isInteractiveShell = true;
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -423,16 +430,20 @@ async function runShell(): Promise<void> {
       return;
     }
 
+    // Tạm dừng readline để nhường quyền nhập liệu cho interactiveSelect (File Picker)
+    rl.pause();
+
     try {
       const args = trimmed.split(/\s+/);
       await program.parseAsync(['node', 'mrp', ...args], { from: 'user' });
     } catch (e: any) {
-      // Commander ném CommanderError thay vì safeExit() khi dùng exitOverride
-      // Chỉ hiển thị lỗi nếu không phải exit code 0 (thoát bình thường)
       if (e.code !== 'commander.exit' || e.exitCode !== 0) {
-        console.error(`⚠️ Lỗi: ${e.message}`);
+        console.error(`⚠️ ${e.message}`);
       }
     }
+    
+    // Xử lý xong, mở lại readline để nhận lệnh tiếp theo
+    rl.resume();
     rl.prompt();
   });
 
