@@ -13,6 +13,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Lõi cây (Sāra)](02_atomic_nodes/HAE-concept-loi-cay-sara.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 2. Duyên Khởi (Dependent Origination)
+- [Tư Niệm Tịnh Tướng](02_atomic_nodes/HAE-concept-tu-niem-tinh-tuong.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Lậu hoặc (Asava)](02_atomic_nodes/HAE-concept-lau-hoac.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 3. Bát Chánh Đạo (Noble Eightfold Path)
@@ -21,6 +22,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Tưởng Tri (Sañjānāti)](02_atomic_nodes/HAE-concept-tuong-tri.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)
+- [Như Thật Tuệ Tri](02_atomic_nodes/HAE-concept-nhu-that-tue-tri.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Nghi Hoặc Do Dự](02_atomic_nodes/HAE-concept-nghi-hoac-do-du.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Hôn Trầm Thụy Miên](02_atomic_nodes/HAE-concept-hon-tram-thuy-mien.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Từ Tâm](02_atomic_nodes/HAE-concept-tu-tam.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
@@ -32,6 +34,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 ### 6. Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)
 
 ### 7. Giáo lý Khác (Other Dharma)
+- [Cấu Uế](02_atomic_nodes/HAE-concept-cau-ue.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Sự Sợ Hãi Khiếp Đảm (Bhayabherava)](02_atomic_nodes/HAE-concept-so-hai-khiep-dam.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Thừa tự tài vật (Amisadayada)](02_atomic_nodes/HAE-concept-thua-tu-tai-vat.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 

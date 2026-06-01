@@ -103,78 +103,95 @@ function repairJsonString(raw: string): string {
   return repaired;
 }
 
-export class LLMClient {
-  private apiProvider: 'anthropic' | 'openai' | 'gemini' | 'mock';
-  private apiKey?: string;
+// Interface định nghĩa LLM Provider theo Clean Architecture
+export interface ILLMProvider {
+  generate(prompt: string, systemPrompt?: string, responseJson?: boolean): Promise<string>;
+}
+
+// 1. Anthropic SDK Provider
+export class AnthropicSDKProvider implements ILLMProvider {
+  private client: Anthropic;
   private model: string;
-  private baseUrl: string;
-  private anthropicClient?: Anthropic;
 
-  constructor() {
-    const anthropicKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY;
-
-    if (anthropicKey) {
-      this.apiProvider = 'anthropic';
-      this.apiKey = anthropicKey;
-      this.model = process.env.ANTHROPIC_MODEL || 'KhaBoDo_1.0';
-      this.baseUrl = (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').replace(/\/+$/, '');
-
-      this.anthropicClient = new Anthropic({
-        apiKey: this.apiKey,
-        baseURL: this.baseUrl,
-      });
-
-      console.log('🤖 Đã phát hiện cấu hình Anthropic/9router Gateway:');
-      console.log(`   Model: ${this.model}`);
-      console.log(`   Base URL: ${this.baseUrl}`);
-    } else if (process.env.OPENAI_API_KEY) {
-      this.apiProvider = 'openai';
-      this.apiKey = process.env.OPENAI_API_KEY;
-      this.model = process.env.OPENAI_MODEL || 'gpt-4o';
-      this.baseUrl = 'https://api.openai.com/v1';
-      console.log(`🤖 Đã phát hiện cấu hình OpenAI: Model: ${this.model}`);
-    } else if (process.env.GEMINI_API_KEY) {
-      this.apiProvider = 'gemini';
-      this.apiKey = process.env.GEMINI_API_KEY;
-      this.model = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
-      this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-      console.log(`🤖 Đã phát hiện cấu hình Gemini: Model: ${this.model}`);
-    } else {
-      this.apiProvider = 'mock';
-      this.model = 'mock-model';
-      this.baseUrl = 'mock-url';
-      console.log('⚠️ Cảnh báo: Không phát hiện API key (Anthropic/OpenAI/Gemini).');
-      console.log('   Hệ thống chạy ở chế độ giả lập thông minh (MOCK MODE).');
-    }
+  constructor(apiKey: string, baseUrl: string, model: string) {
+    this.client = new Anthropic({
+      apiKey,
+      baseURL: baseUrl,
+    });
+    this.model = model;
   }
 
   async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
-    if (this.apiProvider === 'mock') {
-      return this.mockGenerate(prompt, responseJson);
-    }
-
-    let result = '';
-    if (this.apiProvider === 'anthropic') {
-      result = await this.callAnthropic(prompt, systemPrompt, responseJson);
-    } else if (this.apiProvider === 'openai') {
-      result = await this.callOpenai(prompt, systemPrompt, responseJson);
-    } else if (this.apiProvider === 'gemini') {
-      result = await this.callGemini(prompt, systemPrompt, responseJson);
-    }
-
-    if (responseJson && result) {
-      return repairJsonString(result);
-    }
-
-    return result;
-  }
-
-  private async callAnthropicDirect(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
-    const url = `${this.baseUrl}/messages`;
     let promptContent = prompt;
     if (responseJson) {
       promptContent += '\n\nIMPORTANT: Return ONLY a valid JSON object. Do not include markdown code block syntax (like ```json) in your final response.';
     }
+
+    try {
+      const stream = await this.client.messages.create({
+        model: this.model,
+        max_tokens: 4000,
+        system: systemPrompt || undefined,
+        messages: [{ role: 'user', content: promptContent }],
+        stream: true,
+      });
+
+      let text = '';
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          text += chunk.delta.text;
+        }
+      }
+      return text.trim();
+    } catch (error: any) {
+      console.error(`❌ Lỗi gọi API Anthropic SDK:`, error.message);
+      throw error;
+    }
+  }
+}
+
+// 2. Anthropic REST Provider (Dùng Axios & Stream Parser thủ công)
+export class AnthropicRESTProvider implements ILLMProvider {
+  private apiKey: string;
+  private baseUrl: string;
+  private model: string;
+
+  constructor(apiKey: string, baseUrl: string, model: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+    this.model = model;
+  }
+
+  private parseStreamBody(rawBody: string): string {
+    let text = '';
+    const lines = rawBody.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+
+      const dataStr = trimmed.slice(5).trim();
+      if (dataStr === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(dataStr);
+        if (parsed.delta?.text) {
+          text += parsed.delta.text;
+        } else if (parsed.choices?.[0]?.delta?.content) {
+          text += parsed.choices[0].delta.content;
+        } else if (parsed.completion) {
+          text += parsed.completion;
+        }
+      } catch (e) {
+        // Bỏ qua dòng lỗi parse JSON
+      }
+    }
+    return text.trim() || rawBody.trim();
+  }
+
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+    const url = `${this.baseUrl}/messages`;
+    const promptContent = responseJson
+      ? prompt + '\n\nIMPORTANT: Return ONLY a valid JSON object. Do not include markdown code block syntax (like ```json) in your final response.'
+      : prompt;
 
     const payload = {
       model: this.model,
@@ -187,68 +204,38 @@ export class LLMClient {
     try {
       const res = await axios.post(url, payload, {
         headers: {
-          'x-api-key': this.apiKey || '',
+          'x-api-key': this.apiKey,
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
         responseType: 'text'
       });
 
-      const rawBody = res.data;
-
-      let text = '';
-      const lines = rawBody.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('data:')) {
-          const dataStr = trimmed.slice(5).trim();
-          if (dataStr === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(dataStr);
-            // 1. Anthropic stream: content_block_delta -> delta -> text
-            if (parsed.delta && parsed.delta.text) {
-              text += parsed.delta.text;
-            }
-            // 2. OpenAI/Raw stream: choices[0] -> delta -> content
-            else if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-              text += parsed.choices[0].delta.content;
-            }
-            // 3. Anthropic completion
-            else if (parsed.completion) {
-              text += parsed.completion;
-            }
-          } catch (e) {
-            // Bỏ qua dòng lỗi parse JSON
-          }
-        }
-      }
-
-      if (text.trim()) {
-        return text.trim();
-      }
-
-      return rawBody.trim();
+      return this.parseStreamBody(res.data);
     } catch (error: any) {
       console.error(`❌ Lỗi gọi API Anthropic Gateway Direct:`, error.message);
       throw error;
     }
   }
+}
 
-  private async callAnthropic(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
-    if (!this.anthropicClient) {
-      throw new Error('Anthropic client is not initialized');
-    }
+// 3. OpenAI Provider
+export class OpenAIProvider implements ILLMProvider {
+  private apiKey: string;
+  private baseUrl: string;
+  private model: string;
 
-    return this.callAnthropicDirect(prompt, systemPrompt, responseJson);
+  constructor(apiKey: string, baseUrl: string, model: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+    this.model = model;
   }
 
-  private async callOpenai(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
     const url = `${this.baseUrl}/chat/completions`;
-    const messages: any[] = [];
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt });
-    }
-    messages.push({ role: 'user', content: prompt });
+    const messages = systemPrompt
+      ? [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }]
+      : [{ role: 'user', content: prompt }];
 
     const payload: any = {
       model: this.model,
@@ -270,9 +257,7 @@ export class LLMClient {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const result: any = await res.json();
       return result.choices[0].message.content.trim();
@@ -281,8 +266,21 @@ export class LLMClient {
       throw error;
     }
   }
+}
 
-  private async callGemini(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
+// 4. Gemini Provider
+export class GeminiProvider implements ILLMProvider {
+  private apiKey: string;
+  private baseUrl: string;
+  private model: string;
+
+  constructor(apiKey: string, baseUrl: string, model: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+    this.model = model;
+  }
+
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
     const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
     const payload: any = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -305,9 +303,7 @@ export class LLMClient {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const result: any = await res.json();
       return result.candidates[0].content.parts[0].text.trim();
@@ -316,8 +312,17 @@ export class LLMClient {
       throw error;
     }
   }
+}
 
-  private mockGenerate(prompt: string, responseJson: boolean): string {
+// 5. Mock Provider
+export class MockProvider implements ILLMProvider {
+  private model: string;
+
+  constructor(model: string) {
+    this.model = model;
+  }
+
+  async generate(prompt: string, _systemPrompt = '', _responseJson = false): Promise<string> {
     const promptLower = prompt.toLowerCase();
     const currentSlug = process.env.CURRENT_MRP_SOURCE_SLUG || '';
 
@@ -382,7 +387,7 @@ export class LLMClient {
     // =====================================================================
     // 📂 HỒ SƠ 2: LECTURE 15 (TOKEN BUDGET UNDER LARGE LOAD)
     // =====================================================================
-    else if (currentSlug.includes('lecture-15')) {
+    if (currentSlug.includes('lecture-15')) {
       // Planner 15
       if (promptLower.includes('kỹ sư trưởng')) {
         return JSON.stringify({
@@ -458,7 +463,7 @@ export class LLMClient {
     // =====================================================================
     // 📂 HỒ SƠ 3: LECTURE 16 (CAUSAL WEB VISUALIZATION)
     // =====================================================================
-    else if (currentSlug.includes('lecture-16')) {
+    if (currentSlug.includes('lecture-16')) {
       // Planner 16
       if (promptLower.includes('kỹ sư trưởng')) {
         return JSON.stringify({
@@ -516,100 +521,146 @@ export class LLMClient {
     // =====================================================================
     // 📂 LECTURE 13: DEFAULT (global-context-loss / no-accumulation)
     // =====================================================================
-    else {
-      // Planner 13
-      if (promptLower.includes('kỹ sư trưởng')) {
-        return JSON.stringify({
-          new_nodes: [
-            {
-              slug: 'global-context-loss',
-              title: 'Global Context Loss - Mất bối cảnh tổng thể trong Vector DB',
-              category: 'Harness Core Concept',
-              tags: ['global-context-loss', 'vector-db', 'context-fragmentation'],
-              definition: 'Vector Database cắt tài liệu thành các chunk nhỏ khiến AI Agent không thể nhìn thấy cấu trúc tổng thể của tài liệu.',
-              principles: [
-                'MRP Pipeline khắc phục bằng cách biên dịch tài liệu thành cây tri thức phẳng thay vì chunk rời rạc.',
-                'Backlinks trực tiếp trỏ về dòng, trang cụ thể đảm bảo khả năng truy vết.'
-              ],
-              parent: 'harness-definition',
-              children: [],
-              causal_core: 'system-of-record',
-              causal_supporting: ['feature-list-primitive'],
-              causal_derivative: ['five-harness-principles']
-            },
-            {
-              slug: 'no-accumulation',
-              title: 'No Accumulation - Hệ quả không tích lũy tri thức',
-              category: 'Harness Core Concept',
-              tags: ['no-accumulation', 'knowledge-merge', 'consistency'],
-              definition: 'Khi tài liệu thay đổi, VectorDB chỉ chèn thêm vector mới thay vị hợp nhất tri thức, dẫn đến mâu thuẫn.',
-              principles: [
-                'Cơ chế MRP Merge thay thế ghi đè, luôn trộn (merge) kiến thức mới vào nốt cũ.',
-                'Phát hiện xung đột ngữ nghĩa tự động bằng Reducer.'
-              ],
-              parent: 'global-context-loss',
-              children: [],
-              causal_core: 'clean-state',
-              causal_supporting: ['compaction-strategy'],
-              causal_derivative: ['session-continuity']
-            }
-          ],
-          merge_nodes: [
-            {
-              slug: 'early-victory',
-              updated_definition: 'Ngăn chặn Agent tự mãn tuyên bố thành công sớm và mở rộng thêm khả năng phát hiện ảo tưởng ngữ nghĩa (hallucinations) từ các nguồn dữ liệu phân mảnh.',
-              added_principles: [
-                'Mở rộng phát hiện: Không chỉ tuyên bố thành công sớm, Agent còn ảo tưởng khi đọc các chunk dữ liệu rời rạc.'
-              ],
-              added_children: ['global-context-loss'],
-              updated_causal_derivative: ['global-context-loss', 'no-accumulation']
-            }
-          ],
-          reasoning: 'Tài liệu mới nhấn mạnh 3 điểm mù của VectorDB: 1) Global Context Loss, 2) No Accumulation, 3) Uncontrolled Hallucination. Điểm 3 (Hallucination) đã được mô tả một phần trong nốt early-victory nên chúng tôi MERGE vào đó. Hai khái niệm còn lại hoàn toàn mới nên tạo nốt mới, nối parent với harness-definition và clean-state.'
-        });
-      }
-
-      // Reducer 13
-      if (promptLower.includes('lead architect')) {
-        return JSON.stringify({
-          conflicts: [
-            {
-              keyword: 'Hallucinations',
-              existing_slug: 'early-victory',
-              action: 'merge',
-              reason: 'Khái niệm ảo tưởng (hallucinations) liên quan đến lỗi tự mãn tuyên bố thành công sớm (early victory).'
-            }
-          ],
-          new_concepts: [
-            {
-              name: 'Global Context Loss',
-              suggested_slug: 'global-context-loss',
-              definition: 'Mất bối cảnh tổng thể khi AI chỉ nhận các đoạn vụn rời rạc từ Vector DB.'
-            },
-            {
-              name: 'No Accumulation',
-              suggested_slug: 'no-accumulation',
-              definition: 'Hệ thống không tích lũy tri thức, dẫn đến mâu thuẫn giữa dữ liệu cũ và mới.'
-            }
-          ]
-        });
-      }
-
-      // Mapper 13
+    // Planner 13
+    if (promptLower.includes('kỹ sư trưởng')) {
       return JSON.stringify({
-        title: 'Bản chắt lọc tự động - Lecture 13',
-        key_takeaways: [
-          'MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.',
-          'Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.',
-          'Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc.'
+        new_nodes: [
+          {
+            slug: 'global-context-loss',
+            title: 'Global Context Loss - Mất bối cảnh tổng thể trong Vector DB',
+            category: 'Harness Core Concept',
+            tags: ['global-context-loss', 'vector-db', 'context-fragmentation'],
+            definition: 'Vector Database cắt tài liệu thành các chunk nhỏ khiến AI Agent không thể nhìn thấy cấu trúc tổng thể của tài liệu.',
+            principles: [
+              'MRP Pipeline khắc phục bằng cách biên dịch tài liệu thành cây tri thức phẳng thay vì chunk rời rạc.',
+              'Backlinks trực tiếp trỏ về dòng, trang cụ thể đảm bảo khả năng truy vết.'
+            ],
+            parent: 'harness-definition',
+            children: [],
+            causal_core: 'system-of-record',
+            causal_supporting: ['feature-list-primitive'],
+            causal_derivative: ['five-harness-principles']
+          },
+          {
+            slug: 'no-accumulation',
+            title: 'No Accumulation - Hệ quả không tích lũy tri thức',
+            category: 'Harness Core Concept',
+            tags: ['no-accumulation', 'knowledge-merge', 'consistency'],
+            definition: 'Khi tài liệu thay đổi, VectorDB chỉ chèn thêm vector mới thay vị hợp nhất tri thức, dẫn đến mâu thuẫn.',
+            principles: [
+              'Cơ chế MRP Merge thay thế ghi đè, luôn trộn (merge) kiến thức mới vào nốt cũ.',
+              'Phát hiện xung đột ngữ nghĩa tự động bằng Reducer.'
+            ],
+            parent: 'global-context-loss',
+            children: [],
+            causal_core: 'clean-state',
+            causal_supporting: ['compaction-strategy'],
+            causal_derivative: ['session-continuity']
+          }
         ],
-        keywords: [
-          { name: 'Global Context Loss', definition: 'Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc.' },
-          { name: 'No Accumulation', definition: 'Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn.' },
-          { name: 'Uncontrolled Hallucinations', definition: 'AI không thể truy vết ngược dòng dẫn chứng.' }
+        merge_nodes: [
+          {
+            slug: 'early-victory',
+            updated_definition: 'Ngăn chặn Agent tự mãn tuyên bố thành công sớm và mở rộng thêm khả năng phát hiện ảo tưởng ngữ nghĩa (hallucinations) từ các nguồn dữ liệu phân mảnh.',
+            added_principles: [
+              'Mở rộng phát hiện: Không chỉ tuyên bố thành công sớm, Agent còn ảo tưởng khi đọc các chunk dữ liệu rời rạc.'
+            ],
+            added_children: ['global-context-loss'],
+            updated_causal_derivative: ['global-context-loss', 'no-accumulation']
+          }
         ],
-        summary: 'Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song.'
+        reasoning: 'Tài liệu mới nhấn mạnh 3 điểm mù của VectorDB: 1) Global Context Loss, 2) No Accumulation, 3) Uncontrolled Hallucination. Điểm 3 (Hallucination) đã được mô tả một phần trong nốt early-victory nên chúng tôi MERGE vào đó. Hai khái niệm còn lại hoàn toàn mới nên tạo nốt mới, nối parent với harness-definition và clean-state.'
       });
     }
+
+    // Reducer 13
+    if (promptLower.includes('lead architect')) {
+      return JSON.stringify({
+        conflicts: [
+          {
+            keyword: 'Hallucinations',
+            existing_slug: 'early-victory',
+            action: 'merge',
+            reason: 'Khái niệm ảo tưởng (hallucinations) liên quan đến lỗi tự mãn tuyên bố thành công sớm (early victory).'
+          }
+        ],
+        new_concepts: [
+          {
+            name: 'Global Context Loss',
+            suggested_slug: 'global-context-loss',
+            definition: 'Mất bối cảnh tổng thể khi AI chỉ nhận các đoạn vụn rời rạc từ Vector DB.'
+          },
+          {
+            name: 'No Accumulation',
+            suggested_slug: 'no-accumulation',
+            definition: 'Hệ thống không tích lũy tri thức, dẫn đến mâu thuẫn giữa dữ liệu cũ và mới.'
+          }
+        ]
+      });
+    }
+
+    // Mapper 13
+    return JSON.stringify({
+      title: 'Bản chắt lọc tự động - Lecture 13',
+      key_takeaways: [
+        'MRP Pipeline chuyển hóa tài liệu thô thành cây tri thức đồ thị phẳng.',
+        'Vector Database bị 3 điểm mù: global context loss, no accumulation, hallucinations.',
+        'Mỗi nốt nguyên tử có parent/children và Causal Web để truy vết nguồn gốc.'
+      ],
+      keywords: [
+        { name: 'Global Context Loss', definition: 'Mất bối cảnh tổng thể do AI chỉ nhận các đoạn vụn rời rạc.' },
+        { name: 'No Accumulation', definition: 'Không tích lũy được tri thức, dữ liệu cũ và mới dễ mâu thuẫn.' },
+        { name: 'Uncontrolled Hallucinations', definition: 'AI không thể truy vết ngược dòng dẫn chứng.' }
+      ],
+      summary: 'Bài giảng phân tích lý do MRP Pipeline chiến thắng Vector Database và đề xuất quy trình gồm 6 pha xử lý song song.'
+    });
+  }
+}
+
+// 6. Facade/Controller chính (LLMClient)
+export class LLMClient implements ILLMProvider {
+  private provider: ILLMProvider;
+
+  constructor() {
+    const anthropicKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY;
+
+    if (anthropicKey) {
+      const model = process.env.ANTHROPIC_MODEL || 'KhaBoDo_1.0';
+      const baseUrl = (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').replace(/\/+$/, '');
+      const mode = process.env.ANTHROPIC_CONNECTION_MODE || 'sdk';
+
+      if (mode === 'rest') {
+        this.provider = new AnthropicRESTProvider(anthropicKey, baseUrl, model);
+        console.log(`🤖 [Anthropic] Khởi tạo REST Provider (Axios) - Model: ${model}`);
+      } else {
+        this.provider = new AnthropicSDKProvider(anthropicKey, baseUrl, model);
+        console.log(`🤖 [Anthropic] Khởi tạo SDK Provider - Model: ${model}`);
+      }
+    } else if (process.env.OPENAI_API_KEY) {
+      const apiKey = process.env.OPENAI_API_KEY;
+      const model = process.env.OPENAI_MODEL || 'gpt-4o';
+      const baseUrl = 'https://api.openai.com/v1';
+      this.provider = new OpenAIProvider(apiKey, baseUrl, model);
+      console.log(`🤖 Khởi tạo OpenAI Provider - Model: ${model}`);
+    } else if (process.env.GEMINI_API_KEY) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      const model = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+      const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+      this.provider = new GeminiProvider(apiKey, baseUrl, model);
+      console.log(`🤖 Khởi tạo Gemini Provider - Model: ${model}`);
+    } else {
+      const model = 'mock-model';
+      this.provider = new MockProvider(model);
+      console.log('⚠️ Cảnh báo: Không phát hiện API key. Chạy chế độ giả lập (MOCK MODE).');
+    }
+  }
+
+  async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
+    const result = await this.provider.generate(prompt, systemPrompt, responseJson);
+
+    if (responseJson && result) {
+      return repairJsonString(result);
+    }
+    return result;
   }
 }
