@@ -10,16 +10,65 @@ function repairJsonString(raw: string): string {
     cleaned = cleaned.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
   }
 
-  // 2. Thay thế ký tự xuống dòng thực tế nằm trong các chuỗi JSON bằng \\n
+  // 2. Thay thế ký tự xuống dòng thực tế, tự động escape ngoặc kép lồng nhau & theo dõi ngoặc cú pháp
   let inString = false;
   let result = '';
+  const stack: string[] = [];
+
   for (let i = 0; i < cleaned.length; i++) {
     const char = cleaned[i];
     const prevChar = i > 0 ? cleaned[i - 1] : '';
 
-    if (char === '"' && prevChar !== '\\') {
-      inString = !inString;
-      result += char;
+    // Theo dõi cấu trúc ngoặc mở/đóng ngoài chuỗi văn bản
+    if (!inString) {
+      if (char === '{' || char === '[') {
+        stack.push(char);
+      } else if (char === '}') {
+        if (stack[stack.length - 1] === '{') stack.pop();
+      } else if (char === ']') {
+        if (stack[stack.length - 1] === '[') stack.pop();
+      }
+    }
+
+    if (char === '"') {
+      if (prevChar === '\\') {
+        // Dấu ngoặc kép đã được escape sẵn, giữ nguyên
+        result += char;
+      } else {
+        // Nếu chuỗi chưa bắt đầu: dấu ngoặc kép này chắc chắn là dấu mở cú pháp JSON
+        if (!inString) {
+          inString = true;
+          result += char;
+        } else {
+          // Nếu chuỗi đang chạy: kiểm tra xem đây có phải là dấu đóng cú pháp JSON không.
+          // Một dấu đóng cú pháp JSON hợp lệ bắt buộc phải đi sau bởi một ký tự cú pháp:
+          // một dấu phẩy (,), dấu đóng ngoặc nhọn (}), đóng ngoặc vuông (]), dấu hai chấm (:), hoặc kết thúc chuỗi (sau khoảng trắng).
+          let isSyntaxClose = false;
+          let tempIndex = i + 1;
+          while (tempIndex < cleaned.length) {
+            const nextNonSpace = cleaned[tempIndex];
+            if (nextNonSpace === ' ' || nextNonSpace === '\t' || nextNonSpace === '\n' || nextNonSpace === '\r') {
+              tempIndex++;
+              continue;
+            }
+            if (nextNonSpace === ',' || nextNonSpace === '}' || nextNonSpace === ']' || nextNonSpace === ':') {
+              isSyntaxClose = true;
+            }
+            break;
+          }
+          if (tempIndex === cleaned.length) {
+            isSyntaxClose = true; // Kết thúc chuỗi JSON
+          }
+
+          if (isSyntaxClose) {
+            inString = false;
+            result += char;
+          } else {
+            // Dấu ngoặc kép lồng nhau bất hợp lệ, tự động escape nó
+            result += '\\"';
+          }
+        }
+      }
     } else if (char === '\n' && inString) {
       result += '\\n';
     } else if (char === '\r' && inString) {
@@ -29,10 +78,29 @@ function repairJsonString(raw: string): string {
     }
   }
 
-  // 3. Xử lý trailing commas
-  cleaned = result.replace(/,\s*([\]}])/g, '$1');
+  // 3. XỬ LÝ PHỤC HỒI KHI BỊ CẮT BỚT (TRUNCATED JSON RECOVERY)
+  let repaired = result.trim();
+  if (inString) {
+    repaired += '"'; // Đóng chuỗi văn bản đang dở dang
+  }
 
-  return cleaned;
+  // Loại bỏ các dấu phẩy thừa hoặc cú pháp dở dang ở cuối cùng trước khi đóng ngoặc
+  repaired = repaired.replace(/,\s*$/, ''); // Bỏ dấu phẩy thừa cuối cùng nếu có
+
+  // Lần lượt đóng các ngoặc chưa đóng trong stack
+  while (stack.length > 0) {
+    const openChar = stack.pop();
+    if (openChar === '{') {
+      repaired += '}';
+    } else if (openChar === '[') {
+      repaired += ']';
+    }
+  }
+
+  // 4. Xử lý trailing commas chung
+  repaired = repaired.replace(/,\s*([\]}])/g, '$1');
+
+  return repaired;
 }
 
 export class LLMClient {
