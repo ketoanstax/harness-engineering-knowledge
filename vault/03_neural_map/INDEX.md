@@ -13,6 +13,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Lõi cây (Sāra)](02_atomic_nodes/HAE-concept-loi-cay-sara.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 2. Duyên Khởi (Dependent Origination)
+- [Lậu hoặc (Asava)](02_atomic_nodes/HAE-concept-lau-hoac.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 3. Bát Chánh Đạo (Noble Eightfold Path)
 
