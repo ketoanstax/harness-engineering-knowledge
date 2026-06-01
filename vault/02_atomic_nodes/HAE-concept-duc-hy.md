@@ -23,7 +23,7 @@ Sự ham thích, đắm say và bám chấp phát sinh từ tiến trình tưở
 
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: [Tuong Tri](02_atomic_nodes/HAE-concept-tuong-tri.md) — Khái niệm nền tảng sinh ra khái niệm này.
-- **Hội tụ Duyên (Supporting Conditions)**: [Ai Duc](02_atomic_nodes/HAE-concept-ai-duc.md), [Nghiet ](02_atomic_nodes/HAE-concept-nghiet-.md) — Các khái niệm hỗ trợ trực tiếp.
+- **Hội tụ Duyên (Supporting Conditions)**: [Ai Duc](02_atomic_nodes/HAE-concept-ai-duc.md), [Nghiệp (Kamma)](02_atomic_nodes/HAE-concept-nghiep.md) — Các khái niệm hỗ trợ trực tiếp.
 - **Quả chuyển hóa (Derivative Effects)**: Không có — Các giải pháp và hiệu quả kế thừa.
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)

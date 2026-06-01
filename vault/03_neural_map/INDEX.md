@@ -21,10 +21,14 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Tưởng Tri (Sañjānāti)](02_atomic_nodes/HAE-concept-tuong-tri.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)
+- [Ít dục biết đủ (Appichata Santutthi)](02_atomic_nodes/HAE-concept-it-duc-biet-du.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Viễn ly (Viveka)](02_atomic_nodes/HAE-concept-vien-ly.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Thừa tự Pháp (Dhammadàyàda)](02_atomic_nodes/HAE-concept-thua-tu-phap.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 6. Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)
 
 ### 7. Giáo lý Khác (Other Dharma)
+- [Thừa tự tài vật (Amisadayada)](02_atomic_nodes/HAE-concept-thua-tu-tai-vat.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ---
 

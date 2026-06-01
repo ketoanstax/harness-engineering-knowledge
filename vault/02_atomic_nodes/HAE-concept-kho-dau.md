@@ -1,6 +1,6 @@
 ---
-id: HAE-concept-nghiet-
-title: "Nghiet "
+id: HAE-concept-kho-dau
+title: "Kho Dau"
 category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
@@ -8,7 +8,7 @@ tags:
 date: 2026-05-31
 ---
 
-# Nghiet 
+# Kho Dau
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
 Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.
