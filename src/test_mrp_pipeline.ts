@@ -157,6 +157,7 @@ async function runBatchTest(): Promise<boolean> {
     configProvider,
     tokenTracker,
     pipelineDashboard,
+    testLlm,
   );
 
   const success = await useCase.runBatch(TEST_DIR_RAW, true);

@@ -42,6 +42,7 @@ const useCase = new IngestDocumentUseCase(
   configProvider,
   tokenTracker,
   pipelineDashboard,
+  llmClient,
 );
 
 const program = buildProgram(useCase, fileSystem);

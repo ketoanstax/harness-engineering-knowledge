@@ -45,6 +45,11 @@ Mỗi node phải tuân theo cấu trúc phẳng, cực kỳ súc tích:
   - Định dạng ĐÚNG: `[Quy tắc Nốt](02_atomic_nodes/RULE.md)`
   - Định dạng SAI: Không được chứa dấu gạch chéo đầu (như `/02_atomic_nodes/`) hoặc chứa đường dẫn tương đối leo ngược (như `../02_atomic_nodes/`).
 
+### 🌳 5. Tính Tự Giải Thích & Điều Hướng Ngang (Self-Explaining & Horizontal Navigation)
+- **Tập trung ngữ cảnh phân tán:** Mỗi nốt nguyên tử là một thực thể độc lập, tự giải thích (self-explaining). Bản thân nốt nguyên tử phải đủ thông tin cốt lõi để AI hiểu mà không cần đọc file nguồn.
+- **Không lạm dụng sub-agents:** Cấm chạy các sub-agent con để duyệt file bừa bãi. AI phải tự điều hướng (horizontal traversal) thông qua các liên kết trong mục `Causal Web` để mở rộng bối cảnh ngữ nghĩa khi cần.
+- **Duyệt Ngược Dòng An Toàn:** Chỉ khi phần định nghĩa và nguyên lý kỹ thuật của nốt không đủ làm rõ vấn đề, AI mới được phép lần theo link `Evidence & Context` ở cuối nốt để đọc structured doc (`01_structured_docs/`), nhằm tiết kiệm tối đa token.
+
 *   **Định nghĩa Harness trực quan: "Harness là môi trường được dựng lên để AI Agent nhảy lên đó hoạt động tự động, an toàn mà ít hoặc không cần con người phải can thiệp hay canh chừng".** (Được phát hiện vào 2026-05-24 từ FB-012).
 
 *   **Chạy nạp dữ liệu (Ingestion Pipeline) tuần tự (Sequential) theo thứ tự thời gian sửa đổi (Chronological) và áp dụng cơ chế lọc ngữ cảnh động (Active Context Filtering) thay vì chạy song song (Parallel).** (Được phát hiện vào 2026-05-31 từ FB-014).

@@ -3,6 +3,7 @@ import { AnthropicSDKProvider } from './anthropic-sdk.provider.ts';
 import { AnthropicRESTProvider } from './anthropic-rest.provider.ts';
 import { OpenAIProvider } from './openai.provider.ts';
 import { GeminiProvider } from './gemini.provider.ts';
+import { DeepSeekProvider } from './deepseek.provider.ts';
 import { MockProvider } from './mock.provider.ts';
 import { repairJsonString } from './repair-json.ts';
 
@@ -39,6 +40,13 @@ export class LLMClient implements ILLMProvider {
       }
       console.log(`🤖 [Anthropic] Khởi tạo SDK Provider - Model: ${model}`);
       return new LLMClient(new AnthropicSDKProvider(anthropicKey, baseUrl, model));
+    }
+
+    if (process.env.DEEPSEEK_API_KEY) {
+      const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+      const baseUrl = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '');
+      console.log(`🤖 Khởi tạo DeepSeek Provider - Model: ${model}`);
+      return new LLMClient(new DeepSeekProvider(process.env.DEEPSEEK_API_KEY, baseUrl, model));
     }
 
     if (process.env.OPENAI_API_KEY) {

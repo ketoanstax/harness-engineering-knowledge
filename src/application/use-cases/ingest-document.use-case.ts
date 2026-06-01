@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
+import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
@@ -12,6 +13,7 @@ import type { CommitterPhase } from '../phases/committer.phase.ts';
 import type { PlanResult, MappedData, ReducedData } from '../phases/_types.ts';
 import type { TokenTracker } from '../services/token-tracker.ts';
 import type { PipelineDashboard } from '../../presentation/ui/pipeline-dashboard.ts';
+import { filterRelevantNodes } from '../../core/context-filter.ts';
 
 interface PipelineState {
   source_slug: string;
@@ -40,6 +42,7 @@ export class IngestDocumentUseCase {
   private tokenTracker: TokenTracker;
   private dashboard: PipelineDashboard;
   private currentPhaseName: string | null = null;
+  private llm: ILLMProvider;
 
   constructor(
     mapper: MapperPhase,
@@ -53,6 +56,7 @@ export class IngestDocumentUseCase {
     config: IConfigProvider,
     tokenTracker: TokenTracker,
     dashboard: PipelineDashboard,
+    llm: ILLMProvider,
   ) {
     this.mapper = mapper;
     this.reducer = reducer;
@@ -65,6 +69,7 @@ export class IngestDocumentUseCase {
     this.config = config;
     this.tokenTracker = tokenTracker;
     this.dashboard = dashboard;
+    this.llm = llm;
   }
 
   async execute(
@@ -387,6 +392,52 @@ Vui lòng chọn hành động tiếp theo:
       throw e;
     }
     return false;
+  }
+
+  async query(question: string): Promise<{ answer: string; tokensUsed?: number }> {
+    try {
+      // 1. Phân tích từ khóa từ câu hỏi
+      const cleanWords = question.toLowerCase().match(/\b\w+\b/g) || [];
+      const keywords = cleanWords.map(w => ({ name: w, definition: '' }));
+
+      // 2. Lọc 8 nốt liên quan nhất (Active Context Filtering)
+      const relevantNodes = filterRelevantNodes(keywords, 8);
+
+      if (relevantNodes.length === 0) {
+        return { answer: '⚠️ Không tìm thấy khái niệm liên quan trong kho tri thức phẳng của bạn.' };
+      }
+
+      // 3. Xây dựng tài liệu ngữ cảnh siêu nhẹ từ các nốt
+      const contextBlocks = relevantNodes.map((node, i) => {
+        return `[${i + 1}] NỐT: ${node.title} (slug: ${node.slug})\nĐịnh nghĩa: ${node.definition}\nLiên kết cha: ${node.parent || 'không có'}\nLiên kết con: ${node.children.join(', ') || 'không có'}`;
+      }).join('\n\n');
+
+      // 4. Tạo prompt
+      const prompt = `Bạn là Harness Knowledge OS, một bộ não đồ thị tri thức thông minh, cấu trúc phẳng.
+Nhiệm vụ: Trả lời câu hỏi của người dùng dựa TRỰC TIẾP vào các nốt nguyên tử tri thức được cung cấp bên dưới.
+
+Câu hỏi của người dùng:
+"${question}"
+
+Danh sách các nốt nguyên tử liên quan nhất từ Vault (Active Context):
+${contextBlocks}
+
+Yêu cầu trả lời:
+1. Trả lời bằng tiếng Việt một cách sâu sắc, súc tích, đi thẳng vào bản chất (khoảng 3-5 câu).
+2. Chỉ dựa vào dữ liệu được cung cấp. Nếu dữ liệu không chứa câu trả lời, hãy nói rõ những nốt nào liên quan và đề xuất người dùng nạp thêm tài liệu.
+3. Nếu cần thông tin chi tiết hơn của bài kinh/nguồn gốc, hãy chỉ rõ: "Xem dẫn chứng ngược dòng tại structured doc: [structured-slug-processed](01_structured_docs/structured-slug-processed.md)" (thay thế bằng structured_slug thực tế của nốt nếu bạn suy luận được, hoặc gợi ý nốt liên quan).
+`;
+
+      const response = await this.llm.generate(prompt, 'Bạn là Harness Knowledge OS chuyên nghiệp.', false);
+
+      return {
+        answer: response.content,
+        tokensUsed: response.usage?.totalTokens,
+      };
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      return { answer: `❌ Lỗi khi truy vấn kho tri thức: ${err}` };
+    }
   }
 
   // ============ State Machine Helpers ============
