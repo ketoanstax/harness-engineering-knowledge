@@ -14,7 +14,7 @@ parent: duyen-khoi
 # Lậu hoặc (Asava)
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Những cấu uế, phiền não âm thầm rỉ rả và trói buộc tâm thức chúng sinh trong sinh tử luân hồi, bao gồm dục lậu, hữu lậu và vô minh lậu.
+Các dòng chảy ô nhiễm tâm thức tồn tại ngầm định, bao gồm các 'Cấu uế' (pháp làm ô nhiễm tâm) và các triền cái, khiến chúng sinh trôi lăn trong sinh tử. Đây là các vết hằn tâm thức che lấp thực tại.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - **Lậu hoặc được đoạn trừ thông qua bảy phương pháp hành trì chánh kiến:** tri kiến, phòng hộ, thọ dụng, kham nhẫn, tránh né, trừ diệt, và tu tập.
@@ -27,7 +27,12 @@ Những cấu uế, phiền não âm thầm rỉ rả và trói buộc tâm th�
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
+  - [Ghi chú cấu trúc: Mn 005](01_structured_docs/mn-005-processed.md)
+  - [Ghi chú thô: Mn 005](00_raw_docs/mn-005.md)
   - [Ghi chú cấu trúc: Sutta Mn 002](01_structured_docs/sutta-mn-002-processed.md)
   - [Ghi chú thô: Sutta Mn 002](00_raw_docs/sutta-mn-002.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
+
+- Sự tích tụ cấu uế thông qua tư niệm tịnh tướng
+- Cấu uế là sản phẩm của vô minh và tham ái

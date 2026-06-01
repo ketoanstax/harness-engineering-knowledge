@@ -7,6 +7,8 @@ tags:
   - draft
 children:
   - than-khau-y-nghiep-thanh-tinh
+  - tu-vo-luong-tam
+
 date: 2026-05-31
 ---
 

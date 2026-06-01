@@ -5,6 +5,8 @@ category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
   - draft
+children:
+  - tam-tu-bi
 date: 2026-05-31
 ---
 

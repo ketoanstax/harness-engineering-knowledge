@@ -1,6 +1,4 @@
-import { spinner } from '@clack/prompts';
 import chalk from 'chalk';
-import boxen from 'boxen';
 import type { TokenTracker } from '../../application/services/token-tracker.ts';
 
 export type PhaseStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -15,13 +13,29 @@ export interface PhaseInfo {
   durationMs?: number;
 }
 
+// Hàm tính độ rộng chữ chuẩn xác (bỏ qua mã màu ANSI)
+const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, '');
+const padR = (str: string, width: number) => str + ' '.repeat(Math.max(0, width - stripAnsi(str).length));
+const padL = (str: string, width: number) => ' '.repeat(Math.max(0, width - stripAnsi(str).length)) + str;
+
 export class PipelineDashboard {
   private tokenTracker: TokenTracker;
   private phases: PhaseInfo[] = [];
-  private activeSpinner: ReturnType<typeof spinner> | null = null;
-  private currentPhaseName: string | null = null;
   private sourceSlug = '';
   private startTime: number = Date.now();
+
+  // Animation & Rendering
+  private renderInterval: NodeJS.Timeout | null = null;
+  private frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private frameIndex = 0;
+  private lastRenderedLines = 0;
+  private readonly TABLE_WIDTH = 70;
+
+  // Console Hijacking (Để không bị đụng độ với console.log của các class khác)
+  private isHooked = false;
+  private origLog = console.log;
+  private origError = console.error;
+  private origWarn = console.warn;
 
   constructor(tokenTracker: TokenTracker) {
     this.tokenTracker = tokenTracker;
@@ -31,81 +45,119 @@ export class PipelineDashboard {
   setSourceSlug(slug: string): void {
     this.sourceSlug = slug;
     this.startTime = Date.now();
+    this.lastRenderedLines = 0;
+    console.clear();
   }
 
   reset(): void {
+    this.stopEngine();
     this.resetPhases();
     this.sourceSlug = '';
     this.startTime = Date.now();
+    this.lastRenderedLines = 0;
   }
 
   private resetPhases(): void {
     this.phases = [
-      { name: 'MAP', label: '1️⃣  MAP (Mapper)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      { name: 'REDUCE', label: '2️⃣  REDUCE (Reducer)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      { name: 'PLAN', label: '3️⃣  PLAN (Planner)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      { name: 'REFINE', label: '4️⃣  REFINE (Refiner)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      { name: 'VERIFY', label: '5️⃣  VERIFY (Verifier)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      { name: 'COMMIT', label: '6️⃣  COMMIT (Committer)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'MAP',    label: '1. MAP (Mapper)',       status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'REDUCE', label: '2. REDUCE (Reducer)',   status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'PLAN',   label: '3. PLAN (Planner)',     status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'REFINE', label: '4. REFINE (Refiner)',   status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'VERIFY', label: '5. VERIFY (Verifier)',  status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { name: 'COMMIT', label: '6. COMMIT (Committer)', status: 'pending', inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     ];
   }
 
+  // === HỆ THỐNG KIỂM SOÁT GIAO DIỆN ===
+
+  private hookConsole(): void {
+    if (this.isHooked) return;
+    this.isHooked = true;
+    process.stdout.write('\x1b[?25l'); // Giấu con trỏ chuột
+
+    // Bắt cóc lệnh in. Bất cứ khi nào hệ thống in log, ta xóa bảng -> in log -> vẽ lại bảng.
+    const createHook = (originalFn: Function) => (...args: any[]) => {
+      this.clearTable();
+      originalFn.apply(console, args);
+      this.drawTable();
+    };
+
+    console.log = createHook(this.origLog);
+    console.error = createHook(this.origError);
+    console.warn = createHook(this.origWarn);
+  }
+
+  private unhookConsole(): void {
+    if (!this.isHooked) return;
+    console.log = this.origLog;
+    console.error = this.origError;
+    console.warn = this.origWarn;
+    this.isHooked = false;
+    process.stdout.write('\x1b[?25h'); // Bật lại con trỏ chuột
+  }
+
+  private clearTable(): void {
+    if (this.lastRenderedLines > 0) {
+      process.stdout.write(`\r\x1b[${this.lastRenderedLines}A\x1b[J`);
+      this.lastRenderedLines = 0;
+    }
+  }
+
+  private startEngine(): void {
+    this.hookConsole();
+    if (!this.renderInterval) {
+      this.renderInterval = setInterval(() => {
+        this.frameIndex++;
+        this.clearTable();
+        this.drawTable();
+      }, 80);
+    }
+  }
+
+  private stopEngine(): void {
+    if (this.renderInterval) {
+      clearInterval(this.renderInterval);
+      this.renderInterval = null;
+    }
+    this.unhookConsole();
+    this.clearTable(); // Xóa bảng động
+    this.drawTable();  // Vẽ lại bảng tĩnh một lần cuối cùng
+  }
+
+  // === ĐIỀU KHIỂN PHASE ===
+
   startPhase(name: string): void {
-    this.currentPhaseName = name;
     const phase = this.phases.find(p => p.name === name);
     if (phase) {
       phase.status = 'running';
       phase.durationMs = Date.now();
     }
-
-    if (this.activeSpinner) {
-      this.activeSpinner.stop('Done');
-    }
-
-    this.activeSpinner = spinner();
-    this.activeSpinner.start(`🔄 Đang chạy pha: ${chalk.cyan.bold(name)}...`);
-    this.render();
+    this.startEngine(); // Bật vòng lặp
   }
 
   completePhase(name: string, success = true): void {
     const phase = this.phases.find(p => p.name === name);
     if (phase) {
       phase.status = success ? 'completed' : 'failed';
-      if (phase.durationMs) {
-        phase.durationMs = Date.now() - phase.durationMs;
-      }
+      if (phase.durationMs) phase.durationMs = Date.now() - phase.durationMs;
     }
-
-    if (this.activeSpinner) {
-      this.activeSpinner.stop(success ? chalk.green(`✅ Pha ${name} hoàn tất!`) : chalk.red(`❌ Pha ${name} thất bại.`));
-      this.activeSpinner = null;
-    }
-    this.currentPhaseName = null;
-
-    // Cập nhật token cho phase từ TokenTracker
     this.syncTokens(name);
-    this.render();
+    
+    // Nếu không còn phase nào đang chạy (ví dụ kết thúc MAP/REDUCE chuyển sang PLAN chờ duyệt)
+    if (!this.phases.some(p => p.status === 'running')) {
+      this.stopEngine(); // Tắt vòng lặp, nhả console để hiển thị Markdown bình thường
+    }
   }
 
   failPhase(name: string, err: string): void {
     const phase = this.phases.find(p => p.name === name);
-    if (phase) {
-      phase.status = 'failed';
-    }
-    if (this.activeSpinner) {
-      this.activeSpinner.stop(chalk.red(`❌ Pha ${name} thất bại: ${err}`));
-      this.activeSpinner = null;
-    }
-    this.currentPhaseName = null;
-    this.render();
+    if (phase) phase.status = 'failed';
+    this.stopEngine();
   }
 
   skipPhase(name: string): void {
     const phase = this.phases.find(p => p.name === name);
-    if (phase) {
-      phase.status = 'skipped';
-    }
-    this.render();
+    if (phase) phase.status = 'skipped';
   }
 
   private syncTokens(phaseName: string): void {
@@ -120,91 +172,85 @@ export class PipelineDashboard {
     }
   }
 
+  // Dummy function for usecase compatibility
   render(): void {
+    // Để trống, mọi thứ được xử lý bởi drawTable()
+  }
+
+  // === HÀM VẼ BẢNG (CHẮC CHẮN KHÔNG LỆCH) ===
+  private drawTable(): void {
     const lines: string[] = [];
+    const H = chalk.cyan; 
+    
+    lines.push(H('╭' + '─'.repeat(this.TABLE_WIDTH) + '╮'));
 
-    // Header
+    // Header bảng
     const duration = ((Date.now() - this.startTime) / 1000).toFixed(1);
-    lines.push(chalk.bold.yellow(`🚀 ENGINE PIPELINE: ${chalk.white(this.sourceSlug || 'Ingesting...')} — ${chalk.dim(`${duration}s`)}`));
-    lines.push(chalk.gray('═'.repeat(60)));
+    let slugDisp = this.sourceSlug || 'Ingesting...';
+    if (slugDisp.length > 40) slugDisp = slugDisp.substring(0, 37) + '...';
+    
+    const titleLeft = ` 🚀 PIPELINE: ${chalk.white(slugDisp)}`;
+    const titleRight = `${chalk.dim(duration + 's')} `;
+    
+    const spaceCount = this.TABLE_WIDTH - stripAnsi(titleLeft).length - stripAnsi(titleRight).length;
+    lines.push(H('│') + chalk.bold.yellow(titleLeft) + ' '.repeat(Math.max(0, spaceCount)) + titleRight + H('│'));
+    lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Table Header
-    lines.push(
-      chalk.bold(
-        '  Phase' + ' '.repeat(17) + 'Status' + ' '.repeat(7) + 'Input' + ' '.repeat(5) + 'Output' + ' '.repeat(4) + 'Total'
-      )
-    );
-    lines.push(chalk.gray('─'.repeat(60)));
+    // Cột
+    const colHeader = padR('  Phase', 24) + padR('Status', 10) + padL('Input', 8) + padL('Output', 8) + padL('Total', 8) + padL('Time  ', 12);
+    lines.push(H('│') + chalk.bold(colHeader) + H('│'));
+    lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Rows
+    // Nội dung Phase
     for (const p of this.phases) {
       let statusStr = '';
-      switch (p.status) {
-        case 'pending':
-          statusStr = chalk.gray('⏳ pending ');
-          break;
-        case 'running':
-          statusStr = chalk.yellow.bold('🔄 running ');
-          break;
-        case 'completed':
-          statusStr = chalk.green('✅ done    ');
-          break;
-        case 'failed':
-          statusStr = chalk.red('❌ failed  ');
-          break;
-        case 'skipped':
-          statusStr = chalk.blue('⏭️  skipped ');
-          break;
+      if (p.status === 'pending') statusStr = chalk.gray('[ WAIT ]');
+      else if (p.status === 'completed') statusStr = chalk.green('[ DONE ]');
+      else if (p.status === 'failed') statusStr = chalk.red('[ FAIL ]');
+      else if (p.status === 'skipped') statusStr = chalk.blue('[ SKIP ]');
+      else if (p.status === 'running') {
+        const frame = this.frames[this.frameIndex % this.frames.length];
+        statusStr = chalk.yellow.bold(`[ ${frame} RUN]`);
       }
 
-      const inputTok = p.inputTokens > 0 ? String(p.inputTokens).padEnd(8, ' ') : '—'.padEnd(8, ' ');
-      const outputTok = p.outputTokens > 0 ? String(p.outputTokens).padEnd(8, ' ') : '—'.padEnd(8, ' ');
-      const totalTok = p.totalTokens > 0 ? String(p.totalTokens).padEnd(8, ' ') : '—'.padEnd(8, ' ');
+      const inStr = p.inputTokens > 0 ? String(p.inputTokens) : '—';
+      const outStr = p.outputTokens > 0 ? String(p.outputTokens) : '—';
+      const totStr = p.totalTokens > 0 ? String(p.totalTokens) : '—';
+      const timeVal = p.durationMs && p.status !== 'running' && p.status !== 'pending' ? `${(p.durationMs / 1000).toFixed(1)}s` : '';
 
-      const durationStr = p.durationMs && p.status !== 'running' && p.status !== 'pending'
-        ? chalk.dim(` (${(p.durationMs / 1000).toFixed(1)}s)`)
-        : '';
+      const rowData = padR(`  ${p.label}`, 24)
+                    + padR(statusStr, 10)
+                    + padL(inStr, 8)
+                    + padL(outStr, 8)
+                    + padL(totStr, 8)
+                    + padL(timeVal, 10) + '  ';
 
-      const cleanLabel = p.label.replace(/[][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-      const labelPadding = 24 - cleanLabel.length;
-      const row = `  ${p.label}${' '.repeat(Math.max(0, labelPadding))}${statusStr}  ${inputTok}${outputTok}${totalTok}${durationStr}`;
-      lines.push(row);
+      lines.push(H('│') + rowData + H('│'));
     }
 
-    lines.push(chalk.gray('─'.repeat(60)));
+    lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Totals
+    // Tổng hợp Tokens
     const totInput = this.tokenTracker.totalInput;
     const totOutput = this.tokenTracker.totalOutput;
     const totTotal = this.tokenTracker.totalTokens;
 
-    const inputSum = totInput > 0 ? String(totInput).padEnd(8, ' ') : '—'.padEnd(8, ' ');
-    const outputSum = totOutput > 0 ? String(totOutput).padEnd(8, ' ') : '—'.padEnd(8, ' ');
-    const totalSum = totTotal > 0 ? String(totTotal).padEnd(8, ' ') : '—'.padEnd(8, ' ');
+    const inSum = totInput > 0 ? String(totInput) : '—';
+    const outSum = totOutput > 0 ? String(totOutput) : '—';
+    const totSum = totTotal > 0 ? String(totTotal) : '—';
 
-    lines.push(
-      chalk.bold(
-        '  📊 TOTALS' + ' '.repeat(15) + '          ' + inputSum + outputSum + totalSum
-      )
-    );
+    const sumRow = padR('  TOTALS', 34) + padL(inSum, 8) + padL(outSum, 8) + padL(chalk.green.bold(totSum), 19) + '  ';
+    lines.push(H('│') + chalk.bold(sumRow) + H('│'));
+    lines.push(H('╰' + '─'.repeat(this.TABLE_WIDTH) + '╯'));
 
-    // Render Boxen
-    console.clear();
-    console.log(
-      boxen(lines.join('\n'), {
-        padding: 1,
-        margin: { top: 1, bottom: 1 },
-        borderStyle: 'round',
-        borderColor: this.currentPhaseName ? 'yellow' : 'green',
-      })
-    );
+    const output = lines.join('\n') + '\n';
+    process.stdout.write(output);
+    
+    // Ghi nhớ số dòng đã vẽ để xóa vào lần lặp sau
+    this.lastRenderedLines = lines.length;
   }
 
   finalize(): void {
-    if (this.activeSpinner) {
-      this.activeSpinner.stop(chalk.green('✅ Pipeline hoàn thành!'));
-      this.activeSpinner = null;
-    }
-    this.render();
+    this.stopEngine();
   }
 }

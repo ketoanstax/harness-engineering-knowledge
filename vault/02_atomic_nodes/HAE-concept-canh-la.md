@@ -10,7 +10,7 @@ date: 2026-05-31
 # Cành lá
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Tượng trưng cho lợi dưỡng, tôn kính và danh vọng ban đầu mà người tu đạt được; đây là những thứ dễ gây phân tâm và tự mãn nhất.
+Hệ thống các ẩn dụ về những thành tựu tạm thời, phương tiện thiện xảo và các tầng lớp che đậy trong giáo lý, bao gồm cành lá (phương tiện) và vỏ cây (lớp che đậy hoặc bảo vệ).
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Nguyên lý 1 của khái niệm này.
@@ -27,3 +27,6 @@ Tượng trưng cho lợi dưỡng, tôn kính và danh vọng ban đầu mà ng
   - [Ghi chú thô: Sutta Mn 030](00_raw_docs/sutta-mn-030.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
+
+- Vỏ cây che chở giáo pháp nhưng không phải là nội hàm cốt lõi.
+- Cành lá cần được cắt tỉa để tập trung năng lượng vào lõi cây (giải thoát).

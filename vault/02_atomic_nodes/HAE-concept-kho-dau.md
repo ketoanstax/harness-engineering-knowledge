@@ -1,28 +1,31 @@
 ---
 id: HAE-concept-kho-dau
-title: "Kho Dau"
-category: "Giáo lý Khác (Other Dharma)"
+title: "Khổ đau (Dukkha)"
+category: "Tứ Thánh Đế (Four Noble Truths)"
 tags:
-  - placeholder
-  - draft
-date: 2026-05-31
+  - dukkha
+  - bat-toai-nguyen
+  - kho-de
+date: 2026-06-01
+parent: tu-thanh-de
 ---
 
-# Kho Dau
+# Khổ đau (Dukkha)
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.
+Khổ đau là trạng thái bất toại nguyện nảy sinh từ sự dính mắc vào những hiện tượng vốn dĩ không như ý hoặc thay đổi không ngừng. Đây không chỉ là nỗi đau vật lý mà là sự phản ứng tâm lý khi đối diện với tính Vô thường.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
-- Khái niệm này đang ở trạng thái chờ nạp dữ liệu chi tiết.
-
+- Khổ đau nảy sinh khi kỳ vọng về sự thường hằng va chạm với thực tại Vô thường.
+- Giải thoát khỏi khổ đau không phải là diệt bỏ thế giới mà là diệt bỏ sự dính mắc.
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
-- **Nhân gốc (Causal Core)**: Không có — Khái niệm nền tảng sinh ra khái niệm này.
-- **Hội tụ Duyên (Supporting Conditions)**: Không có — Các khái niệm hỗ trợ trực tiếp.
-- **Quả chuyển hóa (Derivative Effects)**: Không có — Các giải pháp và hiệu quả kế thừa.
+- **Nhân gốc (Causal Core)**: [Vo Thuong](02_atomic_nodes/HAE-concept-vo-thuong.md) — Khái niệm nền tảng sinh ra khái niệm này.
+- **Hội tụ Duyên (Supporting Conditions)**: [Tham Ai](02_atomic_nodes/HAE-concept-tham-ai.md) — Các khái niệm hỗ trợ trực tiếp.
+- **Quả chuyển hóa (Derivative Effects)**: [Giai Thoat](02_atomic_nodes/HAE-concept-giai-thoat.md) — Các giải pháp và hiệu quả kế thừa.
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
-
+  - [Ghi chú cấu trúc: Lecture 14 Blast Radius Advanced](01_structured_docs/lecture-14-blast-radius-advanced-processed.md)
+  - [Ghi chú thô: Lecture 14 Blast Radius Advanced](00_raw_docs/lecture-14-blast-radius-advanced.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)

@@ -7,6 +7,8 @@ tags:
   - draft
 children:
   - nhu-that-tue-tri
+  - tue-tri
+
 date: 2026-05-31
 ---
 

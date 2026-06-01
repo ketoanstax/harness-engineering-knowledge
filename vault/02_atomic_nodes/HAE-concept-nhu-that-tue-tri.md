@@ -13,7 +13,7 @@ parent: tue-hoc
 # Như Thật Tuệ Tri
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Sự hiểu biết, nhận thức và trực giác một cách chân thật, chính xác như chúng vốn là về bản chất và trạng thái hiện tại của nội tâm, không qua lăng kính bóp méo của tự ngã.
+Như thật tuệ tri là năng lực nhìn thấu bản chất sự vật đúng như nó đang là (yatha-bhuta-nana-dassana), bao gồm cả yếu tố tuệ tri chi tiết qua quan sát thực tế.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Như thật tuệ tri không phải là tư duy lý luận, mà là sự chứng nghiệm trực tiếp tiến trình sinh diệt của các tâm hành.
@@ -27,7 +27,12 @@ Sự hiểu biết, nhận thức và trực giác một cách chân thật, ch�
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
+  - [Ghi chú cấu trúc: Sutta Mn 010](01_structured_docs/sutta-mn-010-processed.md)
+  - [Ghi chú thô: Sutta Mn 010](00_raw_docs/sutta-mn-010.md)
   - [Ghi chú cấu trúc: Sutta Mn 005](01_structured_docs/sutta-mn-005-processed.md)
   - [Ghi chú thô: Sutta Mn 005](00_raw_docs/sutta-mn-005.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
+
+- Tuệ tri không phải là tri thức lý thuyết mà là sự thấy rõ sự sinh diệt của các pháp.
+- Sự tuệ tri xác thực về khổ và nguyên nhân của khổ là bước ngoặt của giải thoát.

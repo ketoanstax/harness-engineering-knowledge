@@ -195,7 +195,9 @@ Hệ thống hoạt động theo mô hình MAP-REDUCE-PLAN-REFINE-VERIFY-COMMIT:
   // Xử lý command không hợp lệ
   program.on('command:*', () => {
     console.error('Lệnh không hợp lệ: %s\nXem --help để biết các lệnh được hỗ trợ.', program.args.join(' '));
-    safeExit(1);
+    // Không gọi process.exit — khi chạy trong shell, safeExit sẽ giết chết shell.
+    // exitOverride() + throw đủ để Commander báo lỗi mà không tắt tiến trình.
+    throw new Error(`Command not found: ${program.args.join(' ')}`);
   });
 
   program.exitOverride();

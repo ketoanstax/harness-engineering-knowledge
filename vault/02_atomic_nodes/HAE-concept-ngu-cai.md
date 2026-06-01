@@ -15,7 +15,7 @@ date: 2026-05-31
 # Ngu Cai
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.
+Ngũ cái (Năm triền cái) là năm chướng ngại cản trở sự phát triển của thiền định và tuệ giác, bao gồm tham dục, sân hận, hôn trầm thụy miên, trạo cử hối quá và nghi ngờ.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Khái niệm này đang ở trạng thái chờ nạp dữ liệu chi tiết.
@@ -27,6 +27,10 @@ Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ đ�
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
+  - [Ghi chú cấu trúc: Buoi_10](01_structured_docs/buoi_10-processed.md)
+  - [Ghi chú thô: Buoi_10](00_raw_docs/buoi_10.md)
 
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
+
+- Việc nhận diện Ngũ cái là bước thiết yếu trước khi đạt đến sự hay biết trọn vẹn.

@@ -11,7 +11,7 @@ parent: tu-thanh-de
 # Khổ uẩn
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Toàn bộ sự tích tụ của đau khổ bao gồm sanh, già, chết, sầu, bi, khổ, ưu, não mà chúng sinh bị chìm đắm và chi phối.
+Khái niệm chỉ năm nhóm bám víu (Ngũ Uẩn) khi bị chấp thủ, dẫn đến sự vận hành của khổ đau theo Duyên Khởi. Đây là quá trình tích tụ năng lượng của sự đau khổ thông qua các hiện tượng tâm vật lý.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Nguyên lý 1 của khái niệm này.
@@ -28,3 +28,6 @@ Toàn bộ sự tích tụ của đau khổ bao gồm sanh, già, chết, sầu,
   - [Ghi chú thô: Sutta Mn 030](00_raw_docs/sutta-mn-030.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
+
+- Sự đồng nhất hoá với Ngũ Uẩn là gốc rễ của Khổ Uẩn.
+- Chỉ khi thấu suốt bản chất không thực thể của các uẩn, sự tích tụ khổ đau mới chấm dứt.

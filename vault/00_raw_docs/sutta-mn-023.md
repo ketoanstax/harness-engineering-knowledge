@@ -5,7 +5,7 @@ category: Nikaya Raw Sutta
 tags: 
 source: https://www.budsas.org/uni/u-kinh-trungbo/trung23.htm
 date: 2026-05-25
-status: to-process
+status: processed
   - raw-source
   - nikaya
   - trung-bo-kinh

@@ -1,6 +1,6 @@
 ---
 title: "buoi_06"
-status: to-process
+status: processed
 ---
 
 #

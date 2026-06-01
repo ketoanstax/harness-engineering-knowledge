@@ -1,28 +1,28 @@
 ---
 id: sutta-mn-030-processed
-title: "30. Tiểu kinh Dụ lõi cây (Cùlasàropama sutta) - Trung Bộ Kinh"
+title: "Tiểu kinh Dụ lõi cây (Cùlasàropama sutta)"
 category: "Structured Knowledge"
 tags:
   - structured
   - processed
-date: 2026-05-31
+date: 2026-06-01
 source: "00_raw_docs/sutta-mn-030.md"
 ---
 
-# 30. Tiểu kinh Dụ lõi cây (Cùlasàropama sutta) - Trung Bộ Kinh
+# Tiểu kinh Dụ lõi cây (Cùlasàropama sutta)
 
 ## 💡 Key Takeaways
-- Mục đích tối hậu của con đường tu tập xuất gia là sự chấm dứt hoàn toàn khổ uẩn (tương ứng với lõi cây), chứ không phải là danh vọng hay lợi dưỡng.
-- Việc tự mãn, kiêu mạn (khen mình, chê người) khi đạt được lợi dưỡng, tôn kính và danh vọng sẽ khiến hành giả rơi vào thoái hóa, biếng nhác và đánh mất mục tiêu giải thoát.
-- Hình ảnh các bộ phận của cây từ cành lá, vỏ ngoài, vỏ trong, giác cây đến lõi cây đại diện cho các mức độ thành tựu khác nhau, nhắc nhở hành giả không được nhầm lẫn phương tiện hay thành quả phụ với cứu cánh tối hậu.
+- Việc thực hành giáo pháp cũng giống như việc tìm lõi cây; người tu hành cần biết phân biệt giữa giá trị cốt lõi và những thứ bên ngoài.
+- Lợi dưỡng, tôn kính và danh vọng thường là những 'cành lá' che mắt người tu hành, khiến họ tự mãn và lầm tưởng đó là kết quả cuối cùng.
+- Mục đích tối hậu của người xuất gia là chấm dứt khổ đau (sanh, già, chết, sầu, bi, khổ, ưu, não), không phải để tìm kiếm sự nổi tiếng hay vị thế trong giáo hội.
 
 ## 🗝️ Keywords & Core Concepts
-- **Lõi cây (Sāra)**: Tượng trưng cho mục tiêu tối hậu, chân thật và cao thượng nhất của đời sống phạm hạnh - sự giải thoát hoàn toàn khỏi khổ đau.
-- **Cành lá**: Tượng trưng cho lợi dưỡng, tôn kính và danh vọng ban đầu mà người tu đạt được; đây là những thứ dễ gây phân tâm và tự mãn nhất.
-- **Khổ uẩn**: Toàn bộ sự tích tụ của đau khổ bao gồm sanh, già, chết, sầu, bi, khổ, ưu, não mà chúng sinh bị chìm đắm và chi phối.
+- **Lõi cây**: Ẩn dụ cho các trạng thái chứng đắc cao thượng, sự giải thoát và trí tuệ giải thoát khỏi khổ đau.
+- **Cành lá, vỏ cây**: Ẩn dụ cho lợi dưỡng, danh vọng, sự tôn kính; những thứ phụ thuộc, không bền vững trong đời sống tu tập.
+- **Khổ uẩn**: Toàn bộ các trạng thái đau khổ bao gồm sanh, già, chết, sầu, bi, khổ, ưu, não mà chúng sinh đang bị chìm đắm.
 
 ## 📝 AI-Ready Summary
-Tiểu kinh Dụ lõi cây mượn hình ảnh người đi tìm lõi cây nhưng lại nhầm lẫn mang về cành lá, vỏ hoặc giác cây để cảnh tỉnh những hành giả xuất gia dễ bị sa ngã bởi lợi dưỡng, tôn kính và danh vọng. Khi đạt được những thành tựu bước đầu, nếu khởi tâm kiêu mạn và dừng lại không tinh tấn, hành giả sẽ không bao giờ đạt được mục tiêu giải thoát tối hậu. Bài kinh là lời nhắc nhở sâu sắc về việc kiên định hướng tới 'lõi cây' chân thật của sự tu tập thay vì thỏa mãn với những giá trị tạm thời bên ngoài.
+Tiểu kinh Dụ lõi cây sử dụng hình ảnh so sánh về một người tìm lõi cây để cảnh tỉnh những người tu hành không nên lạc lối vào lợi dưỡng và danh vọng. Đức Phật nhấn mạnh rằng những giá trị này chỉ là 'cành lá' bên ngoài, che lấp mục tiêu chính là sự giải thoát hoàn toàn khỏi khổ đau. Người tu hành cần tỉnh thức, không để sự tán dương hay vị thế làm dừng bước tiến trên con đường giác ngộ.
 
 ---
 
