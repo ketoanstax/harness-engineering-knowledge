@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as process from 'node:process';
 import * as readline from 'node:readline/promises';
 import { Command } from 'commander';
+import matter from 'gray-matter';
 import { MRPOrchestrator, MRPBatchOrchestrator } from './core/orchestrator.ts';
 import { DIR_JOURNAL, DIR_RAW } from './core/config.ts';
 import { PlanFile } from './models/plan.ts';
@@ -18,9 +19,14 @@ program
 // Lệnh: run
 program
   .command('run')
-  .description('Chạy Ingestion Pipeline cho file thô')
-  .requiredOption('-s, --source <source>', 'Đường dẫn file thô ở 00_raw_docs (hoặc tên file)')
+  .description('Chạy Ingestion Pipeline cho file thô (nếu không có -s sẽ hiển thị danh sách chọn)')
+  .option('-s, --source <source>', 'Đường dẫn file thô ở 00_raw_docs (hoặc tên file)')
   .action(async (options) => {
+    if (!options.source) {
+      await pickFileForPipeline();
+      return;
+    }
+
     let sourcePath = options.source;
     if (!path.isAbsolute(sourcePath)) {
       sourcePath = path.resolve(sourcePath);
@@ -219,6 +225,61 @@ program.on('command:*', () => {
 });
 
 // =============================
+// FILE PICKER
+// =============================
+
+async function pickFileForPipeline(): Promise<void> {
+  const files = fs.readdirSync(DIR_RAW)
+    .filter(f => f.endsWith('.md') && f !== 'RULE.md' && f !== 'index.md')
+    .map(f => {
+      const filepath = path.join(DIR_RAW, f);
+      try {
+        const content = fs.readFileSync(filepath, 'utf-8');
+        const frontmatter = matter(content);
+        return {
+          filename: f,
+          filepath,
+          title: frontmatter.data?.title || f,
+          status: frontmatter.data?.status || 'unknown',
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((f): f is NonNullable<typeof f> => f !== null && f.status === 'to-process');
+
+  if (files.length === 0) {
+    console.log('  📭 Không có file nào ở trạng thái "to-process" trong 00_raw_docs/');
+    return;
+  }
+
+  console.log('\n📋 Danh sách file sẵn sàng xử lý:');
+  console.log('──────────────────────────────────────');
+  files.forEach((f, i) => {
+    console.log(`  ${String(i + 1).padStart(2)}. ${f.title}`);
+  });
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const answer = await rl.question('\nChọn số (hoặc 0 để hủy): ');
+  rl.close();
+
+  const choice = parseInt(answer.trim(), 10);
+  if (!choice || choice < 1 || choice > files.length) {
+    console.log('  ⏭️ Đã hủy.');
+    return;
+  }
+
+  const selected = files[choice - 1];
+  console.log(`\n  ✅ Đã chọn: ${selected.title}`);
+  const orchestrator = new MRPOrchestrator(selected.filepath);
+  await orchestrator.run();
+}
+
+// =============================
 // INTERACTIVE SHELL MODE
 // =============================
 
@@ -226,12 +287,13 @@ function printShellHelp(): void {
   console.log(`
 📋 DANH SÁCH LỆNH TRONG SHELL MODE:
 ─────────────────────────────────────
-  run -s <file>              Chạy pipeline cho file thô
-  approve -t <timestamp>     Duyệt kế hoạch & chạy tiếp
-  reject -t <timestamp>      Từ chối & dọn dẹp
-  batch                      Chạy batch tuần tự
-  batch --auto-approve       Chạy batch tự động
-  guide                      Xem hướng dẫn vận hành
+  run                           Liệt kê & chọn file để chạy pipeline
+  run -s <file>                 Chạy pipeline trực tiếp cho file
+  approve -t <timestamp>        Duyệt kế hoạch & chạy tiếp
+  reject -t <timestamp>         Từ chối & dọn dẹp
+  batch                         Chạy batch tuần tự
+  batch --auto-approve          Chạy batch tự động
+  guide                         Xem hướng dẫn vận hành
 
   /help      Hiển thị danh sách lệnh
   /exit      Thoát shell
