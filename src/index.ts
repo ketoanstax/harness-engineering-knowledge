@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as process from 'node:process';
+import * as readline from 'node:readline/promises';
 import { Command } from 'commander';
 import { MRPOrchestrator, MRPBatchOrchestrator } from './core/orchestrator.ts';
 import { DIR_JOURNAL, DIR_RAW } from './core/config.ts';
@@ -204,15 +205,94 @@ Hệ thống hoạt động theo mô hình MAP-REDUCE-PLAN-REFINE-VERIFY-COMMIT:
 `);
   });
 
+// Lệnh: shell
+program
+  .command('shell')
+  .alias('sh')
+  .description('💻 Vào Interactive Shell Mode (gõ /exit hoặc Ctrl+D để thoát)')
+  .action(() => runShell());
+
 // Xử lý khi không nhận diện được command
 program.on('command:*', () => {
   console.error('Lệnh không hợp lệ: %s\nXem --help để biết các lệnh được hỗ trợ.', program.args.join(' '));
   process.exit(1);
 });
 
+// =============================
+// INTERACTIVE SHELL MODE
+// =============================
+
+function printShellHelp(): void {
+  console.log(`
+📋 DANH SÁCH LỆNH TRONG SHELL MODE:
+─────────────────────────────────────
+  run -s <file>              Chạy pipeline cho file thô
+  approve -t <timestamp>     Duyệt kế hoạch & chạy tiếp
+  reject -t <timestamp>      Từ chối & dọn dẹp
+  batch                      Chạy batch tuần tự
+  batch --auto-approve       Chạy batch tự động
+  guide                      Xem hướng dẫn vận hành
+
+  /help      Hiển thị danh sách lệnh
+  /exit      Thoát shell
+  Ctrl+D     Thoát shell
+`);
+}
+
+async function runShell(): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: 'mrp> ',
+  });
+
+  rl.on('close', () => {
+    console.log('\n👋 Tạm biệt!');
+    process.exit(0);
+  });
+
+  console.log(`
+╔════════════════════════════════════════╗
+║  💻 MRP Interactive Shell              ║
+║  Gõ /help để xem danh sách lệnh       ║
+║  Gõ /exit hoặc Ctrl+D để thoát        ║
+╚════════════════════════════════════════╝
+`);
+
+  rl.prompt();
+
+  for await (const line of rl) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      rl.prompt();
+      continue;
+    }
+
+    if (trimmed === '/exit' || trimmed === '/quit') {
+      rl.close();
+      break;
+    }
+
+    if (trimmed === '/help') {
+      printShellHelp();
+      rl.prompt();
+      continue;
+    }
+
+    try {
+      const args = trimmed.split(/\s+/);
+      await program.parseAsync(['node', 'mrp', ...args], { from: 'user' });
+    } catch (e: any) {
+      console.error(`⚠️ Lỗi: ${e.message}`);
+    }
+    rl.prompt();
+  }
+}
+
 program.parse(process.argv);
 
-// Nếu không truyền lệnh nào, in trợ giúp
+// Nếu không truyền lệnh nào, vào Shell Mode
 if (process.argv.length <= 2) {
-  program.outputHelp();
+  runShell();
 }
