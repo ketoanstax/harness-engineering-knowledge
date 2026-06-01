@@ -4,6 +4,7 @@ import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provide
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IPipelineObserver } from '../../domain/interfaces/pipeline-observer.interface.ts';
+import type { INodeRepository } from '../../domain/interfaces/node-repository.interface.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
 import type { MapperPhase } from '../phases/mapper.phase.ts';
 import type { ReducerPhase } from '../phases/reducer.phase.ts';
@@ -29,6 +30,13 @@ interface PipelineState {
   committed: boolean;
 }
 
+interface RunStateMachineOpts {
+  sourcePath: string;
+  autoApprove: boolean;
+  skipVerify?: boolean;
+  onPlanGenerated?: (destPlanPath: string, timestamp: string) => Promise<'approve' | 'reject' | 'exit'>;
+}
+
 export class IngestDocumentUseCase {
   private mapper: MapperPhase;
   private reducer: ReducerPhase;
@@ -41,6 +49,7 @@ export class IngestDocumentUseCase {
   private config: IConfigProvider;
   private tokenTracker: TokenTracker;
   private observer: IPipelineObserver;
+  private nodeRepo: INodeRepository;
   private currentPhaseName: string | null = null;
   private llm: ILLMProvider;
 
@@ -57,6 +66,7 @@ export class IngestDocumentUseCase {
     tokenTracker: TokenTracker,
     observer: IPipelineObserver,
     llm: ILLMProvider,
+    nodeRepo: INodeRepository,
   ) {
     this.mapper = mapper;
     this.reducer = reducer;
@@ -70,17 +80,71 @@ export class IngestDocumentUseCase {
     this.tokenTracker = tokenTracker;
     this.observer = observer;
     this.llm = llm;
+    this.nodeRepo = nodeRepo;
   }
+
+  // ============ Public API ============
 
   async execute(
     sourcePath: string,
     onPlanGenerated?: (destPlanPath: string, timestamp: string) => Promise<'approve' | 'reject' | 'exit'>,
   ): Promise<boolean> {
-    const state = this.initState(sourcePath);
+    return this.runStateMachine({ sourcePath, autoApprove: false, onPlanGenerated });
+  }
 
-    // Thiết lập biến môi trường để mock provider phân biệt source slug
+  async runAutoToEnd(sourcePath: string, skipVerify = false): Promise<boolean> {
+    return this.runStateMachine({ sourcePath, autoApprove: true, skipVerify });
+  }
+
+  async query(question: string): Promise<{ answer: string; tokensUsed?: number }> {
+    try {
+      const cleanWords = question.toLowerCase().match(/\b\w+\b/g) || [];
+      const keywords = cleanWords.map(w => ({ name: w, definition: '' }));
+
+      // Lấy nodes từ Repository thay vì context-filter tự đọc FS
+      const allNodes = this.nodeRepo.findAll();
+      const relevantNodes = filterRelevantNodes(keywords, allNodes, 8);
+
+      if (relevantNodes.length === 0) {
+        return { answer: '⚠️ Không tìm thấy khái niệm liên quan trong kho tri thức phẳng của bạn.' };
+      }
+
+      const contextBlocks = relevantNodes.map((node, i) => {
+        return `[${i + 1}] NỐT: ${node.title} (slug: ${node.slug})\nĐịnh nghĩa: ${node.definition}\nLiên kết cha: ${node.parent || 'không có'}\nLiên kết con: ${node.children.join(', ') || 'không có'}`;
+      }).join('\n\n');
+
+      const prompt = `Bạn là Harness Knowledge OS, một bộ não đồ thị tri thức thông minh, cấu trúc phẳng.
+Nhiệm vụ: Trả lời câu hỏi của người dùng dựa TRỰC TIẾP vào các nốt nguyên tử tri thức được cung cấp bên dưới.
+
+Câu hỏi của người dùng:
+"${question}"
+
+Danh sách các nốt nguyên tử liên quan nhất từ Vault (Active Context):
+${contextBlocks}
+
+Yêu cầu trả lời:
+1. Trả lời bằng tiếng Việt một cách sâu sắc, súc tích, đi thẳng vào bản chất (khoảng 3-5 câu).
+2. Chỉ dựa vào dữ liệu được cung cấp. Nếu dữ liệu không chứa câu trả lời, hãy nói rõ những nốt nào liên quan và đề xuất người dùng nạp thêm tài liệu.
+3. Nếu cần thông tin chi tiết hơn của bài kinh/nguồn gốc, hãy chỉ rõ: "Xem dẫn chứng ngược dòng tại structured doc: [structured-slug-processed](01_structured_docs/structured-slug-processed.md)" (thay thế bằng structured_slug thực tế của nốt nếu bạn suy luận được, hoặc gợi ý nốt liên quan).
+`;
+
+      const response = await this.llm.generate(prompt, 'Bạn là Harness Knowledge OS chuyên nghiệp.', false);
+
+      return {
+        answer: response.content,
+        tokensUsed: response.usage?.totalTokens,
+      };
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      return { answer: `❌ Lỗi khi truy vấn kho tri thức: ${err}` };
+    }
+  }
+
+  // ============ State Machine (single source of truth) ============
+
+  private async runStateMachine(opts: RunStateMachineOpts): Promise<boolean> {
+    const state = this.initState(opts.sourcePath);
     process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
-
     this.observer.onStart(state.source_slug);
 
     try {
@@ -88,7 +152,7 @@ export class IngestDocumentUseCase {
       if (state.current_phase === 'MAP') {
         this.observer.onPhaseStart('MAP');
         this.currentPhaseName = 'MAP';
-        const mappedData = await this.mapper.execute(sourcePath, (usage) => {
+        const mappedData = await this.mapper.execute(opts.sourcePath, (usage) => {
           this.observer.onTokenUsage('MAP', usage);
           this.tokenTracker.add({ phase: 'MAP', operation: 'chắt lọc tài liệu', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
@@ -120,7 +184,7 @@ export class IngestDocumentUseCase {
         this.observer.onPhaseSkip('REDUCE');
       }
 
-      // Phase PLAN
+      // Phase PLAN — chỗ khác biệt duy nhất giữa execute() và runAutoToEnd()
       if (state.current_phase === 'PLAN') {
         this.observer.onPhaseStart('PLAN');
         this.currentPhaseName = 'PLAN';
@@ -149,8 +213,15 @@ export class IngestDocumentUseCase {
         this.observer.onPhaseComplete('PLAN', true);
         this.currentPhaseName = null;
 
-        if (onPlanGenerated) {
-          const action = await onPlanGenerated(destPlanPath, state.timestamp);
+        // Quyết định approve hay user duyệt
+        if (opts.autoApprove) {
+          let pContent = this.fs.readFile(destPlanPath);
+          pContent = pContent.replace('Trạng thái: `pending`', 'Trạng thái: `approved`');
+          this.fs.writeFile(destPlanPath, pContent);
+          state.current_phase = 'REFINE';
+          this.saveCheckpoint(state);
+        } else if (opts.onPlanGenerated) {
+          const action = await opts.onPlanGenerated(destPlanPath, state.timestamp);
           if (action === 'approve') {
             let pContent = this.fs.readFile(destPlanPath);
             pContent = pContent.replace('Trạng thái: \`pending\`', 'Trạng thái: \`approved\`');
@@ -167,6 +238,7 @@ export class IngestDocumentUseCase {
             return true;
           }
         } else {
+          // Batch mode không auto-approve — dừng chờ user CLI
           console.log(`
 ═══════════════════════════════════════════════════════════════════════
 ⏸️  PIPELINE ĐÃ HOÀN TẤT PHA PLAN - CHỜ DUYỆT
@@ -212,15 +284,20 @@ Vui lòng chọn hành động tiếp theo:
       if (state.current_phase === 'VERIFY') {
         this.observer.onPhaseStart('VERIFY');
         this.currentPhaseName = 'VERIFY';
-        const result = this.verifier.execute();
-        if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
-          console.log(`  ❌ Phát hiện lỗi kiểm toán: brokenLinks=${result.brokenLinks}, portabilityViolations=${result.portabilityViolations}, inconsistencies=${result.inconsistencies}`);
-          this.observer.onPhaseComplete('VERIFY', false);
-          return false;
+        if (opts.skipVerify) {
+          console.log('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
+          this.observer.onPhaseSkip('VERIFY');
+        } else {
+          const result = this.verifier.execute();
+          if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
+            console.log(`  ❌ Phát hiện lỗi kiểm toán: brokenLinks=${result.brokenLinks}, portabilityViolations=${result.portabilityViolations}, inconsistencies=${result.inconsistencies}`);
+            this.observer.onPhaseComplete('VERIFY', false);
+            return false;
+          }
+          this.observer.onPhaseComplete('VERIFY', true);
         }
         state.current_phase = 'COMMIT';
         this.saveCheckpoint(state);
-        this.observer.onPhaseComplete('VERIFY', true);
         this.currentPhaseName = null;
       } else {
         this.observer.onPhaseSkip('VERIFY');
@@ -232,7 +309,7 @@ Vui lòng chọn hành động tiếp theo:
         this.currentPhaseName = 'COMMIT';
         const planResult = state.plan_item_data as PlanResult;
         if (!planResult) { this.observer.onPhaseComplete('COMMIT', false); return false; }
-        this.committer.execute(planResult, sourcePath, state.timestamp);
+        this.committer.execute(planResult, opts.sourcePath, state.timestamp);
         this.clearCheckpoint(state);
         this.observer.onPhaseComplete('COMMIT', true);
         this.currentPhaseName = null;
@@ -253,194 +330,6 @@ Vui lòng chọn hành động tiếp theo:
     }
 
     return false;
-  }
-
-  async runAutoToEnd(sourcePath: string, skipVerify = false): Promise<boolean> {
-    const state = this.initState(sourcePath);
-    this.observer.onStart(state.source_slug);
-    process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
-
-    try {
-      // Phase MAP
-      if (state.current_phase === 'MAP') {
-        this.observer.onPhaseStart('MAP');
-        this.currentPhaseName = 'MAP';
-        const mappedData = await this.mapper.execute(sourcePath, (usage) => {
-          this.observer.onTokenUsage('MAP', usage);
-          this.tokenTracker.add({ phase: 'MAP', operation: 'chắt lọc tài liệu', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
-        });
-        if (!mappedData) { this.observer.onPhaseComplete('MAP', false); return false; }
-        state.mapped_data = mappedData;
-        state.current_phase = 'REDUCE';
-        this.saveCheckpoint(state);
-        this.observer.onPhaseComplete('MAP', true);
-        this.currentPhaseName = null;
-      } else {
-        this.observer.onPhaseSkip('MAP');
-      }
-
-      // Phase REDUCE
-      if (state.current_phase === 'REDUCE') {
-        this.observer.onPhaseStart('REDUCE');
-        this.currentPhaseName = 'REDUCE';
-        if (!state.mapped_data) { this.observer.onPhaseComplete('REDUCE', false); return false; }
-        state.reduced_data = await this.reducer.execute(state.mapped_data, (usage) => {
-          this.observer.onTokenUsage('REDUCE', usage);
-          this.tokenTracker.add({ phase: 'REDUCE', operation: 'phân tích trùng lặp', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
-        });
-        state.current_phase = 'PLAN';
-        this.saveCheckpoint(state);
-        this.observer.onPhaseComplete('REDUCE', true);
-        this.currentPhaseName = null;
-      } else {
-        this.observer.onPhaseSkip('REDUCE');
-      }
-
-      // Phase PLAN
-      if (state.current_phase === 'PLAN') {
-        this.observer.onPhaseStart('PLAN');
-        this.currentPhaseName = 'PLAN';
-        if (!state.reduced_data || !state.mapped_data) { this.observer.onPhaseComplete('PLAN', false); return false; }
-        const planResult = await this.planner.execute(state.reduced_data, state.mapped_data, (usage) => {
-          this.observer.onTokenUsage('PLAN', usage);
-          this.tokenTracker.add({ phase: 'PLAN', operation: 'thiết kế nốt', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
-        });
-        state.plan_item_data = planResult;
-        state.plan_timestamp = state.timestamp;
-
-        const planFile = new PlanFile(
-          [{
-            source_slug: state.source_slug,
-            new_nodes: planResult.new_nodes,
-            merge_nodes: planResult.merge_nodes,
-            depends_on: [],
-            reasoning: planResult.reasoning,
-          }],
-          state.timestamp,
-        );
-        const destPlanPath = path.join(this.config.dirJournal, planFile.filename);
-        this.fs.writeFile(destPlanPath, this.mdGenerator.generatePlan(planFile));
-
-        // Tự động approve
-        let pContent = this.fs.readFile(destPlanPath);
-        pContent = pContent.replace('Trạng thái: `pending`', 'Trạng thái: `approved`');
-        this.fs.writeFile(destPlanPath, pContent);
-
-        state.current_phase = 'REFINE';
-        this.saveCheckpoint(state);
-        this.observer.onPhaseComplete('PLAN', true);
-        this.currentPhaseName = null;
-      } else {
-        this.observer.onPhaseSkip('PLAN');
-      }
-
-      // Phase REFINE
-      if (state.current_phase === 'REFINE') {
-        this.observer.onPhaseStart('REFINE');
-        this.currentPhaseName = 'REFINE';
-        if (!state.plan_item_data) { this.observer.onPhaseComplete('REFINE', false); return false; }
-        this.refiner.execute(state.plan_item_data as PlanResult, state.source_slug);
-        state.current_phase = 'VERIFY';
-        this.saveCheckpoint(state);
-        this.observer.onPhaseComplete('REFINE', true);
-        this.currentPhaseName = null;
-      } else {
-        this.observer.onPhaseSkip('REFINE');
-      }
-
-      // Phase VERIFY
-      if (state.current_phase === 'VERIFY') {
-        this.observer.onPhaseStart('VERIFY');
-        this.currentPhaseName = 'VERIFY';
-        if (skipVerify) {
-          console.log('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
-          this.observer.onPhaseSkip('VERIFY');
-        } else {
-          const result = this.verifier.execute();
-          if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
-            console.log(`  ❌ Phát hiện lỗi kiểm toán cuối cùng.`);
-            this.observer.onPhaseComplete('VERIFY', false);
-            return false;
-          }
-          this.observer.onPhaseComplete('VERIFY', true);
-        }
-        state.current_phase = 'COMMIT';
-        this.saveCheckpoint(state);
-        this.currentPhaseName = null;
-      } else {
-        this.observer.onPhaseSkip('VERIFY');
-      }
-
-      // Phase COMMIT
-      if (state.current_phase === 'COMMIT') {
-        this.observer.onPhaseStart('COMMIT');
-        this.currentPhaseName = 'COMMIT';
-        if (!state.plan_item_data) { this.observer.onPhaseComplete('COMMIT', false); return false; }
-        this.committer.execute(state.plan_item_data as PlanResult, sourcePath, state.timestamp);
-        this.clearCheckpoint(state);
-        this.observer.onPhaseComplete('COMMIT', true);
-        this.currentPhaseName = null;
-        this.observer.onFinalize();
-        console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
-        return true;
-      } else {
-        this.observer.onPhaseSkip('COMMIT');
-      }
-    } catch (e: unknown) {
-      const err = e instanceof Error ? e.message : String(e);
-      if (this.currentPhaseName) {
-        this.observer.onPhaseFail(this.currentPhaseName, err);
-      }
-      console.log(`❌ Lỗi thực thi tự động: ${err}`);
-      throw e;
-    }
-    return false;
-  }
-
-  async query(question: string): Promise<{ answer: string; tokensUsed?: number }> {
-    try {
-      // 1. Phân tích từ khóa từ câu hỏi
-      const cleanWords = question.toLowerCase().match(/\b\w+\b/g) || [];
-      const keywords = cleanWords.map(w => ({ name: w, definition: '' }));
-
-      // 2. Lọc 8 nốt liên quan nhất (Active Context Filtering)
-      const relevantNodes = filterRelevantNodes(keywords, 8);
-
-      if (relevantNodes.length === 0) {
-        return { answer: '⚠️ Không tìm thấy khái niệm liên quan trong kho tri thức phẳng của bạn.' };
-      }
-
-      // 3. Xây dựng tài liệu ngữ cảnh siêu nhẹ từ các nốt
-      const contextBlocks = relevantNodes.map((node, i) => {
-        return `[${i + 1}] NỐT: ${node.title} (slug: ${node.slug})\nĐịnh nghĩa: ${node.definition}\nLiên kết cha: ${node.parent || 'không có'}\nLiên kết con: ${node.children.join(', ') || 'không có'}`;
-      }).join('\n\n');
-
-      // 4. Tạo prompt
-      const prompt = `Bạn là Harness Knowledge OS, một bộ não đồ thị tri thức thông minh, cấu trúc phẳng.
-Nhiệm vụ: Trả lời câu hỏi của người dùng dựa TRỰC TIẾP vào các nốt nguyên tử tri thức được cung cấp bên dưới.
-
-Câu hỏi của người dùng:
-"${question}"
-
-Danh sách các nốt nguyên tử liên quan nhất từ Vault (Active Context):
-${contextBlocks}
-
-Yêu cầu trả lời:
-1. Trả lời bằng tiếng Việt một cách sâu sắc, súc tích, đi thẳng vào bản chất (khoảng 3-5 câu).
-2. Chỉ dựa vào dữ liệu được cung cấp. Nếu dữ liệu không chứa câu trả lời, hãy nói rõ những nốt nào liên quan và đề xuất người dùng nạp thêm tài liệu.
-3. Nếu cần thông tin chi tiết hơn của bài kinh/nguồn gốc, hãy chỉ rõ: "Xem dẫn chứng ngược dòng tại structured doc: [structured-slug-processed](01_structured_docs/structured-slug-processed.md)" (thay thế bằng structured_slug thực tế của nốt nếu bạn suy luận được, hoặc gợi ý nốt liên quan).
-`;
-
-      const response = await this.llm.generate(prompt, 'Bạn là Harness Knowledge OS chuyên nghiệp.', false);
-
-      return {
-        answer: response.content,
-        tokensUsed: response.usage?.totalTokens,
-      };
-    } catch (e: unknown) {
-      const err = e instanceof Error ? e.message : String(e);
-      return { answer: `❌ Lỗi khi truy vấn kho tri thức: ${err}` };
-    }
   }
 
   // ============ State Machine Helpers ============

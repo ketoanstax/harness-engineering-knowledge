@@ -1,13 +1,16 @@
-import type { ILLMProvider, LLMResponse, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
+import type { INodeRepository } from '../../domain/interfaces/node-repository.interface.ts';
 import { filterRelevantNodes } from '../../core/context-filter.ts';
 import type { MappedData, ReducedData } from './_types.ts';
 import { extractJson } from './_utils.ts';
 
 export class ReducerPhase {
   private llm: ILLMProvider;
+  private nodeRepo: INodeRepository;
 
-  constructor(llm: ILLMProvider) {
+  constructor(llm: ILLMProvider, nodeRepo: INodeRepository) {
     this.llm = llm;
+    this.nodeRepo = nodeRepo;
   }
 
   async execute(mappedData: MappedData, onTokenUsed?: (usage: LLMUsage) => void): Promise<ReducedData> {
@@ -18,8 +21,9 @@ export class ReducerPhase {
       return { conflicts: [], new_concepts: [] };
     }
 
-    // Active Context Filtering
-    const relevantNodes = filterRelevantNodes(keywords, 12);
+    // Lấy nodes từ Repository, không tự đọc FS
+    const allNodes = this.nodeRepo.findAll();
+    const relevantNodes = filterRelevantNodes(keywords, allNodes, 12);
     console.log(`  🧠 Active Context: Chỉ chọn ${relevantNodes.length} nốt liên quan nhất để so khớp LLM.`);
 
     // Gọi LLM

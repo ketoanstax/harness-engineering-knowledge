@@ -15,6 +15,7 @@ import { ReducerPhase } from './application/phases/reducer.phase.ts';
 import { PlannerPhase } from './application/phases/planner.phase.ts';
 import { RefinerPhase } from './application/phases/refiner.phase.ts';
 import { CommitterPhase } from './application/phases/committer.phase.ts';
+import { FileSystemNodeRepository } from './infrastructure/repositories/file-system-node-repository.ts';
 
 const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
 
@@ -137,13 +138,15 @@ async function runBatchTest(): Promise<boolean> {
   const configProvider = new ConfigProvider();
   const tokenTracker = new TokenTracker();
   const pipelineDashboard = new PipelineDashboard(tokenTracker);
+  const testNodeRepo = new FileSystemNodeRepository(testFs, configProvider);
 
   const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider);
-  const reducer = new ReducerPhase(testLlm);
+  const reducer = new ReducerPhase(testLlm, testNodeRepo);
   const planner = new PlannerPhase(testLlm, configProvider);
   const refiner = new RefinerPhase(testFs, testMd, configProvider);
   const testVerifier = new VerifierPhase(testFs, testMd, configProvider);
   const committer = new CommitterPhase(testFs, testMd, configProvider);
+  const testNodeRepo2 = new FileSystemNodeRepository(new NodeFileSystem(), configProvider);
 
   const useCase = new IngestDocumentUseCase(
     mapper,
@@ -158,6 +161,7 @@ async function runBatchTest(): Promise<boolean> {
     tokenTracker,
     pipelineDashboard,
     testLlm,
+    testNodeRepo,
   );
 
   const success = await useCase.runBatch(TEST_DIR_RAW, true);

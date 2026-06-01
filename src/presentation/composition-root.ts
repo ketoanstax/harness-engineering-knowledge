@@ -2,6 +2,7 @@ import { NodeFileSystem } from '../infrastructure/fs/node-file-system.ts';
 import { LLMClient } from '../infrastructure/llm/llm-client.ts';
 import { MarkdownGenerator } from '../infrastructure/formatters/markdown.generator.ts';
 import { ConfigProvider } from '../infrastructure/config/config-provider.ts';
+import { FileSystemNodeRepository } from '../infrastructure/repositories/file-system-node-repository.ts';
 import { TokenTracker } from '../application/services/token-tracker.ts';
 import { PipelineDashboard } from './ui/pipeline-dashboard.ts';
 import { IngestDocumentUseCase } from '../application/use-cases/ingest-document.use-case.ts';
@@ -22,9 +23,10 @@ const markdownGenerator = new MarkdownGenerator();
 const configProvider = new ConfigProvider();
 const tokenTracker = new TokenTracker();
 const pipelineDashboard = new PipelineDashboard(tokenTracker);
+const nodeRepository = new FileSystemNodeRepository(fileSystem, configProvider);
 
 const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider);
-const reducer = new ReducerPhase(llmClient);
+const reducer = new ReducerPhase(llmClient, nodeRepository);
 const planner = new PlannerPhase(llmClient, configProvider);
 const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider);
 const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider);
@@ -43,6 +45,7 @@ const useCase = new IngestDocumentUseCase(
   tokenTracker,
   pipelineDashboard as import('../domain/interfaces/pipeline-observer.interface.ts').IPipelineObserver,
   llmClient,
+  nodeRepository,
 );
 
 const program = buildProgram(useCase, fileSystem);
