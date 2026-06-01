@@ -316,11 +316,7 @@ export class GeminiProvider implements ILLMProvider {
 
 // 5. Mock Provider
 export class MockProvider implements ILLMProvider {
-  private model: string;
-
-  constructor(model: string) {
-    this.model = model;
-  }
+  constructor(_model: string) {}
 
   async generate(prompt: string, _systemPrompt = '', _responseJson = false): Promise<string> {
     const promptLower = prompt.toLowerCase();

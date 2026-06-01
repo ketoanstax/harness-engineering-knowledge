@@ -145,6 +145,65 @@ program
     process.exit(0);
   });
 
+// Lệnh: guide
+program
+  .command('guide')
+  .description('📖 Hiển thị hướng dẫn vận hành chi tiết quy trình nạp tri thức (MRP Ingestion Workflow)')
+  .action(() => {
+    console.log(`
+=====================================================================
+📖 HƯỚNG DẪN VẬN HÀNH QUY TRÌNH NẠP TRI THỨC (MRP PIPELINE WORKFLOW)
+=====================================================================
+
+Hệ thống hoạt động theo mô hình MAP-REDUCE-PLAN-REFINE-VERIFY-COMMIT:
+
+1️⃣  Pha MAP (Mapper):
+    - Đọc tài liệu thô tại 'vault/00_raw_docs/' có trạng thái 'status: to-process'.
+    - Phân tích và trích xuất khái niệm chính, từ khóa và tạo file chắt lọc cấu trúc tại 'vault/01_structured_docs/'.
+
+2️⃣  Pha REDUCE (Reducer):
+    - Dùng cơ chế lọc ngữ cảnh động (Active Context Filtering).
+    - So sánh khái niệm mới với các nốt tri thức cũ trong vault để tìm trùng lặp hoặc xung đột.
+
+3️⃣  Pha PLAN (Planner):
+    - LLM đề xuất phương án hành động cụ thể (Tạo nốt mới hoặc Trộn vào nốt cũ).
+    - Xuất file kế hoạch hành động dạng Markdown tại 'vault/05_journal/mrp_plan_<timestamp>.md'.
+    - Pipeline TẠM DỪNG ở pha này để chờ người dùng phê duyệt.
+
+4️⃣  Pha REFINE (Refiner):
+    - Sau khi được duyệt, hệ thống tự động tạo mới hoặc trộn nội dung các nốt nguyên tử tại 'vault/02_atomic_nodes/'.
+    - Ghi nhận liên kết ngược dòng dẫn chứng (evidence) về tận tài liệu thô ban đầu.
+
+5️⃣  Pha VERIFY (Verifier):
+    - Kiểm toán liên kết (Link Audit) & Kiểm toán cấu trúc cha-con (Tree Integrity Audit) để tránh liên kết gãy.
+
+6️⃣  Pha COMMIT (Committer):
+    - Cập nhật trạng thái tài liệu thô sang 'processed'.
+    - Cập nhật chỉ mục đồ thị vào 'vault/03_neural_map/INDEX.md' và bảng định tuyến 'vault/03_neural_map/AI_ROUTING_TABLE.md'.
+
+---------------------------------------------------------------------
+💻 CÁC LỆNH ĐIỀU HÀNH CHÍNH (CLI COMMANDS):
+---------------------------------------------------------------------
+
+👉 1. Chạy quy trình cho 1 tệp tin thô (ví dụ sutta-mn-003.md):
+   $ pnpm start run -s sutta-mn-003.md
+   (Hoặc: node --experimental-strip-types src/index.ts run -s sutta-mn-003.md)
+
+👉 2. Duyệt kế hoạch (sau khi kiểm tra file mrp_plan_<timestamp>.md):
+   $ pnpm start approve -t <timestamp>
+   (Ví dụ: pnpm start approve -t 20260601_092811)
+
+👉 3. Từ chối kế hoạch và dọn dẹp checkpoint:
+   $ pnpm start reject -t <timestamp>
+
+👉 4. Chạy Batch tuần tự tự động cho toàn bộ tệp thô mới (không dừng duyệt):
+   $ pnpm start batch --auto-approve
+
+👉 5. Chạy Batch tuần tự dừng duyệt từng bước:
+   $ pnpm start batch
+`);
+  });
+
 // Xử lý khi không nhận diện được command
 program.on('command:*', () => {
   console.error('Lệnh không hợp lệ: %s\nXem --help để biết các lệnh được hỗ trợ.', program.args.join(' '));
