@@ -253,30 +253,114 @@ async function pickFileForPipeline(): Promise<void> {
     return;
   }
 
-  console.log('\n📋 Danh sách file sẵn sàng xử lý:');
-  console.log('──────────────────────────────────────');
-  files.forEach((f, i) => {
-    console.log(`  ${String(i + 1).padStart(2)}. ${f.title}`);
-  });
+  const selected = await interactiveSelect(
+    files.map(f => f.title),
+    '📋 Chọn file để chạy pipeline (↑↓ + Enter, Esc để hủy):'
+  );
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  const answer = await rl.question('\nChọn số (hoặc 0 để hủy): ');
-  rl.close();
-
-  const choice = parseInt(answer.trim(), 10);
-  if (!choice || choice < 1 || choice > files.length) {
+  if (selected === -1) {
     console.log('  ⏭️ Đã hủy.');
     return;
   }
 
-  const selected = files[choice - 1];
-  console.log(`\n  ✅ Đã chọn: ${selected.title}`);
-  const orchestrator = new MRPOrchestrator(selected.filepath);
+  const chosen = files[selected];
+  console.log(`\n  ✅ Đã chọn: ${chosen.title}`);
+  const orchestrator = new MRPOrchestrator(chosen.filepath);
   await orchestrator.run();
+}
+
+async function interactiveSelect(options: string[], prompt: string): Promise<number> {
+  const stdin = process.stdin;
+  const stdout = process.stdout;
+
+  if (!stdin.isTTY) {
+    // Fallback: nếu không phải TTY thì dùng readline số
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    console.log(`\n${prompt}`);
+    options.forEach((opt, i) => console.log(`  ${i + 1}. ${opt}`));
+    const answer = await rl.question('\nChọn số (hoặc 0 để hủy): ');
+    rl.close();
+    const choice = parseInt(answer.trim(), 10);
+    if (choice >= 1 && choice <= options.length) return choice - 1;
+    return -1;
+  }
+
+  // Raw TTY mode để bắt phím mũi tên
+  const isRaw = stdin.isRaw;
+  stdin.setRawMode(true);
+  stdin.resume();
+
+  let selected = 0;
+
+  function render() {
+    // Xoá dòng cũ và vẽ lại
+    const lines = options.length + 3; // prompt + border + padding
+    const ansiUp = `\x1b[${lines}A`;
+    stdout.write(ansiUp);
+
+    stdout.write(`\r${prompt}\n`);
+    stdout.write('  ──────────────────────────────────────\n');
+    options.forEach((opt, i) => {
+      const prefix = i === selected ? '\x1b[7m ❯ ' : '   ';
+      const suffix = i === selected ? ' \x1b[0m' : '';
+      stdout.write(`\r${prefix}${opt}${suffix}\n`);
+    });
+  }
+
+  // Vẽ lần đầu
+  stdout.write(`\n${prompt}\n`);
+  stdout.write('  ──────────────────────────────────────\n');
+  options.forEach((_, i) => stdout.write(`   ${options[i]}\n`));
+  // Di chuyển con trỏ lên đầu danh sách
+  const totalLines = options.length + 2;
+  stdout.write(`\x1b[${totalLines}A`);
+
+  return new Promise<number>((resolve) => {
+    const onData = (key: Buffer) => {
+      const keyStr = key.toString();
+
+      // Mũi tên lên
+      if (keyStr === '\x1b[A') {
+        selected = Math.max(0, selected - 1);
+        render();
+        return;
+      }
+
+      // Mũi tên xuống
+      if (keyStr === '\x1b[B') {
+        selected = Math.min(options.length - 1, selected + 1);
+        render();
+        return;
+      }
+
+      // Enter
+      if (keyStr === '\r' || keyStr === '\n') {
+        cleanup();
+        resolve(selected);
+        return;
+      }
+
+      // Escape hoặc Ctrl+C
+      if (keyStr === '\x1b' || keyStr === '\x03') {
+        cleanup();
+        resolve(-1);
+        return;
+      }
+    };
+
+    function cleanup() {
+      stdin.removeListener('data', onData);
+      stdin.setRawMode(isRaw);
+      stdin.pause();
+
+      // Vẽ lại kết quả cuối cùng
+      stdout.write(`\x1b[${options.length + 2}B`); // xuống cuối
+      const suffix = selected >= 0 ? options[selected] : '(đã hủy)';
+      stdout.write(`\n  ✅ ${suffix}\n`);
+    }
+
+    stdin.on('data', onData);
+  });
 }
 
 // =============================
