@@ -21,6 +21,10 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 - [Tưởng Tri (Sañjānāti)](02_atomic_nodes/HAE-concept-tuong-tri.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ### 5. Giới Định Tuệ (Virtue, Concentration, Wisdom)
+- [Nghi Hoặc Do Dự](02_atomic_nodes/HAE-concept-nghi-hoac-do-du.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Hôn Trầm Thụy Miên](02_atomic_nodes/HAE-concept-hon-tram-thuy-mien.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Từ Tâm](02_atomic_nodes/HAE-concept-tu-tam.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
+- [Thân - Khẩu - Ý Nghiệp Thanh Tịnh](02_atomic_nodes/HAE-concept-than-khau-y-nghiep-thanh-tinh.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Ít dục biết đủ (Appichata Santutthi)](02_atomic_nodes/HAE-concept-it-duc-biet-du.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Viễn ly (Viveka)](02_atomic_nodes/HAE-concept-vien-ly.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Thừa tự Pháp (Dhammadàyàda)](02_atomic_nodes/HAE-concept-thua-tu-phap.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
@@ -28,6 +32,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
 ### 6. Vô Thường - Khổ - Vô Ngã (Three Marks of Existence)
 
 ### 7. Giáo lý Khác (Other Dharma)
+- [Sự Sợ Hãi Khiếp Đảm (Bhayabherava)](02_atomic_nodes/HAE-concept-so-hai-khiep-dam.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 - [Thừa tự tài vật (Amisadayada)](02_atomic_nodes/HAE-concept-thua-tu-tai-vat.md) — Bổ sung tự động bởi MRP Ingestion Pipeline.
 
 ---
