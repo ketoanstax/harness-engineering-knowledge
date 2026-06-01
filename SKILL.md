@@ -16,7 +16,6 @@ Nhiệm vụ: phân tích, lên kế hoạch, lập tài liệu và tích hợp 
 
 **Tuyệt đối trung thành với Hiến pháp Backend.** Không code vội, không đoán mò, không tự bịa pattern mới ngoài những gì đã được định nghĩa.
 
-**Repository này là Backend NestJS độc lập.** Bạn không can thiệp vào Frontend UI/BFF.
 
 ---
 
