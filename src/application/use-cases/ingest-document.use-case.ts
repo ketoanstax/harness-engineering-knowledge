@@ -3,6 +3,7 @@ import type { IFileSystem } from '../../domain/interfaces/file-system.interface.
 import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import type { IPipelineObserver } from '../../domain/interfaces/pipeline-observer.interface.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
 import type { MapperPhase } from '../phases/mapper.phase.ts';
 import type { ReducerPhase } from '../phases/reducer.phase.ts';
@@ -12,7 +13,6 @@ import type { VerifierPhase } from '../phases/verifier.phase.ts';
 import type { CommitterPhase } from '../phases/committer.phase.ts';
 import type { PlanResult, MappedData, ReducedData } from '../phases/_types.ts';
 import type { TokenTracker } from '../services/token-tracker.ts';
-import type { PipelineDashboard } from '../../presentation/ui/pipeline-dashboard.ts';
 import { filterRelevantNodes } from '../../core/context-filter.ts';
 
 interface PipelineState {
@@ -40,7 +40,7 @@ export class IngestDocumentUseCase {
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
   private tokenTracker: TokenTracker;
-  private dashboard: PipelineDashboard;
+  private observer: IPipelineObserver;
   private currentPhaseName: string | null = null;
   private llm: ILLMProvider;
 
@@ -55,7 +55,7 @@ export class IngestDocumentUseCase {
     mdGenerator: IMarkdownGenerator,
     config: IConfigProvider,
     tokenTracker: TokenTracker,
-    dashboard: PipelineDashboard,
+    observer: IPipelineObserver,
     llm: ILLMProvider,
   ) {
     this.mapper = mapper;
@@ -68,7 +68,7 @@ export class IngestDocumentUseCase {
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.tokenTracker = tokenTracker;
-    this.dashboard = dashboard;
+    this.observer = observer;
     this.llm = llm;
   }
 
@@ -81,50 +81,52 @@ export class IngestDocumentUseCase {
     // Thiết lập biến môi trường để mock provider phân biệt source slug
     process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
 
-    this.dashboard.setSourceSlug(state.source_slug);
-    this.dashboard.render();
+    this.observer.onStart(state.source_slug);
 
     try {
       // Phase MAP
       if (state.current_phase === 'MAP') {
-        this.dashboard.startPhase('MAP');
+        this.observer.onPhaseStart('MAP');
         this.currentPhaseName = 'MAP';
         const mappedData = await this.mapper.execute(sourcePath, (usage) => {
+          this.observer.onTokenUsage('MAP', usage);
           this.tokenTracker.add({ phase: 'MAP', operation: 'chắt lọc tài liệu', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
-        if (!mappedData) { this.dashboard.completePhase('MAP', false); return false; }
+        if (!mappedData) { this.observer.onPhaseComplete('MAP', false); return false; }
         state.mapped_data = mappedData;
         state.current_phase = 'REDUCE';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('MAP', true);
+        this.observer.onPhaseComplete('MAP', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('MAP');
+        this.observer.onPhaseSkip('MAP');
       }
 
       // Phase REDUCE
       if (state.current_phase === 'REDUCE') {
-        this.dashboard.startPhase('REDUCE');
+        this.observer.onPhaseStart('REDUCE');
         this.currentPhaseName = 'REDUCE';
-        if (!state.mapped_data) { this.dashboard.completePhase('REDUCE', false); return false; }
+        if (!state.mapped_data) { this.observer.onPhaseComplete('REDUCE', false); return false; }
         const reducedData = await this.reducer.execute(state.mapped_data, (usage) => {
+          this.observer.onTokenUsage('REDUCE', usage);
           this.tokenTracker.add({ phase: 'REDUCE', operation: 'phân tích trùng lặp', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
         state.reduced_data = reducedData;
         state.current_phase = 'PLAN';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('REDUCE', true);
+        this.observer.onPhaseComplete('REDUCE', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('REDUCE');
+        this.observer.onPhaseSkip('REDUCE');
       }
 
       // Phase PLAN
       if (state.current_phase === 'PLAN') {
-        this.dashboard.startPhase('PLAN');
+        this.observer.onPhaseStart('PLAN');
         this.currentPhaseName = 'PLAN';
-        if (!state.reduced_data || !state.mapped_data) { this.dashboard.completePhase('PLAN', false); return false; }
+        if (!state.reduced_data || !state.mapped_data) { this.observer.onPhaseComplete('PLAN', false); return false; }
         const planResult = await this.planner.execute(state.reduced_data, state.mapped_data, (usage) => {
+          this.observer.onTokenUsage('PLAN', usage);
           this.tokenTracker.add({ phase: 'PLAN', operation: 'thiết kế nốt', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
         state.plan_item_data = planResult;
@@ -144,7 +146,7 @@ export class IngestDocumentUseCase {
         this.fs.writeFile(destPlanPath, this.mdGenerator.generatePlan(planFile));
 
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('PLAN', true);
+        this.observer.onPhaseComplete('PLAN', true);
         this.currentPhaseName = null;
 
         if (onPlanGenerated) {
@@ -188,62 +190,62 @@ Vui lòng chọn hành động tiếp theo:
           return true;
         }
       } else {
-        this.dashboard.skipPhase('PLAN');
+        this.observer.onPhaseSkip('PLAN');
       }
 
       // Phase REFINE
       if (state.current_phase === 'REFINE') {
-        this.dashboard.startPhase('REFINE');
+        this.observer.onPhaseStart('REFINE');
         this.currentPhaseName = 'REFINE';
         const planData = state.plan_item_data as PlanResult;
-        if (!planData) { this.dashboard.completePhase('REFINE', false); return false; }
+        if (!planData) { this.observer.onPhaseComplete('REFINE', false); return false; }
         this.refiner.execute(planData, state.source_slug);
         state.current_phase = 'VERIFY';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('REFINE', true);
+        this.observer.onPhaseComplete('REFINE', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('REFINE');
+        this.observer.onPhaseSkip('REFINE');
       }
 
       // Phase VERIFY
       if (state.current_phase === 'VERIFY') {
-        this.dashboard.startPhase('VERIFY');
+        this.observer.onPhaseStart('VERIFY');
         this.currentPhaseName = 'VERIFY';
         const result = this.verifier.execute();
         if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
           console.log(`  ❌ Phát hiện lỗi kiểm toán: brokenLinks=${result.brokenLinks}, portabilityViolations=${result.portabilityViolations}, inconsistencies=${result.inconsistencies}`);
-          this.dashboard.completePhase('VERIFY', false);
+          this.observer.onPhaseComplete('VERIFY', false);
           return false;
         }
         state.current_phase = 'COMMIT';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('VERIFY', true);
+        this.observer.onPhaseComplete('VERIFY', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('VERIFY');
+        this.observer.onPhaseSkip('VERIFY');
       }
 
       // Phase COMMIT
       if (state.current_phase === 'COMMIT') {
-        this.dashboard.startPhase('COMMIT');
+        this.observer.onPhaseStart('COMMIT');
         this.currentPhaseName = 'COMMIT';
         const planResult = state.plan_item_data as PlanResult;
-        if (!planResult) { this.dashboard.completePhase('COMMIT', false); return false; }
+        if (!planResult) { this.observer.onPhaseComplete('COMMIT', false); return false; }
         this.committer.execute(planResult, sourcePath, state.timestamp);
         this.clearCheckpoint(state);
-        this.dashboard.completePhase('COMMIT', true);
+        this.observer.onPhaseComplete('COMMIT', true);
         this.currentPhaseName = null;
-        this.dashboard.finalize();
+        this.observer.onFinalize();
         console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
         return true;
       } else {
-        this.dashboard.skipPhase('COMMIT');
+        this.observer.onPhaseSkip('COMMIT');
       }
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
       if (this.currentPhaseName) {
-        this.dashboard.failPhase(this.currentPhaseName, err);
+        this.observer.onPhaseFail(this.currentPhaseName, err);
       }
       console.log(`❌ Lỗi thực thi Pipeline: ${err}`);
       this.saveCheckpoint(state);
@@ -255,51 +257,52 @@ Vui lòng chọn hành động tiếp theo:
 
   async runAutoToEnd(sourcePath: string, skipVerify = false): Promise<boolean> {
     const state = this.initState(sourcePath);
-    this.dashboard.setSourceSlug(state.source_slug);
+    this.observer.onStart(state.source_slug);
     process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
-
-    this.dashboard.render();
 
     try {
       // Phase MAP
       if (state.current_phase === 'MAP') {
-        this.dashboard.startPhase('MAP');
+        this.observer.onPhaseStart('MAP');
         this.currentPhaseName = 'MAP';
         const mappedData = await this.mapper.execute(sourcePath, (usage) => {
+          this.observer.onTokenUsage('MAP', usage);
           this.tokenTracker.add({ phase: 'MAP', operation: 'chắt lọc tài liệu', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
-        if (!mappedData) { this.dashboard.completePhase('MAP', false); return false; }
+        if (!mappedData) { this.observer.onPhaseComplete('MAP', false); return false; }
         state.mapped_data = mappedData;
         state.current_phase = 'REDUCE';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('MAP', true);
+        this.observer.onPhaseComplete('MAP', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('MAP');
+        this.observer.onPhaseSkip('MAP');
       }
 
       // Phase REDUCE
       if (state.current_phase === 'REDUCE') {
-        this.dashboard.startPhase('REDUCE');
+        this.observer.onPhaseStart('REDUCE');
         this.currentPhaseName = 'REDUCE';
-        if (!state.mapped_data) { this.dashboard.completePhase('REDUCE', false); return false; }
+        if (!state.mapped_data) { this.observer.onPhaseComplete('REDUCE', false); return false; }
         state.reduced_data = await this.reducer.execute(state.mapped_data, (usage) => {
+          this.observer.onTokenUsage('REDUCE', usage);
           this.tokenTracker.add({ phase: 'REDUCE', operation: 'phân tích trùng lặp', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
         state.current_phase = 'PLAN';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('REDUCE', true);
+        this.observer.onPhaseComplete('REDUCE', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('REDUCE');
+        this.observer.onPhaseSkip('REDUCE');
       }
 
       // Phase PLAN
       if (state.current_phase === 'PLAN') {
-        this.dashboard.startPhase('PLAN');
+        this.observer.onPhaseStart('PLAN');
         this.currentPhaseName = 'PLAN';
-        if (!state.reduced_data || !state.mapped_data) { this.dashboard.completePhase('PLAN', false); return false; }
+        if (!state.reduced_data || !state.mapped_data) { this.observer.onPhaseComplete('PLAN', false); return false; }
         const planResult = await this.planner.execute(state.reduced_data, state.mapped_data, (usage) => {
+          this.observer.onTokenUsage('PLAN', usage);
           this.tokenTracker.add({ phase: 'PLAN', operation: 'thiết kế nốt', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
         });
         state.plan_item_data = planResult;
@@ -325,68 +328,68 @@ Vui lòng chọn hành động tiếp theo:
 
         state.current_phase = 'REFINE';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('PLAN', true);
+        this.observer.onPhaseComplete('PLAN', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('PLAN');
+        this.observer.onPhaseSkip('PLAN');
       }
 
       // Phase REFINE
       if (state.current_phase === 'REFINE') {
-        this.dashboard.startPhase('REFINE');
+        this.observer.onPhaseStart('REFINE');
         this.currentPhaseName = 'REFINE';
-        if (!state.plan_item_data) { this.dashboard.completePhase('REFINE', false); return false; }
+        if (!state.plan_item_data) { this.observer.onPhaseComplete('REFINE', false); return false; }
         this.refiner.execute(state.plan_item_data as PlanResult, state.source_slug);
         state.current_phase = 'VERIFY';
         this.saveCheckpoint(state);
-        this.dashboard.completePhase('REFINE', true);
+        this.observer.onPhaseComplete('REFINE', true);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('REFINE');
+        this.observer.onPhaseSkip('REFINE');
       }
 
       // Phase VERIFY
       if (state.current_phase === 'VERIFY') {
-        this.dashboard.startPhase('VERIFY');
+        this.observer.onPhaseStart('VERIFY');
         this.currentPhaseName = 'VERIFY';
         if (skipVerify) {
           console.log('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
-          this.dashboard.skipPhase('VERIFY');
+          this.observer.onPhaseSkip('VERIFY');
         } else {
           const result = this.verifier.execute();
           if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
             console.log(`  ❌ Phát hiện lỗi kiểm toán cuối cùng.`);
-            this.dashboard.completePhase('VERIFY', false);
+            this.observer.onPhaseComplete('VERIFY', false);
             return false;
           }
-          this.dashboard.completePhase('VERIFY', true);
+          this.observer.onPhaseComplete('VERIFY', true);
         }
         state.current_phase = 'COMMIT';
         this.saveCheckpoint(state);
         this.currentPhaseName = null;
       } else {
-        this.dashboard.skipPhase('VERIFY');
+        this.observer.onPhaseSkip('VERIFY');
       }
 
       // Phase COMMIT
       if (state.current_phase === 'COMMIT') {
-        this.dashboard.startPhase('COMMIT');
+        this.observer.onPhaseStart('COMMIT');
         this.currentPhaseName = 'COMMIT';
-        if (!state.plan_item_data) { this.dashboard.completePhase('COMMIT', false); return false; }
+        if (!state.plan_item_data) { this.observer.onPhaseComplete('COMMIT', false); return false; }
         this.committer.execute(state.plan_item_data as PlanResult, sourcePath, state.timestamp);
         this.clearCheckpoint(state);
-        this.dashboard.completePhase('COMMIT', true);
+        this.observer.onPhaseComplete('COMMIT', true);
         this.currentPhaseName = null;
-        this.dashboard.finalize();
+        this.observer.onFinalize();
         console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
         return true;
       } else {
-        this.dashboard.skipPhase('COMMIT');
+        this.observer.onPhaseSkip('COMMIT');
       }
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
       if (this.currentPhaseName) {
-        this.dashboard.failPhase(this.currentPhaseName, err);
+        this.observer.onPhaseFail(this.currentPhaseName, err);
       }
       console.log(`❌ Lỗi thực thi tự động: ${err}`);
       throw e;

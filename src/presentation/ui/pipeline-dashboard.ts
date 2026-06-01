@@ -1,5 +1,7 @@
-import chalk from 'chalk';
+import type { IPipelineObserver } from '../../domain/interfaces/pipeline-observer.interface.ts';
+import type { LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { TokenTracker } from '../../application/services/token-tracker.ts';
+import chalk from 'chalk';
 
 export type PhaseStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
 
@@ -18,7 +20,7 @@ const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, '');
 const padR = (str: string, width: number) => str + ' '.repeat(Math.max(0, width - stripAnsi(str).length));
 const padL = (str: string, width: number) => ' '.repeat(Math.max(0, width - stripAnsi(str).length)) + str;
 
-export class PipelineDashboard {
+export class PipelineDashboard implements IPipelineObserver {
   private tokenTracker: TokenTracker;
   private phases: PhaseInfo[] = [];
   private sourceSlug = '';
@@ -31,7 +33,7 @@ export class PipelineDashboard {
   private lastRenderedLines = 0;
   private readonly TABLE_WIDTH = 70;
 
-  // Console Hijacking (Để không bị đụng độ với console.log của các class khác)
+  // Console Hijacking
   private isHooked = false;
   private origLog = console.log;
   private origError = console.error;
@@ -42,12 +44,57 @@ export class PipelineDashboard {
     this.resetPhases();
   }
 
-  setSourceSlug(slug: string): void {
+  // ============ IPipelineObserver Implementation ============
+
+  onStart(slug: string): void {
     this.sourceSlug = slug;
     this.startTime = Date.now();
     this.lastRenderedLines = 0;
     console.clear();
   }
+
+  onPhaseStart(phase: string): void {
+    const p = this.phases.find(p => p.name === phase);
+    if (p) {
+      p.status = 'running';
+      p.durationMs = Date.now();
+    }
+    this.startEngine();
+  }
+
+  onPhaseComplete(phase: string, success: boolean): void {
+    const p = this.phases.find(p => p.name === phase);
+    if (p) {
+      p.status = success ? 'completed' : 'failed';
+      if (p.durationMs) p.durationMs = Date.now() - p.durationMs;
+    }
+    this.syncTokens(phase);
+
+    if (!this.phases.some(p => p.status === 'running')) {
+      this.stopEngine();
+    }
+  }
+
+  onPhaseFail(phase: string, _error: string): void {
+    const p = this.phases.find(p => p.name === phase);
+    if (p) p.status = 'failed';
+    this.stopEngine();
+  }
+
+  onPhaseSkip(phase: string): void {
+    const p = this.phases.find(p => p.name === phase);
+    if (p) p.status = 'skipped';
+  }
+
+  onTokenUsage(phase: string, usage: LLMUsage): void {
+    this.tokenTracker.add({ phase, operation: `${phase} operation`, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.totalTokens });
+  }
+
+  onFinalize(): void {
+    this.stopEngine();
+  }
+
+  // ============ Internal Helpers ============
 
   reset(): void {
     this.stopEngine();
@@ -73,9 +120,8 @@ export class PipelineDashboard {
   private hookConsole(): void {
     if (this.isHooked) return;
     this.isHooked = true;
-    process.stdout.write('\x1b[?25l'); // Giấu con trỏ chuột
+    process.stdout.write('\x1b[?25l');
 
-    // Bắt cóc lệnh in. Bất cứ khi nào hệ thống in log, ta xóa bảng -> in log -> vẽ lại bảng.
     const createHook = (originalFn: Function) => (...args: any[]) => {
       this.clearTable();
       originalFn.apply(console, args);
@@ -93,7 +139,7 @@ export class PipelineDashboard {
     console.error = this.origError;
     console.warn = this.origWarn;
     this.isHooked = false;
-    process.stdout.write('\x1b[?25h'); // Bật lại con trỏ chuột
+    process.stdout.write('\x1b[?25h');
   }
 
   private clearTable(): void {
@@ -120,88 +166,44 @@ export class PipelineDashboard {
       this.renderInterval = null;
     }
     this.unhookConsole();
-    this.clearTable(); // Xóa bảng động
-    this.drawTable();  // Vẽ lại bảng tĩnh một lần cuối cùng
-  }
-
-  // === ĐIỀU KHIỂN PHASE ===
-
-  startPhase(name: string): void {
-    const phase = this.phases.find(p => p.name === name);
-    if (phase) {
-      phase.status = 'running';
-      phase.durationMs = Date.now();
-    }
-    this.startEngine(); // Bật vòng lặp
-  }
-
-  completePhase(name: string, success = true): void {
-    const phase = this.phases.find(p => p.name === name);
-    if (phase) {
-      phase.status = success ? 'completed' : 'failed';
-      if (phase.durationMs) phase.durationMs = Date.now() - phase.durationMs;
-    }
-    this.syncTokens(name);
-    
-    // Nếu không còn phase nào đang chạy (ví dụ kết thúc MAP/REDUCE chuyển sang PLAN chờ duyệt)
-    if (!this.phases.some(p => p.status === 'running')) {
-      this.stopEngine(); // Tắt vòng lặp, nhả console để hiển thị Markdown bình thường
-    }
-  }
-
-  failPhase(name: string, err: string): void {
-    const phase = this.phases.find(p => p.name === name);
-    if (phase) phase.status = 'failed';
-    this.stopEngine();
-  }
-
-  skipPhase(name: string): void {
-    const phase = this.phases.find(p => p.name === name);
-    if (phase) phase.status = 'skipped';
+    this.clearTable();
+    this.drawTable();
   }
 
   private syncTokens(phaseName: string): void {
-    const phase = this.phases.find(p => p.name === phaseName);
-    if (phase) {
+    const p = this.phases.find(p => p.name === phaseName);
+    if (p) {
       const entry = this.tokenTracker.history.find(e => e.phase === phaseName);
       if (entry) {
-        phase.inputTokens = entry.inputTokens;
-        phase.outputTokens = entry.outputTokens;
-        phase.totalTokens = entry.totalTokens;
+        p.inputTokens = entry.inputTokens;
+        p.outputTokens = entry.outputTokens;
+        p.totalTokens = entry.totalTokens;
       }
     }
   }
 
-  // Dummy function for usecase compatibility
-  render(): void {
-    // Để trống, mọi thứ được xử lý bởi drawTable()
-  }
-
-  // === HÀM VẼ BẢNG (CHẮC CHẮN KHÔNG LỆCH) ===
+  // === HÀM VẼ BẢNG ===
   private drawTable(): void {
     const lines: string[] = [];
-    const H = chalk.cyan; 
-    
+    const H = chalk.cyan;
+
     lines.push(H('╭' + '─'.repeat(this.TABLE_WIDTH) + '╮'));
 
-    // Header bảng
     const duration = ((Date.now() - this.startTime) / 1000).toFixed(1);
     let slugDisp = this.sourceSlug || 'Ingesting...';
     if (slugDisp.length > 40) slugDisp = slugDisp.substring(0, 37) + '...';
-    
+
     const titleLeft = ` 🚀 PIPELINE: ${chalk.white(slugDisp)}`;
     const titleRight = `${chalk.dim(duration + 's')} `;
-    
+
     const spaceCount = this.TABLE_WIDTH - stripAnsi(titleLeft).length - stripAnsi(titleRight).length;
     lines.push(H('│') + chalk.bold.yellow(titleLeft) + ' '.repeat(Math.max(0, spaceCount)) + titleRight + H('│'));
     lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Cột
     const colHeader = padR('  Phase', 24) + padR('Status', 10) + padL('Input', 8) + padL('Output', 8) + padL('Total', 8) + padL('Time  ', 12);
     lines.push(H('│') + chalk.bold(colHeader) + H('│'));
     lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Nội dung Phase
     for (const p of this.phases) {
       let statusStr = '';
       if (p.status === 'pending') statusStr = chalk.gray('[ WAIT ]');
@@ -230,7 +232,6 @@ export class PipelineDashboard {
 
     lines.push(H('├' + '─'.repeat(this.TABLE_WIDTH) + '┤'));
 
-    // Tổng hợp Tokens
     const totInput = this.tokenTracker.totalInput;
     const totOutput = this.tokenTracker.totalOutput;
     const totTotal = this.tokenTracker.totalTokens;
@@ -243,14 +244,7 @@ export class PipelineDashboard {
     lines.push(H('│') + chalk.bold(sumRow) + H('│'));
     lines.push(H('╰' + '─'.repeat(this.TABLE_WIDTH) + '╯'));
 
-    const output = lines.join('\n') + '\n';
-    process.stdout.write(output);
-    
-    // Ghi nhớ số dòng đã vẽ để xóa vào lần lặp sau
+    process.stdout.write(lines.join('\n') + '\n');
     this.lastRenderedLines = lines.length;
-  }
-
-  finalize(): void {
-    this.stopEngine();
   }
 }

@@ -1,21 +1,20 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { VerificationResult } from './_types.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
-import { MarkdownGenerator } from '../../infrastructure/formatters/markdown.generator.ts';
-import chalk from 'chalk';
 import matter from 'gray-matter';
 import * as path from 'node:path';
 
 export class VerifierPhase {
   private fs: IFileSystem;
-  private mdGenerator: MarkdownGenerator;
+  private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
 
-  constructor(fs: IFileSystem, config: IConfigProvider) {
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
     this.fs = fs;
-    this.mdGenerator = new MarkdownGenerator();
+    this.mdGenerator = mdGenerator;
     this.config = config;
   }
 
@@ -121,7 +120,7 @@ export class VerifierPhase {
           { supportingConditions: [], derivativeEffects: [] }
         );
         this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
-        console.log(chalk.cyan(`  🩹 [Graph Healing] Đã tự tạo nốt nguyên tử nháp: [${node.fullSlug}.md]`));
+        console.log(`  🩹 [Graph Healing] Đã tự tạo nốt nguyên tử nháp: [${node.fullSlug}.md]`);
       }
     }
     // Hướng 2: Trỏ tới 01_structured_docs
@@ -140,7 +139,7 @@ export class VerifierPhase {
           'Nội dung đang được cập nhật.'
         );
         this.fs.writeFile(filepath, this.mdGenerator.generateStructuredDoc(doc));
-        console.log(chalk.cyan(`  🩹 [Graph Healing] Đã tự tạo structured doc nháp: [${slug}.md]`));
+        console.log(`  🩹 [Graph Healing] Đã tự tạo structured doc nháp: [${slug}.md]`);
       }
     }
   }
@@ -193,7 +192,7 @@ export class VerifierPhase {
           // Parent có tồn tại, nhưng parent không có slug này trong children -> Vá parent
           const parentNode = nodes.get(info.parent)!;
           if (!parentNode.children.includes(slug)) {
-            console.log(chalk.yellow(`⚠️ Sửa lỗi cây: Node cha [${info.parent}] thiếu nốt con [${slug}]. Tiến hành tự vá...`));
+            console.log(`⚠️ Sửa lỗi cây: Node cha [${info.parent}] thiếu nốt con [${slug}]. Tiến hành tự vá...`);
             this.addChildToParentFile(parentNode.filepath, slug);
             inconsistencies++;
           }
@@ -209,7 +208,7 @@ export class VerifierPhase {
           // Con tồn tại, nhưng con khai báo parent khác slug này -> Vá con
           const childNode = nodes.get(child)!;
           if (childNode.parent !== slug) {
-            console.log(chalk.yellow(`⚠️ Sửa lỗi cây: Node con [${child}] có parent là [${childNode.parent}] (Kỳ vọng: [${slug}]). Tiến hành tự vá...`));
+            console.log(`⚠️ Sửa lỗi cây: Node con [${child}] có parent là [${childNode.parent}] (Kỳ vọng: [${slug}]). Tiến hành tự vá...`);
             this.updateParentInChildFile(childNode.filepath, slug);
             inconsistencies++;
           }

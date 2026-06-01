@@ -27,7 +27,7 @@ const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configP
 const reducer = new ReducerPhase(llmClient);
 const planner = new PlannerPhase(llmClient, configProvider);
 const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider);
-const verifier = new VerifierPhase(fileSystem, configProvider);
+const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider);
 const committer = new CommitterPhase(fileSystem, markdownGenerator, configProvider);
 
 const useCase = new IngestDocumentUseCase(
@@ -41,7 +41,7 @@ const useCase = new IngestDocumentUseCase(
   markdownGenerator,
   configProvider,
   tokenTracker,
-  pipelineDashboard,
+  pipelineDashboard as import('../domain/interfaces/pipeline-observer.interface.ts').IPipelineObserver,
   llmClient,
 );
 

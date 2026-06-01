@@ -142,7 +142,7 @@ async function runBatchTest(): Promise<boolean> {
   const reducer = new ReducerPhase(testLlm);
   const planner = new PlannerPhase(testLlm, configProvider);
   const refiner = new RefinerPhase(testFs, testMd, configProvider);
-  const testVerifier = new VerifierPhase(testFs, configProvider);
+  const testVerifier = new VerifierPhase(testFs, testMd, configProvider);
   const committer = new CommitterPhase(testFs, testMd, configProvider);
 
   const useCase = new IngestDocumentUseCase(
@@ -215,7 +215,7 @@ async function runBatchTest(): Promise<boolean> {
 
   // 5. CHẠY BỘ KIỂM TOÁN TĨNH XÁC NHẬN 0 LỖI
   console.log('\n--- BƯỚC 5: CHẠY BỘ KIỂM TOÁN TĨNH ---');
-  const verifier = new VerifierPhase(new NodeFileSystem(), configProvider);
+  const verifier = new VerifierPhase(new NodeFileSystem(), new MarkdownGenerator(), configProvider);
   const { brokenLinks, portabilityViolations, inconsistencies } = verifier.execute();
 
   // 6. DỌN DẸP SAU KHI TEST (BẢO VỆ VAULT TRỐNG CHO NIKAYA)
