@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as process from 'node:process';
 import { LLMClient } from './llm.ts';
-import { DIR_JOURNAL, DIR_RAW, VAULT_ROOT } from './config.ts';
+import { DIR_JOURNAL, VAULT_ROOT } from './config.ts';
 import { PhaseMapper } from '../phases/mapper.ts';
 import { PhaseReducer } from '../phases/reducer.ts';
 import { PhasePlanner } from '../phases/planner.ts';

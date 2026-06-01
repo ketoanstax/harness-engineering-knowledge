@@ -246,10 +246,8 @@ async function runShell(): Promise<void> {
     prompt: 'mrp> ',
   });
 
-  rl.on('close', () => {
-    console.log('\n👋 Tạm biệt!');
-    process.exit(0);
-  });
+  // Dùng exitOverride của Commander thay vì can thiệp process.exit (read-only)
+  program.exitOverride();
 
   console.log(`
 ╔════════════════════════════════════════╗
@@ -259,40 +257,53 @@ async function runShell(): Promise<void> {
 ╚════════════════════════════════════════╝
 `);
 
-  rl.prompt();
-
-  for await (const line of rl) {
+  rl.on('line', async (line: string) => {
     const trimmed = line.trim();
 
     if (!trimmed || trimmed.startsWith('#')) {
       rl.prompt();
-      continue;
+      return;
     }
 
     if (trimmed === '/exit' || trimmed === '/quit') {
       rl.close();
-      break;
+      return;
     }
 
     if (trimmed === '/help') {
       printShellHelp();
       rl.prompt();
-      continue;
+      return;
     }
 
     try {
       const args = trimmed.split(/\s+/);
       await program.parseAsync(['node', 'mrp', ...args], { from: 'user' });
     } catch (e: any) {
-      console.error(`⚠️ Lỗi: ${e.message}`);
+      // Commander ném CommanderError thay vì process.exit() khi dùng exitOverride
+      // Chỉ hiển thị lỗi nếu không phải exit code 0 (thoát bình thường)
+      if (e.code !== 'commander.exit' || e.exitCode !== 0) {
+        console.error(`⚠️ Lỗi: ${e.message}`);
+      }
     }
     rl.prompt();
-  }
+  });
+
+  rl.on('close', () => {
+    console.log('\n👋 Tạm biệt!');
+    process.exit(0);
+  });
+
+  rl.prompt();
 }
 
-program.parse(process.argv);
-
-// Nếu không truyền lệnh nào, vào Shell Mode
+// Nếu có tham số dòng lệnh → parse và chạy command tương ứng
+// Nếu không → vào Shell Mode tương tác
 if (process.argv.length <= 2) {
-  runShell();
+  runShell().catch((e) => {
+    console.error(`❌ Shell error: ${e.message}`);
+    process.exit(1);
+  });
+} else {
+  program.parse(process.argv);
 }
