@@ -8,25 +8,6 @@ import { askPlanAction } from './plan-displayer.ts';
 import { spinner } from '@clack/prompts';
 import chalk from 'chalk';
 
-// Hàm render markdown tối giản, an toàn cho Terminal
-function renderMarkdown(md: string): string {
-  return md
-    // H1, H2, H3
-    .replace(/^# (.*$)/gim, (_, p1) => chalk.bold.yellow(`\n⭐ ${p1}\n`))
-    .replace(/^## (.*$)/gim, (_, p1) => chalk.bold.cyan(`\n🔹 ${p1}\n`))
-    .replace(/^### (.*$)/gim, (_, p1) => chalk.bold.underline(`\n🔸 ${p1}\n`))
-    // Bold
-    .replace(/\*\*(.*?)\*\*/g, (_, p1) => chalk.bold(p1))
-    // Italic
-    .replace(/\*(.*?)\*/g, (_, p1) => chalk.italic(p1))
-    // Code block inline `code`
-    .replace(/`(.*?)`/g, (_, p1) => chalk.bgGray.black(` ${p1} `))
-    // Link [text](url) -> text (url)
-    .replace(/\[(.*?)\]\((.*?)\)/g, (_, p1, p2) => `${chalk.bold.blue(p1)} (${chalk.dim(p2)})`)
-    // List item -
-    .replace(/^- (.*$)/gim, (_, p1) => `  • ${p1}`);
-}
-
 let activeProgram: Command | null = null;
 let currentInput = '';
 
@@ -53,24 +34,17 @@ export function setActiveProgram(program: Command): void {
   activeProgram = program;
 }
 
-// === Readline completer — Tab completion cho /commands ===
-function completer(line: string, callback: (err: Error | null, result: [string[], string]) => void): void {
-  if (line.startsWith('/')) {
-    const hits = COMMANDS.filter(c => c.command.startsWith(line)).map(c => c.command);
-    callback(null, [hits.length ? hits : COMMANDS.map(c => c.command), line]);
-  } else {
-    callback(null, [[], line]);
-  }
-}
-
-// === Real-time Syntax Highlighting ===
-function redrawLine(rl: readline.Interface, line: string): void {
+// === Real-time Syntax Highlighting & Suggestion Panel ===
+function redrawLine(rl: readline.Interface, line: string, selectedIndex = -1, matched: typeof COMMANDS = []): void {
   const cursorPos = rl.cursor;
   const prompt = chalk.bold.magenta('mrp❯ ');
-  const promptLen = 5; // 'mrp❯ ' chiều dài visual
+  const promptLen = 5;
 
-  // Xóa dòng hiện tại + di về đầu
-  process.stdout.write('\x1b[K\r' + prompt);
+  // 1. Dòng kẻ ngang ranh giới ở trên prompt
+  // Để tránh rác khi gõ, ta chỉ in đường kẻ trên khi vẽ prompt đầu tiên của phiên gõ mới
+
+  // Xóa toàn bộ từ con trỏ hiện tại tới hết màn hình dưới để tránh rác
+  process.stdout.write('\r\x1b[K' + prompt);
 
   if (line.startsWith('/')) {
     const firstSpace = line.indexOf(' ');
@@ -85,7 +59,31 @@ function redrawLine(rl: readline.Interface, line: string): void {
     process.stdout.write(chalk.white(line));
   }
 
-  // Di chuyển con trỏ tới vị trí đúng (cộng thêm độ dài prompt)
+  // Xóa hết phần màn hình bên dưới (để dọn bảng gợi ý cũ)
+  process.stdout.write('\x1b[J');
+
+  // 2. Vẽ bảng gợi ý bên dưới dòng gõ lệnh
+  if (matched.length > 0) {
+    // Xuống dòng vẽ bảng
+    process.stdout.write('\n' + chalk.gray('  ' + '─'.repeat(60)));
+    for (let i = 0; i < matched.length; i++) {
+      const isSelected = i === selectedIndex;
+      const cmdText = matched[i].command;
+      const descText = matched[i].description;
+
+      const row = isSelected
+        ? chalk.bgCyan.black(` ❯ ${cmdText.padEnd(25)} - ${descText} `)
+        : `   ${chalk.cyan(cmdText.padEnd(25))} - ${chalk.dim(descText)}`;
+      process.stdout.write(`\n${row}`);
+    }
+    process.stdout.write('\n' + chalk.gray('  ' + '─'.repeat(60)));
+
+    // Dịch con trỏ ngược lên dòng input (số dòng dịch lên = matched.length + 3)
+    const linesToMoveUp = matched.length + 3;
+    process.stdout.write(`\x1b[${linesToMoveUp}A`);
+  }
+
+  // 3. Trả con trỏ về vị trí cũ trên dòng input
   process.stdout.write(`\x1b[${promptLen + cursorPos}G`);
 }
 
@@ -167,12 +165,31 @@ async function handleQuery(input: string, useCase: IngestDocumentUseCase): Promi
   }
 }
 
+// Hàm render markdown tối giản, an toàn cho Terminal
+function renderMarkdown(md: string): string {
+  return md
+    // H1, H2, H3
+    .replace(/^# (.*$)/gim, (_, p1) => chalk.bold.yellow(`\n⭐ ${p1}\n`))
+    .replace(/^## (.*$)/gim, (_, p1) => chalk.bold.cyan(`\n🔹 ${p1}\n`))
+    .replace(/^### (.*$)/gim, (_, p1) => chalk.bold.underline(`\n🔸 ${p1}\n`))
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, (_, p1) => chalk.bold(p1))
+    // Italic
+    .replace(/\*(.*?)\*/g, (_, p1) => chalk.italic(p1))
+    // Code block inline `code`
+    .replace(/`(.*?)`/g, (_, p1) => chalk.bgGray.black(` ${p1} `))
+    // Link [text](url) -> text (url)
+    .replace(/\[(.*?)\]\((.*?)\)/g, (_, p1, p2) => `${chalk.bold.blue(p1)} (${chalk.dim(p2)})`)
+    // List item -
+    .replace(/^- (.*$)/gim, (_, p1) => `  • ${p1}`);
+}
+
 // === Shell chính ===
 export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  ${chalk.bold.cyan('💻 HARRNESS KNOWLEDGE OS')}                        ║
-║  Gõ ${chalk.cyan.bold('/')} + Tab xem lệnh                               ║
+║  Gõ ${chalk.cyan.bold('/')} để mở menu phím mũi tên / Tab                  ║
 ║  Gõ câu hỏi tự do để truy vấn kho tri thức             ║
 ║  Gõ ${chalk.cyan.bold('/exit')} để thoát                                    ║
 ╚══════════════════════════════════════════════════════════╝
@@ -181,70 +198,135 @@ export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFile
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    completer,
+    completer: () => [[], ''], // Tắt completer mặc định của readline để ta tự xử lý
     prompt: '',
     terminal: true,
   });
 
-  // Real-time syntax highlighting qua keypress event
-  process.stdin.setRawMode?.(true);
-  process.stdin.on('keypress', (char, key) => {
-    // Xử lý Enter — submit dòng
-    if (key?.name === 'enter' || key?.name === 'return') {
-      // Để readline xử lý line event
-      return;
-    }
+  let selectedIndex = -1;
+  let matchedCommands: typeof COMMANDS = [];
+  let isSuggesting = false;
 
-    // Xử lý Ctrl+C/Ctrl+D → exit hoặc cancel
+  // Kích hoạt Raw Mode để nghe keystroke chính xác
+  process.stdin.setRawMode?.(true);
+
+  process.stdin.on('keypress', (char, key) => {
+    // 1. Ctrl+C / Ctrl+D → Exit ngay
     if (key?.ctrl && (key.name === 'c' || key.name === 'd')) {
       console.log('\n👋 Tạm biệt!');
       process.exit(0);
     }
 
-    // Vẽ lại dòng với syntax highlighting sau mỗi lần gõ
-    setImmediate(() => {
-      if (rl.line !== currentInput) {
-        currentInput = rl.line;
-        redrawLine(rl, rl.line);
-      }
-    });
-  });
-
-  // Main loop — vòng lặp xử lý câu lệnh vô hạn
-  rl.on('line', async (line) => {
-    const input = line.trim();
-
-    // Vẽ lại prompt cho dòng tiếp theo
-    currentInput = '';
-
-    if (!input) {
-      process.stdout.write(chalk.bold.magenta('mrp❯ '));
-      rl.resume();
+    // 2. Phím mũi tên Xuống / Lên / Tab khi đang hiển thị Suggestion
+    if (isSuggesting && (key?.name === 'down' || key?.name === 'tab')) {
+      selectedIndex = (selectedIndex + 1) % matchedCommands.length;
+      redrawLine(rl, rl.line, selectedIndex, matchedCommands);
       return;
     }
 
-    // Xác định: lệnh / hay câu hỏi?
+    if (isSuggesting && key?.name === 'up') {
+      selectedIndex = selectedIndex === -1 ? matchedCommands.length - 1 : selectedIndex - 1;
+      if (selectedIndex < 0) selectedIndex = matchedCommands.length - 1;
+      redrawLine(rl, rl.line, selectedIndex, matchedCommands);
+      return;
+    }
+
+    // 3. Phím Enter khi đang highlight một gợi ý lệnh
+    if (isSuggesting && selectedIndex >= 0 && (key?.name === 'enter' || key?.name === 'return')) {
+      const chosen = matchedCommands[selectedIndex].command;
+
+      // Ghi đè dòng input hiện tại
+      // rl.write(null, {ctrl: true, name: 'u'}) // Xóa dòng cũ
+      // Tự cập nhật nội dung vào readline
+      const promptLen = 5;
+      process.stdout.write(`\r\x1b[K${chalk.bold.magenta('mrp❯ ')}${chalk.cyan.bold(chosen)}`);
+
+      // Đồng bộ readline line buffer
+      const lineLen = rl.line.length;
+      rl.write(null, { ctrl: true, name: 'u' }); // Xóa buffer cũ
+      rl.write(chosen); // Viết buffer mới
+
+      isSuggesting = false;
+      selectedIndex = -1;
+      matchedCommands = [];
+      redrawLine(rl, rl.line, selectedIndex, matchedCommands);
+      return;
+    }
+
+    // 4. Các phím gõ thông thường
+    setImmediate(() => {
+      const line = rl.line;
+
+      if (line.startsWith('/')) {
+        isSuggesting = true;
+        // Lọc các command bắt đầu khớp
+        matchedCommands = COMMANDS.filter(c => c.command.startsWith(line));
+
+        // Giới hạn hiển thị tối đa 5 items để không tràn màn hình
+        matchedCommands = matchedCommands.slice(0, 5);
+
+        if (matchedCommands.length === 0) {
+          isSuggesting = false;
+          selectedIndex = -1;
+        } else if (selectedIndex >= matchedCommands.length) {
+          selectedIndex = 0;
+        }
+      } else {
+        isSuggesting = false;
+        selectedIndex = -1;
+        matchedCommands = [];
+      }
+
+      // Xử lý scroll/height control: nếu vị trí gõ quá sát mép dưới terminal (còn dưới 6 dòng)
+      // thì in thêm dòng trống và dịch màn hình lên để có khoảng vẽ menu gợi ý bên dưới
+      const rows = process.stdout.rows || 24;
+      // Lấy cursor position thật từ readline
+      const cursorY = rl.cursor; // readline cursor chỉ cho X, vị trí dòng khó xác định chính xác
+      // Giải thuật đơn giản: khi mở menu gợi ý, ta cứ scroll 1 khoảng cố định nếu cần
+      if (isSuggesting && matchedCommands.length > 0) {
+        // Tạm thời in thêm dòng trống xuống đáy để cuộn terminal lên
+        process.stdout.write('\n'.repeat(matchedCommands.length + 1));
+        process.stdout.write(`\x1b[${matchedCommands.length + 1}A`); // dịch ngược con trỏ lên
+      }
+
+      currentInput = line;
+      redrawLine(rl, line, selectedIndex, matchedCommands);
+    });
+  });
+
+  // Main loop
+  rl.on('line', async (line) => {
+    const input = line.trim();
+    currentInput = '';
+
+    // Dọn sạch bảng gợi ý bên dưới khi nhấn Enter để submit
+    process.stdout.write('\x1b[J');
+
+    if (!input) {
+      process.stdout.write(chalk.bold.magenta('mrp❯ '));
+      return;
+    }
+
+    // Kẹp khung input bằng 2 đường kẻ ngang cân đối
+    console.log(chalk.gray('━'.repeat(60)));
+
     if (input.startsWith('/') || input === 'help' || input === 'run') {
       await handleCommand(input, useCase, fileSystem);
     } else {
       await handleQuery(input, useCase);
     }
 
-    // Vẽ lại prompt cho lần nhập tiếp theo
-    process.stdout.write('\n' + chalk.bold.magenta('mrp❯ '));
-    rl.resume();
+    console.log(chalk.gray('━'.repeat(60)));
+    process.stdout.write(chalk.bold.magenta('mrp❯ '));
   });
 
-  // === QUAN TRỌNG: Ngăn không cho readline đóng khi không có lệnh exit ===
   rl.on('close', () => {
-    // Không làm gì — chương trình không thoát trừ khi /exit
-    // Ctrl+C đã được xử lý riêng ở keypress handler
+    // Ngăn đóng
   });
 
   // Vẽ prompt ban đầu
   process.stdout.write(chalk.bold.magenta('mrp❯ '));
 
-  // Giữ tiến trình tồn tại mãi mãi — dùng Promise never resolves
   await new Promise<never>(() => {});
 }
 
