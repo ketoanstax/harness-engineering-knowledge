@@ -10,15 +10,31 @@ export interface Frontmatter {
 }
 
 export class SourceDoc {
+  public readonly slug: string;
+  public readonly title: string;
+  public readonly filepath: string;
+  public readonly content: string;
+  public readonly frontmatter: Frontmatter;
+  public readonly sourceUrl?: string;
+  public readonly sourceType: string;
+
   constructor(
-    public readonly slug: string,
-    public readonly title: string,
-    public readonly filepath: string,
-    public readonly content: string,
-    public readonly frontmatter: Frontmatter,
-    public readonly sourceUrl?: string,
-    public readonly sourceType: string = 'website',
-  ) {}
+    slug: string,
+    title: string,
+    filepath: string,
+    content: string,
+    frontmatter: Frontmatter,
+    sourceUrl?: string,
+    sourceType: string = 'website',
+  ) {
+    this.slug = slug;
+    this.title = title;
+    this.filepath = filepath;
+    this.content = content;
+    this.frontmatter = frontmatter;
+    this.sourceUrl = sourceUrl;
+    this.sourceType = sourceType;
+  }
 
   get relativePath(): string {
     return `00_raw_docs/${this.slug}.md`;

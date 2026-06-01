@@ -3,7 +3,11 @@ import { filterRelevantNodes } from '../../core/context-filter.ts';
 import type { MappedData, ReducedData } from './_types.ts';
 
 export class ReducerPhase {
-  constructor(private llm: ILLMProvider) {}
+  private llm: ILLMProvider;
+
+  constructor(llm: ILLMProvider) {
+    this.llm = llm;
+  }
 
   async execute(mappedData: MappedData): Promise<ReducedData> {
     const keywords = mappedData.keywords || [];

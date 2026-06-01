@@ -1,6 +1,6 @@
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
-import { PlanFile, PlanItem } from '../../domain/entities/plan.entity.ts';
+import type { PlanFile, PlanItem } from '../../domain/entities/plan.entity.ts';
 import { ATOMIC_PREFIX } from '../../core/config.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 

@@ -1,14 +1,12 @@
-import * as readline from 'node:readline/promises';
 import * as process from 'node:process';
 import { Command } from 'commander';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case.ts';
-import { DIR_RAW } from '../../core/config.ts';
 import { pickFileForPipeline } from './file-picker.ts';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { askPlanAction } from './plan-displayer.ts';
+import { outro, text, isCancel, spinner } from '@clack/prompts';
+import chalk from 'chalk';
 
-let isInteractiveShell = false;
 let activeProgram: Command | null = null;
 
 function printShellHelp(): void {
@@ -23,9 +21,8 @@ function printShellHelp(): void {
   batch --auto-approve          Chạy batch tự động
   guide                         Xem hướng dẫn vận hành
 
-  /help      Hiển thị danh sách lệnh
-  /exit      Thoát shell
-  Ctrl+D     Thoát shell
+  exit                          Thoát shell
+  help                          Hiển thị danh sách lệnh
 `);
 }
 
@@ -33,92 +30,75 @@ export function setActiveProgram(program: Command): void {
   activeProgram = program;
 }
 
-export function runShell(useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
-  isInteractiveShell = true;
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: 'mrp> ',
+async function getShellInput(): Promise<string> {
+  const result = await text({
+    message: 'mrp>',
+    placeholder: 'Gõ lệnh (help để xem DS)',
   });
 
+  if (isCancel(result)) return 'exit';
+  return (result as string).trim();
+}
+
+async function handleCommand(cmd: string, useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
+  if (!cmd || cmd.startsWith('#')) return;
+
+  if (cmd === 'exit' || cmd === 'quit') {
+    outro(chalk.gray('👋 Tạm biệt!'));
+    process.exit(0);
+    return;
+  }
+
+  if (cmd === 'help') {
+    printShellHelp();
+    return;
+  }
+
+  // "run" không tham số → file picker
+  if (cmd === 'run') {
+    const filepath = await pickFileForPipeline(fileSystem);
+    if (filepath) {
+      const s = spinner();
+      s.start('🔄 Đang chạy Pipeline...');
+      const success = await useCase.execute(filepath, askPlanAction);
+      s.stop(success ? chalk.green('✅ Pipeline hoàn tất thành công!') : chalk.red('⚠️ Pipeline thất bại.'));
+    }
+    return;
+  }
+
+  // Các lệnh còn lại qua Commander
+  try {
+    const args = cmd.split(/\s+/);
+    if (activeProgram) {
+      await activeProgram.parseAsync(['node', 'mrp', ...args], { from: 'user' });
+    }
+  } catch (e: any) {
+    if (e.code !== 'commander.exit' || e.exitCode !== 0) {
+      process.stderr.write(`⚠️ ${e.message}\n`);
+    }
+  }
+}
+
+export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
   console.log(`
 ╔════════════════════════════════════════╗
 ║  💻 MRP Interactive Shell              ║
-║  Gõ /help để xem danh sách lệnh       ║
-║  Gõ /exit hoặc Ctrl+D để thoát        ║
+║  Gõ help để xem danh sách lệnh        ║
+║  Gõ exit hoặc Ctrl+C để thoát         ║
 ╚════════════════════════════════════════╝
   `);
 
-  rl.on('line', async (line: string) => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      rl.prompt();
-      return;
-    }
-
-    if (trimmed === '/exit' || trimmed === '/quit') {
-      rl.close();
-      return;
-    }
-
-    if (trimmed === '/help') {
-      printShellHelp();
-      rl.prompt();
-      return;
-    }
-
-    // Special handling: "run" without args → file picker
-    if (trimmed === 'run') {
-      rl.pause();
-      const filepath = await pickFileForPipeline(fileSystem);
-      if (filepath) {
-        const success = await useCase.execute(filepath);
-        if (!success) {
-          console.log('⚠️ Pipeline hoàn tất với cảnh báo hoặc thất bại.');
-        } else {
-          console.log('✅ Pipeline hoàn tất thành công.');
-        }
-      }
-      rl.resume();
-      rl.prompt();
-      return;
-    }
-
-    rl.pause();
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
     try {
-      const args = trimmed.split(/\s+/);
-      if (activeProgram) {
-        await activeProgram.parseAsync(['node', 'mrp', ...args], { from: 'user' });
-      }
+      const cmd = await getShellInput();
+      await handleCommand(cmd, useCase, fileSystem);
     } catch (e: any) {
-      if (e.code !== 'commander.exit' || e.exitCode !== 0) {
-        console.error(`⚠️ ${e.message}`);
-      }
+      process.stderr.write(`⚠️ ${e.message}\n`);
     }
-    rl.resume();
-    rl.prompt();
-  });
-
-  rl.on('close', () => {
-    console.log('\n👋 Tạm biệt!');
-    safeExit(0);
-  });
-
-  rl.prompt();
-
-  return new Promise<void>(() => {
-    // resolve never — shell runs until user exits
-  });
-}
-
-export function isShellMode(): boolean {
-  return isInteractiveShell;
+  }
 }
 
 export function safeExit(code: number): void {
-  if (isInteractiveShell) {
-    if (code !== 0) throw new Error(`Lệnh bị hủy hoặc thất bại (Mã: ${code})`);
-  } else {
-    process.exit(code);
-  }
+  process.exit(code);
 }

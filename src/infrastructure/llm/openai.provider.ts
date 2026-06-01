@@ -1,11 +1,15 @@
 import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class OpenAIProvider implements ILLMProvider {
-  constructor(
-    private apiKey: string,
-    private baseUrl: string,
-    private model: string,
-  ) {}
+  private apiKey: string;
+  private baseUrl: string;
+  private model: string;
+
+  constructor(apiKey: string, baseUrl: string, model: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+    this.model = model;
+  }
 
   async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
     const url = `${this.baseUrl}/chat/completions`;

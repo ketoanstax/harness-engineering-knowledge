@@ -7,11 +7,15 @@ import { DIR_STRUCTURED } from '../../core/config.ts';
 import type { MappedData } from './_types.ts';
 
 export class MapperPhase {
-  constructor(
-    private llm: ILLMProvider,
-    private fs: IFileSystem,
-    private mdGenerator: IMarkdownGenerator,
-  ) {}
+  private llm: ILLMProvider;
+  private fs: IFileSystem;
+  private mdGenerator: IMarkdownGenerator;
+
+  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+    this.llm = llm;
+    this.fs = fs;
+    this.mdGenerator = mdGenerator;
+  }
 
   async execute(sourcePath: string): Promise<MappedData | null> {
     const slug = this.extractSlug(sourcePath);

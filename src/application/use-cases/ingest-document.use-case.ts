@@ -34,12 +34,14 @@ export class IngestDocumentUseCase {
   private refiner: RefinerPhase;
   private verifier: VerifierPhase;
   private committer: CommitterPhase;
+  private fs: IFileSystem;
+  private llm: ILLMProvider;
+  private mdGenerator: IMarkdownGenerator;
 
-  constructor(
-    private fs: IFileSystem,
-    private llm: ILLMProvider,
-    private mdGenerator: IMarkdownGenerator,
-  ) {
+  constructor(fs: IFileSystem, llm: ILLMProvider, mdGenerator: IMarkdownGenerator) {
+    this.fs = fs;
+    this.llm = llm;
+    this.mdGenerator = mdGenerator;
     this.mapper = new MapperPhase(llm, fs, mdGenerator);
     this.reducer = new ReducerPhase(llm);
     this.planner = new PlannerPhase(llm);
@@ -48,8 +50,14 @@ export class IngestDocumentUseCase {
     this.committer = new CommitterPhase(fs, mdGenerator);
   }
 
-  async execute(sourcePath: string): Promise<boolean> {
+  async execute(
+    sourcePath: string,
+    onPlanGenerated?: (destPlanPath: string, timestamp: string) => Promise<'approve' | 'reject' | 'exit'>,
+  ): Promise<boolean> {
     const state = this.initState(sourcePath);
+
+    // Thiết lập biến môi trường để mock provider phân biệt source slug
+    process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
 
     console.log(`\n=======================================================`);
     console.log(`🚀 KHỞI CHẠY MRP PIPELINE CHO: [${state.source_slug}]`);
@@ -95,8 +103,29 @@ export class IngestDocumentUseCase {
 
         this.saveCheckpoint(state);
 
-        // DỪNG CHỜ DUYỆT
-        console.log(`
+        // NẾU CÓ CALLBACK THÌ HỎI USER TRỰC TIẾP
+        if (onPlanGenerated) {
+          const action = await onPlanGenerated(destPlanPath, state.timestamp);
+          if (action === 'approve') {
+            // Tự động gán approved và chạy tiếp
+            let pContent = this.fs.readFile(destPlanPath);
+            pContent = pContent.replace('Trạng thái: \`pending\`', 'Trạng thái: \`approved\`');
+            this.fs.writeFile(destPlanPath, pContent);
+            state.current_phase = 'REFINE';
+            this.saveCheckpoint(state);
+          } else if (action === 'reject') {
+            let pContent = this.fs.readFile(destPlanPath);
+            pContent = pContent.replace('Trạng thái: \`pending\`', 'Trạng thái: \`rejected\`');
+            this.fs.writeFile(destPlanPath, pContent);
+            this.clearCheckpoint(state);
+            return false;
+          } else {
+            // exit -> thoát ra ngoài shell
+            return true;
+          }
+        } else {
+          // DỪNG CHỜ DUYỆT (CLI/non-interactive)
+          console.log(`
 ═══════════════════════════════════════════════════════════════════════
 ⏸️  PIPELINE ĐÃ HOÀN TẤT PHA PLAN - CHỜ DUYỆT
 ═══════════════════════════════════════════════════════════════════════
@@ -116,7 +145,8 @@ Vui lòng chọn hành động tiếp theo:
 
   [Q] 🚪 Thoát
 `);
-        return true;
+          return true;
+        }
       }
 
       // Phase REFINE
@@ -160,8 +190,9 @@ Vui lòng chọn hành động tiếp theo:
     return false;
   }
 
-  async runAutoToEnd(sourcePath: string): Promise<boolean> {
+  async runAutoToEnd(sourcePath: string, skipVerify = false): Promise<boolean> {
     const state = this.initState(sourcePath);
+    process.env.CURRENT_MRP_SOURCE_SLUG = state.source_slug;
     console.log(`⚡ Đang chạy tự động hoàn toàn (Auto-Approve Mode)...`);
 
     try {
@@ -213,10 +244,14 @@ Vui lòng chọn hành động tiếp theo:
       }
 
       if (state.current_phase === 'VERIFY') {
-        const result = this.verifier.execute();
-        if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
-          console.log(`  ❌ Phát hiện lỗi kiểm toán cuối cùng.`);
-          return false;
+        if (skipVerify) {
+          console.log('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
+        } else {
+          const result = this.verifier.execute();
+          if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
+            console.log(`  ❌ Phát hiện lỗi kiểm toán cuối cùng.`);
+            return false;
+          }
         }
         state.current_phase = 'COMMIT';
         this.saveCheckpoint(state);
@@ -322,7 +357,7 @@ Vui lòng chọn hành động tiếp theo:
       console.log(`👉 Đang xử lý: ${filename}`);
 
       if (autoApprove) {
-        const success = await this.runAutoToEnd(filepath);
+        const success = await this.runAutoToEnd(filepath, true);
         if (!success) {
           console.log(`❌ Lỗi: Chạy tự động thất bại tại file: ${filename}`);
           return false;

@@ -5,10 +5,13 @@ import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
 export class CommitterPhase {
-  constructor(
-    private fs: IFileSystem,
-    private mdGenerator: IMarkdownGenerator,
-  ) {}
+  private fs: IFileSystem;
+  private mdGenerator: IMarkdownGenerator;
+
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+    this.fs = fs;
+    this.mdGenerator = mdGenerator;
+  }
 
   execute(planResult: PlanResult, sourcePath: string, planTimestamp: string): void {
     this.updateRawFileStatus(sourcePath);

@@ -2,7 +2,11 @@ import * as process from 'node:process';
 import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
 
 export class MockProvider implements ILLMProvider {
-  constructor(private _model: string) {}
+  private _model: string;
+
+  constructor(_model: string) {
+    this._model = _model;
+  }
 
   get model(): string {
     return this._model;

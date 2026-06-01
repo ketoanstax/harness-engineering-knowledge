@@ -6,10 +6,13 @@ import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
 export class RefinerPhase {
-  constructor(
-    private fs: IFileSystem,
-    private mdGenerator: IMarkdownGenerator,
-  ) {}
+  private fs: IFileSystem;
+  private mdGenerator: IMarkdownGenerator;
+
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator) {
+    this.fs = fs;
+    this.mdGenerator = mdGenerator;
+  }
 
   execute(planResult: PlanResult, sourceSlug: string): void {
     const newNodes = planResult.new_nodes || [];

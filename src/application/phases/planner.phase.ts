@@ -3,7 +3,11 @@ import { loadCategories } from '../../core/config.ts';
 import type { MappedData, ReducedData, PlanResult, NewNodeOutput, MergeNodeOutput } from './_types.ts';
 
 export class PlannerPhase {
-  constructor(private llm: ILLMProvider) {}
+  private llm: ILLMProvider;
+
+  constructor(llm: ILLMProvider) {
+    this.llm = llm;
+  }
 
   async execute(reducedData: ReducedData, mappedData: MappedData): Promise<PlanResult> {
     const conflicts = reducedData.conflicts || [];

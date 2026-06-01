@@ -6,7 +6,7 @@ import { IngestDocumentUseCase } from './application/use-cases/ingest-document.u
 import { NodeFileSystem } from './infrastructure/fs/node-file-system.ts';
 import { MarkdownGenerator } from './infrastructure/formatters/markdown.generator.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
-import { auditLinks, auditTreeIntegrity } from './phases/verifier.ts';
+import { VerifierPhase } from './application/phases/verifier.phase.ts';
 
 const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
 
@@ -183,8 +183,8 @@ async function runBatchTest(): Promise<boolean> {
 
   // 5. CHẠY BỘ KIỂM TOÁN TĨNH XÁC NHẬN 0 LỖI
   console.log('\n--- BƯỚC 5: CHẠY BỘ KIỂM TOÁN TĨNH ---');
-  const { brokenLinks, portabilityViolations } = auditLinks();
-  const inconsistencies = auditTreeIntegrity();
+  const verifier = new VerifierPhase(new NodeFileSystem());
+  const { brokenLinks, portabilityViolations, inconsistencies } = verifier.execute();
 
   // 6. DỌN DẸP SAU KHI TEST (BẢO VỆ VAULT TRỐNG CHO NIKAYA)
   console.log('\n--- BƯỚC 6: DỌN DẸP SAU KHI TEST (CLEANUP) ---');

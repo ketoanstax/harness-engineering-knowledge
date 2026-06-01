@@ -29,12 +29,22 @@ export interface PlanItem {
 }
 
 export class PlanFile {
+  public readonly items: PlanItem[];
+  public readonly planTimestamp: string;
+  public readonly createdAt: string;
+  public readonly status: string;
+
   constructor(
-    public readonly items: PlanItem[],
-    public readonly planTimestamp: string,
-    public readonly createdAt: string = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14),
-    public readonly status: string = 'pending',
-  ) {}
+    items: PlanItem[],
+    planTimestamp: string,
+    createdAt?: string,
+    status: string = 'pending',
+  ) {
+    this.items = items;
+    this.planTimestamp = planTimestamp;
+    this.createdAt = createdAt ?? new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    this.status = status;
+  }
 
   get filename(): string {
     return `mrp_plan_${this.planTimestamp}.md`;

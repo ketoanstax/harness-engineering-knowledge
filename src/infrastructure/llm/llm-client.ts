@@ -7,7 +7,11 @@ import { MockProvider } from './mock.provider.ts';
 import { repairJsonString } from './repair-json.ts';
 
 export class LLMClient implements ILLMProvider {
-  constructor(private provider: ILLMProvider) {}
+  private provider: ILLMProvider;
+
+  constructor(provider: ILLMProvider) {
+    this.provider = provider;
+  }
 
   async generate(prompt: string, systemPrompt = '', responseJson = false): Promise<string> {
     const result = await this.provider.generate(prompt, systemPrompt, responseJson);
