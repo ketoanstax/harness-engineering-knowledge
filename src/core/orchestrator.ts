@@ -125,10 +125,26 @@ export class MRPOrchestrator {
         if (!success) return false;
         this.saveCheckpoint();
         // DỪNG LẠI tại đây, chờ duyệt
-        console.log(`\n⏸️ PIPELINE ĐÃ DỪNG ĐỂ CHỜ DUYỆT.`);
-        console.log(`👉 Vui lòng kiểm tra file kế hoạch tại:`);
-        console.log(`   05_journal/mrp_plan_${this.timestamp}.md`);
-        console.log(`👉 Hãy cập nhật trạng thái hoặc gõ lệnh để tiếp tục.`);
+        console.log(`
+═══════════════════════════════════════════════════════════════════════
+⏸️  PIPELINE ĐÃ HOÀN TẤT PHA PLAN - CHỜ DUYỆT
+═══════════════════════════════════════════════════════════════════════
+📄 File kế hoạch:  vault/05_journal/mrp_plan_${this.timestamp}.md
+📂 Tài liệu nguồn: ${this.sourceSlug}
+
+Vui lòng chọn hành động tiếp theo:
+
+  [A] ✅ Duyệt & chạy tiếp
+      → pnpm start approve -t ${this.timestamp}
+
+  [R] ❌ Từ chối & dọn dẹp
+      → pnpm start reject -t ${this.timestamp}
+
+  [V] 📖 Xem hướng dẫn vận hành
+      → pnpm start guide
+
+  [Q] 🚪 Thoát
+`);
         return true;
       }
 
