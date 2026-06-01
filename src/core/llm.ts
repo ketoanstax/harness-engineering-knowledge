@@ -2,6 +2,39 @@ import * as process from 'node:process';
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
 
+function repairJsonString(raw: string): string {
+  let cleaned = raw.trim();
+
+  // 1. Loại bỏ markdown code blocks
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+  }
+
+  // 2. Thay thế ký tự xuống dòng thực tế nằm trong các chuỗi JSON bằng \\n
+  let inString = false;
+  let result = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    const prevChar = i > 0 ? cleaned[i - 1] : '';
+
+    if (char === '"' && prevChar !== '\\') {
+      inString = !inString;
+      result += char;
+    } else if (char === '\n' && inString) {
+      result += '\\n';
+    } else if (char === '\r' && inString) {
+      // Bỏ qua \r
+    } else {
+      result += char;
+    }
+  }
+
+  // 3. Xử lý trailing commas
+  cleaned = result.replace(/,\s*([\]}])/g, '$1');
+
+  return cleaned;
+}
+
 export class LLMClient {
   private apiProvider: 'anthropic' | 'openai' | 'gemini' | 'mock';
   private apiKey?: string;
@@ -52,15 +85,20 @@ export class LLMClient {
       return this.mockGenerate(prompt, responseJson);
     }
 
+    let result = '';
     if (this.apiProvider === 'anthropic') {
-      return this.callAnthropic(prompt, systemPrompt, responseJson);
+      result = await this.callAnthropic(prompt, systemPrompt, responseJson);
     } else if (this.apiProvider === 'openai') {
-      return this.callOpenai(prompt, systemPrompt, responseJson);
+      result = await this.callOpenai(prompt, systemPrompt, responseJson);
     } else if (this.apiProvider === 'gemini') {
-      return this.callGemini(prompt, systemPrompt, responseJson);
+      result = await this.callGemini(prompt, systemPrompt, responseJson);
     }
 
-    return '';
+    if (responseJson && result) {
+      return repairJsonString(result);
+    }
+
+    return result;
   }
 
   private async callAnthropicDirect(prompt: string, systemPrompt: string, responseJson: boolean): Promise<string> {
