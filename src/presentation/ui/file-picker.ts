@@ -64,7 +64,11 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
         // Option quay lại thư mục cha
         if (dir !== VAULT_ROOT) {
           const parent = path.dirname(dir);
-          items.push({ label: '📁 ..', value: parent, hint: 'Thư mục cha' });
+          items.push({
+            label: chalk.yellow(' ⬅  .. (Quay lại)'),
+            value: parent,
+            hint: chalk.yellow('📁 Thư mục cha')
+          });
         }
 
         // Thư mục
@@ -72,7 +76,11 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
           try { return fs.stat(path.join(dir, e)).isDirectory(); } catch { return false; }
         }).sort();
         for (const d of dirs) {
-          items.push({ label: `📁 ${d}/`, value: path.join(dir, d), hint: '' });
+          items.push({
+            label: chalk.cyan(` 📁 ${d}/`),
+            value: path.join(dir, d),
+            hint: chalk.dim('thư mục')
+          });
         }
 
         // File .md
@@ -80,21 +88,35 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
         for (const f of mdFiles) {
           const fp = path.join(dir, f);
           let title = f;
+          let sizeStr = '';
           try {
+            const stat = fs.stat(fp);
+            const sizeKB = (stat.size / 1024).toFixed(1);
+            sizeStr = `${sizeKB} KB`;
+
             const content = fs.readFile(fp);
             const frontmatter = matter(content);
             if (frontmatter.data?.title) title = frontmatter.data.title;
           } catch { /* skip */ }
-          items.push({ label: `📄 ${title}`, value: fp, hint: chalk.gray(f) });
+
+          items.push({
+            label: chalk.green(` 📄 ${title}`),
+            value: fp,
+            hint: chalk.gray(`📝 ${f} (${sizeStr})`)
+          });
         }
 
         if (items.length === 0) {
           outro(chalk.yellow('📭 Thư mục rỗng.'));
-          return null;
+          return await browseDir(path.dirname(dir)); // Tự động quay lại
         }
 
+        // Trực quan hóa breadcrumbs đường dẫn
+        const relativePath = path.relative(VAULT_ROOT, dir) || '.';
+        const breadcrumbs = relativePath.split(path.sep).map(p => chalk.bold.cyan(p)).join(chalk.gray(' ❯ '));
+
         const selected = await select({
-          message: `📂 Đang ở: ${chalk.cyan(path.relative(VAULT_ROOT, dir) || '.')}`,
+          message: `📂 Path: ${chalk.bold.yellow('ROOT')} ${chalk.gray('❯')} ${breadcrumbs} ${chalk.dim(`(${dirs.length} dirs, ${mdFiles.length} files)`)}`,
           options: items,
           maxItems: 12,
         });
