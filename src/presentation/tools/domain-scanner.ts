@@ -1,9 +1,8 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
-import { DIR_RAW } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
 export interface DomainInfo {
   domain: string;
@@ -27,13 +26,13 @@ export interface DomainScanResult {
  * (không đọc RULE.md). Trả về thống kê cho mỗi domain subdirectory
  * và các file legacy ở root.
  */
-export function scanDomains(fs: IFileSystem): DomainScanResult {
+export function scanDomains(fs: IFileSystem, config: IConfigProvider): DomainScanResult {
   const domains: DomainInfo[] = [];
   let legacyFiles = 0;
   let totalToProcess = 0;
   let totalAll = 0;
 
-  const rawDir = DIR_RAW;
+  const rawDir = config.dirRaw;
   if (!fs.fileExists(rawDir)) {
     return { domains: [], legacyFiles: 0, totalToProcess: 0, totalAll: 0 };
   }
@@ -68,17 +67,28 @@ export function scanDomains(fs: IFileSystem): DomainScanResult {
           const fp = path.join(fullPath, f);
           try {
             const content = fs.readFile(fp);
-            const parsed = matter(content);
-            const data = parsed.data || {};
+            // Simple frontmatter detection (no gray-matter needed for tools)
+            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            const frontmatter: Record<string, any> = {};
+            if (fmMatch) {
+              for (const line of fmMatch[1].split('\n')) {
+                const sep = line.indexOf(':');
+                if (sep > 0) {
+                  const key = line.slice(0, sep).trim();
+                  const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
+                  frontmatter[key] = val;
+                }
+              }
+            }
 
-            if (String(data.status || '').trim() === 'to-process') {
+            if (String(frontmatter.status || '').trim() === 'to-process') {
               info.toProcess++;
               totalToProcess++;
-            } else if (String(data.status || '').trim() === 'processed') {
+            } else if (String(frontmatter.status || '').trim() === 'processed') {
               info.processed++;
             }
 
-            if (!data.domain) {
+            if (!frontmatter.domain) {
               info.withoutDomainField++;
             }
           } catch {
@@ -92,9 +102,19 @@ export function scanDomains(fs: IFileSystem): DomainScanResult {
         legacyFiles++;
         totalAll++;
         const content = fs.readFile(fullPath);
-        const parsed = matter(content);
-        const data = parsed.data || {};
-        if (String(data.status || '').trim() === 'to-process') {
+        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const frontmatter: Record<string, any> = {};
+        if (fmMatch) {
+          for (const line of fmMatch[1].split('\n')) {
+            const sep = line.indexOf(':');
+            if (sep > 0) {
+              const key = line.slice(0, sep).trim();
+              const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
+              frontmatter[key] = val;
+            }
+          }
+        }
+        if (String(frontmatter.status || '').trim() === 'to-process') {
           totalToProcess++;
         }
       }
@@ -112,8 +132,8 @@ export function scanDomains(fs: IFileSystem): DomainScanResult {
 /**
  * Hiển thị bảng domain stats đẹp ra console
  */
-export function displayDomainStats(fs: IFileSystem): void {
-  const result = scanDomains(fs);
+export function displayDomainStats(fs: IFileSystem, config: IConfigProvider): void {
+  const result = scanDomains(fs, config);
   const { domains, legacyFiles, totalToProcess, totalAll } = result;
 
   const lines: string[] = [];

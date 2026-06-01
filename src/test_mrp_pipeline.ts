@@ -8,6 +8,7 @@ import { MarkdownGenerator } from './infrastructure/formatters/markdown.generato
 import { ConfigProvider } from './infrastructure/config/config-provider.ts';
 import { TokenTracker } from './application/services/token-tracker.ts';
 import { PipelineDashboard } from './presentation/ui/pipeline-dashboard.ts';
+import { GrayMatterParser } from './infrastructure/parsers/gray-matter.parser.ts';
 import { DIR_RAW, DIR_ATOMIC, DIR_JOURNAL } from './core/config.ts';
 import { VerifierPhase } from './application/phases/verifier.phase.ts';
 import { MapperPhase } from './application/phases/mapper.phase.ts';
@@ -139,12 +140,13 @@ async function runBatchTest(): Promise<boolean> {
   const tokenTracker = new TokenTracker();
   const pipelineDashboard = new PipelineDashboard(tokenTracker);
   const testNodeRepo = new FileSystemNodeRepository(testFs, configProvider);
+  const testParser = new GrayMatterParser();
 
-  const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider);
+  const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider, testParser);
   const reducer = new ReducerPhase(testLlm, testNodeRepo);
   const planner = new PlannerPhase(testLlm, configProvider);
   const refiner = new RefinerPhase(testFs, testMd, configProvider);
-  const testVerifier = new VerifierPhase(testFs, testMd, configProvider);
+  const testVerifier = new VerifierPhase(testFs, testMd, configProvider, testParser);
   const committer = new CommitterPhase(testFs, testMd, configProvider);
   const testNodeRepo2 = new FileSystemNodeRepository(new NodeFileSystem(), configProvider);
 
@@ -219,7 +221,7 @@ async function runBatchTest(): Promise<boolean> {
 
   // 5. CHẠY BỘ KIỂM TOÁN TĨNH XÁC NHẬN 0 LỖI
   console.log('\n--- BƯỚC 5: CHẠY BỘ KIỂM TOÁN TĨNH ---');
-  const verifier = new VerifierPhase(new NodeFileSystem(), new MarkdownGenerator(), configProvider);
+  const verifier = new VerifierPhase(new NodeFileSystem(), new MarkdownGenerator(), configProvider, new GrayMatterParser());
   const { brokenLinks, portabilityViolations, inconsistencies } = verifier.execute();
 
   // 6. DỌN DẸP SAU KHI TEST (BẢO VỆ VAULT TRỐNG CHO NIKAYA)

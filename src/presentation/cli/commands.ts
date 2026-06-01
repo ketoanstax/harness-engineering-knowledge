@@ -2,15 +2,15 @@ import { Command } from 'commander';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import chalk from 'chalk';
-import { DIR_JOURNAL, DIR_RAW } from '../../core/config.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case.ts';
 import { pickFileForPipeline } from '../ui/file-picker.ts';
 import { displayPlanInBox } from '../ui/plan-displayer.ts';
 import { setActiveProgram, safeExit } from '../ui/interactive-shell.ts';
 
-export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Command {
+export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Command {
   const program = new Command();
 
   program
@@ -25,7 +25,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
     .option('-s, --source <source>', 'Đường dẫn file thô ở 00_raw_docs (hoặc tên file)')
     .action(async (options) => {
       if (!options.source) {
-        const filepath = await pickFileForPipeline(fileSystem);
+        const filepath = await pickFileForPipeline(fileSystem, config);
         if (filepath) {
           const success = await useCase.execute(filepath);
           safeExit(success ? 0 : 1);
@@ -39,7 +39,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
       }
 
       if (!fs.existsSync(sourcePath)) {
-        const testPath = path.join(DIR_RAW, options.source);
+        const testPath = path.join(config.dirRaw, options.source);
         if (fs.existsSync(testPath)) {
           sourcePath = testPath;
         } else {
@@ -56,7 +56,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
   program
     .command('batch')
     .description('Chạy Batch Ingestion Pipeline tuần tự chronological')
-    .option('-d, --dir <dir>', 'Thư mục chứa file thô', DIR_RAW)
+    .option('-d, --dir <dir>', 'Thư mục chứa file thô', config.dirRaw)
     .option('-a, --auto-approve', 'Cờ chạy tự động từ đầu đến cuối', false)
     .action(async (options) => {
       let directory = options.dir;
@@ -81,7 +81,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
     .action(async (options) => {
       const timestamp = options.timestamp;
       const planFilename = `mrp_plan_${timestamp}.md`;
-      const planFilepath = path.join(DIR_JOURNAL, planFilename);
+      const planFilepath = path.join(config.dirJournal, planFilename);
 
       if (!fs.existsSync(planFilepath)) {
         console.error(`❌ Lỗi: Không tìm thấy kế hoạch [${planFilename}]`);
@@ -96,7 +96,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
         safeExit(1);
       }
 
-      const sourcePath = path.join(DIR_RAW, `${sourceSlug}.md`);
+      const sourcePath = path.join(config.dirRaw, `${sourceSlug}.md`);
       if (!fs.existsSync(sourcePath)) {
         console.error(`❌ Lỗi: Không tìm thấy tài liệu nguồn gốc [${sourceSlug}.md]`);
         safeExit(1);
@@ -125,7 +125,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
     .action((options) => {
       const timestamp = options.timestamp;
       const planFilename = `mrp_plan_${timestamp}.md`;
-      const planFilepath = path.join(DIR_JOURNAL, planFilename);
+      const planFilepath = path.join(config.dirJournal, planFilename);
 
       if (!fs.existsSync(planFilepath)) {
         console.error(`❌ Lỗi: Không tìm thấy kế hoạch [${planFilename}]`);
@@ -142,7 +142,7 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
       // Dọn checkpoint
       const sourceSlug = PlanFile.parseSourceSlug(content);
       if (sourceSlug) {
-        const checkpointPath = path.join(DIR_JOURNAL, `mrp_checkpoint_${sourceSlug}.json`);
+        const checkpointPath = path.join(config.dirJournal, `mrp_checkpoint_${sourceSlug}.json`);
         if (fs.existsSync(checkpointPath)) {
           fs.unlinkSync(checkpointPath);
         }

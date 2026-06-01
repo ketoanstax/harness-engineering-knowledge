@@ -1,6 +1,7 @@
 import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
+import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
 import { SourceDoc } from '../../domain/entities/source-doc.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
@@ -13,12 +14,14 @@ export class MapperPhase {
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
+  private parser: IFrontmatterParser;
 
-  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
+  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
     this.llm = llm;
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
+    this.parser = parser;
   }
 
   async execute(sourcePath: string, onTokenUsed?: (usage: LLMUsage) => void): Promise<MappedData | null> {
@@ -36,7 +39,7 @@ export class MapperPhase {
       return null;
     }
 
-    const frontmatter = SourceDoc.parseFrontmatter(content);
+    const frontmatter = SourceDoc.parseFrontmatter(content, this.parser);
     console.log(`📄 Slug: ${slug}`);
     console.log(`  Tiêu đề: ${frontmatter.title}`);
     console.log(`  Trạng thái: ${frontmatter.status}`);

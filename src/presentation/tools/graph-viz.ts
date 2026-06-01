@@ -1,9 +1,8 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
-import { DIR_ATOMIC, ATOMIC_PREFIX } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
 interface NodeInfo {
   slug: string;
@@ -15,22 +14,42 @@ interface NodeInfo {
 /**
  * Đọc toàn bộ atomic nodes, parse parent/children từ frontmatter.
  */
-function loadNodes(fs: IFileSystem): NodeInfo[] {
-  if (!fs.fileExists(DIR_ATOMIC)) return [];
+function loadNodes(fs: IFileSystem, config: IConfigProvider): NodeInfo[] {
+  const atomicDir = config.dirAtomic;
+  const prefix = config.atomicPrefix;
 
-  const files = fs.readdir(DIR_ATOMIC);
+  if (!fs.fileExists(atomicDir)) return [];
+
+  const files = fs.readdir(atomicDir);
   const nodes: NodeInfo[] = [];
 
   for (const f of files) {
-    if (!f.endsWith('.md') || !f.startsWith(ATOMIC_PREFIX)) continue;
+    if (!f.endsWith('.md') || !f.startsWith(prefix)) continue;
 
-    const fp = path.join(DIR_ATOMIC, f);
+    const fp = path.join(atomicDir, f);
     try {
       const content = fs.readFile(fp);
-      const parsed = matter(content);
-      const data = parsed.data || {};
 
-      const slug = f.replace(ATOMIC_PREFIX, '').replace('.md', '');
+      // Parse frontmatter without gray-matter (Presentation tools)
+      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      const data: Record<string, any> = {};
+      if (fmMatch) {
+        for (const line of fmMatch[1].split('\n')) {
+          const sep = line.indexOf(':');
+          if (sep > 0) {
+            const key = line.slice(0, sep).trim();
+            const val = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
+            // Handle children array: "child1, child2"
+            if (key === 'children' && val.includes(',')) {
+              data.children = val.split(',').map((s: string) => s.trim());
+            } else {
+              data[key] = val;
+            }
+          }
+        }
+      }
+
+      const slug = f.replace(prefix, '').replace('.md', '');
       nodes.push({
         slug,
         title: String(data.title || slug),
@@ -182,8 +201,8 @@ function getAllPrintedSlugs(
 /**
  * Hiển thị ASCII tree ra console
  */
-export function displayGraphViz(fs: IFileSystem): void {
-  const nodes = loadNodes(fs);
+export function displayGraphViz(fs: IFileSystem, config: IConfigProvider): void {
+  const nodes = loadNodes(fs, config);
 
   if (nodes.length === 0) {
     console.log(chalk.yellow('  📭 Không có atomic nodes nào.'));

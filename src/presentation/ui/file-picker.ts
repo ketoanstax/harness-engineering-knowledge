@@ -1,8 +1,7 @@
 import { intro, outro, select, isCancel, confirm } from '@clack/prompts';
 import chalk from 'chalk';
-import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
-import { DIR_RAW, VAULT_ROOT } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 
@@ -10,17 +9,25 @@ import { execSync } from 'node:child_process';
  * Hiển thị danh sách file "to-process" để người dùng chọn,
  * kết hợp duyệt thư mục và tìm kiếm nhanh bằng fzf.
  */
-export async function pickFileForPipeline(fs: IFileSystem): Promise<string | null> {
+export async function pickFileForPipeline(fs: IFileSystem, config: IConfigProvider): Promise<string | null> {
   console.clear();
   intro(chalk.bgCyan.black(' 🚀 MRP KNOWLEDGE INGESTION PIPELINE '));
 
-  const files = fs.readdir(DIR_RAW)
+  const files = fs.readdir(config.dirRaw)
     .filter(f => f.endsWith('.md') && f !== 'RULE.md' && f !== 'index.md')
     .map(f => {
-      const filepath = path.join(DIR_RAW, f);
+      const filepath = path.join(config.dirRaw, f);
       try {
         const content = fs.readFile(filepath);
-        const frontmatter = matter(content);
+        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const data: Record<string, any> = {};
+        if (fmMatch) {
+          for (const line of fmMatch[1].split('\n')) {
+            const sep = line.indexOf(':');
+            if (sep > 0) { data[line.slice(0, sep).trim()] = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, ''); }
+          }
+        }
+        const frontmatter = { data };
         return {
           filename: f,
           filepath,
@@ -78,7 +85,7 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
       // - stdin: inherit (nhận phím gõ từ user)
       // - stdout: pipe (trả kết quả về cho Nodejs capture)
       // - stderr: inherit (để fzf render UI ra màn hình)
-      const fzfCommand = `find "${VAULT_ROOT}" -type f -name "*.md" ! -path "*/node_modules/*" ! -path "*/.git/*" | fzf --prompt="🔍 TÌM FILE: " --height=80% --layout=reverse --border --info=inline`;
+      const fzfCommand = `find "${config.dirVault}" -type f -name "*.md" ! -path "*/node_modules/*" ! -path "*/.git/*" | fzf --prompt="🔍 TÌM FILE: " --height=80% --layout=reverse --border --info=inline`;
       
       const result = execSync(fzfCommand, { 
         stdio: ['inherit', 'pipe', 'inherit'], 
@@ -106,7 +113,7 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
   // === CHẾ ĐỘ FILE BROWSER (VÒNG LẶP ITERATIVE CŨ)       ===
   // =========================================================
   if (chosenFilepath === '__custom_path__') {
-    let currentDir = VAULT_ROOT;
+    let currentDir = config.dirVault;
 
     while (true) {
       console.clear();
@@ -116,7 +123,7 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
         const entries = fs.readdir(currentDir).filter(e => e !== 'node_modules' && e !== '.git' && !e.startsWith('.'));
         const items: Array<{ label: string; value: string; hint: string }> = [];
 
-        if (currentDir !== VAULT_ROOT) {
+        if (currentDir !== config.dirVault) {
           items.push({
             label: chalk.yellow(' ⬅  .. (Quay lại)'),
             value: path.dirname(currentDir),
@@ -138,8 +145,13 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
           let title = f;
           try {
             const content = fs.readFile(fp);
-            const frontmatter = matter(content);
-            if (frontmatter.data?.title) title = frontmatter.data.title;
+            const fmMatch2 = content.match(/^---\n([\s\S]*?)\n---/);
+            let parsedTitle = '';
+            if (fmMatch2) {
+              const titleLine = fmMatch2[1].split('\n').find((l: string) => l.trim().startsWith('title:'));
+              if (titleLine) parsedTitle = titleLine.split(':').slice(1).join(':').trim().replace(/^['"]|['"]$/g, '');
+            }
+            if (parsedTitle) title = parsedTitle;
           } catch { /* skip */ }
 
           items.push({ label: chalk.green(` 📄 ${title}`), value: fp, hint: chalk.gray(`📝 ${f}`) });
@@ -147,7 +159,7 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
 
         if (items.length === 0) {
           console.log(chalk.yellow('  📭 Thư mục rỗng.'));
-          if (currentDir !== VAULT_ROOT) {
+          if (currentDir !== config.dirVault) {
             currentDir = path.dirname(currentDir);
             continue;
           } else {
@@ -156,7 +168,7 @@ export async function pickFileForPipeline(fs: IFileSystem): Promise<string | nul
           }
         }
 
-        const relativePath = path.relative(VAULT_ROOT, currentDir) || '.';
+        const relativePath = path.relative(config.dirVault, currentDir) || '.';
         const breadcrumbs = relativePath.split(path.sep).map(p => chalk.bold.cyan(p)).join(chalk.gray(' ❯ '));
 
         const selected = await select({

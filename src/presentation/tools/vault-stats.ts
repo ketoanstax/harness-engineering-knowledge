@@ -1,9 +1,8 @@
 import * as path from 'node:path';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import matter from 'gray-matter';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
-import { DIR_VAULT, ATOMIC_PREFIX } from '../../core/config.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 
 interface LayerStats {
   name: string;
@@ -55,8 +54,8 @@ function scanLayer(dir: string, fs: IFileSystem): LayerStats {
 /**
  * Phân tích atomic nodes: parent stats
  */
-function scanAtomic(fs: IFileSystem): AtomicStats {
-  const atomicDir = path.join(DIR_VAULT, '02_atomic_nodes');
+function scanAtomic(fs: IFileSystem, config: IConfigProvider): AtomicStats {
+  const atomicDir = path.join(config.dirVault, '02_atomic_nodes');
   if (!fs.fileExists(atomicDir)) return { total: 0, withParent: 0, withoutParent: 0 };
 
   const files = fs.readdir(atomicDir);
@@ -65,15 +64,24 @@ function scanAtomic(fs: IFileSystem): AtomicStats {
   let withoutParent = 0;
 
   for (const f of files) {
-    if (!f.endsWith('.md') || !f.startsWith(ATOMIC_PREFIX)) continue;
+    if (!f.endsWith('.md') || !f.startsWith(config.atomicPrefix)) continue;
     total++;
 
     try {
       const content = fs.readFile(path.join(atomicDir, f));
-      const parsed = matter(content);
-      const data = parsed.data || {};
+      // Parse parent from frontmatter without gray-matter
+      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      let hasParent = false;
+      if (fmMatch) {
+        for (const line of fmMatch[1].split('\n')) {
+          if (line.trim().startsWith('parent:') && line.trim() !== 'parent:') {
+            hasParent = true;
+            break;
+          }
+        }
+      }
 
-      if (data.parent) {
+      if (hasParent) {
         withParent++;
       } else {
         withoutParent++;
@@ -89,8 +97,8 @@ function scanAtomic(fs: IFileSystem): AtomicStats {
 /**
  * Đếm tổng số file to-process trong 00_raw_docs/ (đệ quy)
  */
-function countToProcess(fs: IFileSystem): number {
-  const rawDir = path.join(DIR_VAULT, '00_raw_docs');
+function countToProcess(fs: IFileSystem, config: IConfigProvider): number {
+  const rawDir = config.dirRaw;
   if (!fs.fileExists(rawDir)) return 0;
 
   let count = 0;
@@ -105,9 +113,8 @@ function countToProcess(fs: IFileSystem): number {
           walk(fp);
         } else if (e.endsWith('.md')) {
           const content = fs.readFile(fp);
-          const parsed = matter(content);
-          const data = parsed.data || {};
-          if (String(data.status || '').trim() === 'to-process') {
+          const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+          if (fmMatch && fmMatch[1].includes('status: to-process')) {
             count++;
           }
         }
@@ -124,7 +131,7 @@ function countToProcess(fs: IFileSystem): number {
 /**
  * Lấy tổng quan vault
  */
-export function getVaultOverview(fs: IFileSystem): VaultOverview {
+export function getVaultOverview(fs: IFileSystem, config: IConfigProvider): VaultOverview {
   const layerNames = [
     '00_raw_docs',
     '01_structured_docs',
@@ -135,9 +142,9 @@ export function getVaultOverview(fs: IFileSystem): VaultOverview {
     'memory',
   ];
 
-  const layers = layerNames.map(n => scanLayer(path.join(DIR_VAULT, n), fs));
-  const atomic = scanAtomic(fs);
-  const toProcessInRaw = countToProcess(fs);
+  const layers = layerNames.map(n => scanLayer(path.join(config.dirVault, n), fs));
+  const atomic = scanAtomic(fs, config);
+  const toProcessInRaw = countToProcess(fs, config);
 
   return { layers, atomic, toProcessInRaw };
 }
@@ -145,14 +152,13 @@ export function getVaultOverview(fs: IFileSystem): VaultOverview {
 /**
  * Hiển thị tổng quan vault ra console
  */
-export function displayVaultStats(fs: IFileSystem): void {
-  const overview = getVaultOverview(fs);
+export function displayVaultStats(fs: IFileSystem, config: IConfigProvider): void {
+  const overview = getVaultOverview(fs, config);
 
   const lines: string[] = [];
   lines.push(`  ${chalk.bold('📊 Vault Overview')}`);
   lines.push('');
 
-  // Layer table
   lines.push(`  ${chalk.dim('Layer')}        ${chalk.dim('Files')}  ${chalk.dim('Subdirs')}`);
   for (const layer of overview.layers) {
     const icon = layer.files > 0 ? chalk.green(layer.name) : chalk.gray(layer.name);
@@ -168,7 +174,6 @@ export function displayVaultStats(fs: IFileSystem): void {
   lines.push(`    Có parent:     ${chalk.green(String(overview.atomic.withParent))}`);
   lines.push(`    Không parent:  ${overview.atomic.withoutParent > 0 ? chalk.yellow(String(overview.atomic.withoutParent)) : chalk.green('0')}`);
 
-  // To-process count
   lines.push('');
   if (overview.toProcessInRaw > 0) {
     lines.push(`  ${chalk.yellow(`📥 ${overview.toProcessInRaw} file chờ xử lý (to-process)`)}`);

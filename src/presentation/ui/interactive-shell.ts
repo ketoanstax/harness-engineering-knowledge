@@ -2,6 +2,7 @@ import * as process from 'node:process';
 import * as readline from 'node:readline';
 import { Command } from 'commander';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
+import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case.ts';
 import { pickFileForPipeline } from './file-picker.ts';
 import { askPlanAction } from './plan-displayer.ts';
@@ -147,7 +148,7 @@ function redrawLine(rl: readline.Interface, line: string, selectedIndex = -1, ma
 }
 
 // === Logic Xử lý Lệnh ===
-async function handleCommand(input: string, useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
+async function handleCommand(input: string, useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Promise<void> {
   if (!input || input.startsWith('#')) return;
 
   if (input === '/exit' || input === '/quit') {
@@ -162,7 +163,7 @@ async function handleCommand(input: string, useCase: IngestDocumentUseCase, file
   }
 
   if (input === '/run' || input === 'run') {
-    const filepath = await pickFileForPipeline(fileSystem);
+    const filepath = await pickFileForPipeline(fileSystem, config);
     if (filepath) {
       // NOTE: Lệnh /run sẽ kích hoạt PipelineDashboard (UI full màn hình), 
       // nên ta không dùng spinner inline ở đây để tránh đè lấn UI.
@@ -225,22 +226,22 @@ async function handleCommand(input: string, useCase: IngestDocumentUseCase, file
   }
 
   if (input === '/scan') {
-    displayDomainStats(fileSystem);
+    displayDomainStats(fileSystem, config);
     return;
   }
 
   if (input === '/domain') {
-    displayDomainStats(fileSystem);
+    displayDomainStats(fileSystem, config);
     return;
   }
 
   if (input === '/graph') {
-    displayGraphViz(fileSystem);
+    displayGraphViz(fileSystem, config);
     return;
   }
 
   if (input === '/status') {
-    displayVaultStats(fileSystem);
+    displayVaultStats(fileSystem, config);
     return;
   }
 
@@ -287,7 +288,7 @@ function renderMarkdown(md: string): string {
 }
 
 // === Shell Chính ===
-export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFileSystem): Promise<void> {
+export async function runShell(useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Promise<void> {
   isInteractiveMode = true;
   console.clear();
 
@@ -410,7 +411,7 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
         if (!input) return;
 
         if (input.startsWith('/') || input === 'help' || input === 'run') {
-          await handleCommand(input, useCase, fileSystem);
+          await handleCommand(input, useCase, fileSystem, config);
         } else {
           await handleQuery(input, useCase);
         }

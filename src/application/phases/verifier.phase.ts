@@ -4,18 +4,20 @@ import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-genera
 import type { VerificationResult } from './_types.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
-import matter from 'gray-matter';
+import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
 import * as path from 'node:path';
 
 export class VerifierPhase {
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
+  private parser: IFrontmatterParser;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
+    this.parser = parser;
   }
 
   execute(): VerificationResult {
@@ -168,7 +170,7 @@ export class VerifierPhase {
       let children: string[] = [];
 
       try {
-        const parsed = matter(content);
+        const parsed = this.parser.parse(content);
         const data = parsed.data || {};
         parent = data.parent || undefined;
         children = Array.isArray(data.children) ? data.children : [];

@@ -2,6 +2,7 @@ import { NodeFileSystem } from '../infrastructure/fs/node-file-system.ts';
 import { LLMClient } from '../infrastructure/llm/llm-client.ts';
 import { MarkdownGenerator } from '../infrastructure/formatters/markdown.generator.ts';
 import { ConfigProvider } from '../infrastructure/config/config-provider.ts';
+import { GrayMatterParser } from '../infrastructure/parsers/gray-matter.parser.ts';
 import { FileSystemNodeRepository } from '../infrastructure/repositories/file-system-node-repository.ts';
 import { TokenTracker } from '../application/services/token-tracker.ts';
 import { PipelineDashboard } from './ui/pipeline-dashboard.ts';
@@ -21,15 +22,16 @@ const fileSystem = new NodeFileSystem();
 const llmClient = LLMClient.createFromEnv();
 const markdownGenerator = new MarkdownGenerator();
 const configProvider = new ConfigProvider();
+const frontmatterParser = new GrayMatterParser();
 const tokenTracker = new TokenTracker();
 const pipelineDashboard = new PipelineDashboard(tokenTracker);
 const nodeRepository = new FileSystemNodeRepository(fileSystem, configProvider);
 
-const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider);
+const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider, frontmatterParser);
 const reducer = new ReducerPhase(llmClient, nodeRepository);
 const planner = new PlannerPhase(llmClient, configProvider);
 const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider);
-const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider);
+const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser);
 const committer = new CommitterPhase(fileSystem, markdownGenerator, configProvider);
 
 const useCase = new IngestDocumentUseCase(
@@ -48,9 +50,9 @@ const useCase = new IngestDocumentUseCase(
   nodeRepository,
 );
 
-const program = buildProgram(useCase, fileSystem);
+const program = buildProgram(useCase, fileSystem, configProvider);
 
 // Bound version of runShell for index.ts entry point
-const boundRunShell = () => runShell(useCase, fileSystem);
+const boundRunShell = () => runShell(useCase, fileSystem, configProvider);
 
 export { program, boundRunShell as runShell };

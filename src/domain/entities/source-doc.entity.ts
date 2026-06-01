@@ -1,4 +1,4 @@
-import matter from 'gray-matter';
+import type { IFrontmatterParser } from '../interfaces/frontmatter-parser.interface.ts';
 
 export interface Frontmatter {
   id: string;
@@ -40,9 +40,13 @@ export class SourceDoc {
     return `00_raw_docs/${this.slug}.md`;
   }
 
-  static parseFrontmatter(content: string): Frontmatter {
+  /**
+   * Parse frontmatter YAML từ nội dung file markdown.
+   * Nhận parser từ tầng Infrastructure (DI) — Domain không biết gray-matter.
+   */
+  static parseFrontmatter(content: string, parser: IFrontmatterParser): Frontmatter {
     try {
-      const parsed = matter(content);
+      const parsed = parser.parse(content);
       const data = parsed.data || {};
       return {
         id: String(data.id || ''),
