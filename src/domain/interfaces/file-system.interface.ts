@@ -2,6 +2,7 @@ import { Stats } from 'node:fs';
 
 export interface IFileSystem {
   readFile(filepath: string): string;
+  readFileBuffer(filepath: string): Buffer;
   writeFile(filepath: string, content: string): void;
   fileExists(filepath: string): boolean;
   readdir(dirPath: string): string[];

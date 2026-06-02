@@ -14,18 +14,38 @@ export async function pickFileForPipeline(fs: IFileSystem, config: IConfigProvid
   console.clear();
   intro(chalk.bgCyan.black(' 🚀 MRP KNOWLEDGE INGESTION PIPELINE '));
 
+  const supportedExts = ['.md', '.txt', '.pdf', '.docx', '.csv'];
+
   const files = fs.readdir(config.dirRaw)
-    .filter(f => f.endsWith('.md') && f !== 'RULE.md' && f !== 'index.md')
+    .filter(f => supportedExts.some(ext => f.toLowerCase().endsWith(ext)) && f !== 'RULE.md' && f !== 'index.md')
     .map(f => {
       const filepath = path.join(config.dirRaw, f);
+      const ext = path.extname(f).toLowerCase();
+
+      let icon = '📄';
+      if (ext === '.pdf') icon = '📕';
+      if (ext === '.docx') icon = '📘';
+      if (ext === '.csv') icon = '📊';
+      if (ext === '.txt') icon = '📃';
+
       try {
         const content = fs.readFile(filepath);
-        const parsed = matter(content);
+        if (ext === '.md') {
+          const parsed = matter(content);
+          return {
+            filename: f,
+            filepath,
+            title: `${icon} ${parsed.data?.title || f}`,
+            status: parsed.data?.status || 'unknown',
+          };
+        }
+        // File không phải .md — dùng tên làm title
+        const title = f.replace(ext, '').replace(/[-_]/g, ' ');
         return {
           filename: f,
           filepath,
-          title: parsed.data?.title || f,
-          status: parsed.data?.status || 'unknown',
+          title: `${icon} ${title.charAt(0).toUpperCase() + title.slice(1)}`,
+          status: 'to-process',
         };
       } catch {
         return null;

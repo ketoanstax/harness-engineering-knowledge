@@ -8,7 +8,18 @@ import type { IConfigProvider } from '../../domain/interfaces/config-provider.in
 import type { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case.ts';
 import { pickFileForPipeline } from '../ui/file-picker.ts';
 import { displayPlanInBox } from '../ui/plan-displayer.ts';
-import { setActiveProgram, safeExit } from '../ui/interactive-shell.ts';
+import { safeExit } from '../ui/interactive-shell.ts';
+import { setActiveProgram } from '../ui/shell-router.ts';
+
+const SUPPORTED_EXTS = ['.md', '.txt', '.pdf', '.docx', '.csv'];
+
+function findSourceFileBySlug(slug: string, dirRaw: string): string | null {
+  for (const ext of SUPPORTED_EXTS) {
+    const candidate = path.join(dirRaw, `${slug}${ext}`);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
 
 export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Command {
   const program = new Command();
@@ -96,10 +107,12 @@ export function buildProgram(useCase: IngestDocumentUseCase, fileSystem: IFileSy
         safeExit(1);
       }
 
-      const sourcePath = path.join(config.dirRaw, `${sourceSlug}.md`);
-      if (!fs.existsSync(sourcePath)) {
-        console.error(`❌ Lỗi: Không tìm thấy tài liệu nguồn gốc [${sourceSlug}.md]`);
+      // Tìm file nguồn theo slug (không hardcode .md — hỗ trợ .pdf, .docx...)
+      const sourcePath = findSourceFileBySlug(sourceSlug as string, config.dirRaw);
+      if (!sourcePath) {
+        console.error(`❌ Lỗi: Không tìm thấy tài liệu nguồn [${sourceSlug}] trong [${config.dirRaw}]`);
         safeExit(1);
+        return;
       }
 
       // Hiển thị plan trước khi duyệt

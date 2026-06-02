@@ -348,7 +348,7 @@ Vui lòng chọn hành động tiếp theo:
   // ============ State Machine Helpers ============
 
   private initState(sourcePath: string): PipelineState {
-    const sourceSlug = path.basename(sourcePath).replace('.md', '');
+    const sourceSlug = path.basename(sourcePath).replace(/\.[^.]+$/, '');
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -452,18 +452,23 @@ Vui lòng chọn hành động tiếp theo:
   private scanAndSortFiles(directory: string): string[] {
     if (!this.fs.fileExists(directory)) return [];
 
+    const supportedExts = ['.md', '.txt', '.pdf', '.docx', '.csv'];
     const filesToProcess: Array<{ mtime: number; filepath: string }> = [];
     const files = this.fs.readdir(directory);
 
     for (const file of files) {
-      if (!file.endsWith('.md')) continue;
+      const ext = path.extname(file).toLowerCase();
+      if (!supportedExts.includes(ext)) continue;
       const filepath = path.join(directory, file);
+
       try {
-        const content = this.fs.readFile(filepath);
-        if (content.includes('status: to-process')) {
-          const stat = this.fs.stat(filepath);
-          filesToProcess.push({ mtime: stat.mtimeMs, filepath });
+        if (ext === '.md') {
+          const content = this.fs.readFile(filepath);
+          if (!content.includes('status: to-process')) continue;
         }
+        // File không phải .md luôn được xử lý (to-process implicit)
+        const stat = this.fs.stat(filepath);
+        filesToProcess.push({ mtime: stat.mtimeMs, filepath });
       } catch {
         // Bỏ qua file lỗi
       }

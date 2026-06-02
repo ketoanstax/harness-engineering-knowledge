@@ -20,6 +20,8 @@ import { CommitterPhase } from '../../src/application/phases/committer.phase.ts'
 import { FileSystemNodeRepository } from '../../src/infrastructure/repositories/file-system-node-repository.ts';
 import { SilentLogger } from '../../src/infrastructure/logging/silent-logger.ts';
 import { AtomicNodeFactory } from '../../src/infrastructure/parsers/atomic-node-factory.ts';
+import { DocumentReaderTool } from '../../src/infrastructure/tools/document-reader/document-reader.tool.ts';
+import { TextExtractor } from '../../src/infrastructure/tools/document-reader/extractors.ts';
 
 const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
 
@@ -220,7 +222,10 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
     const silentLogger = new SilentLogger();
     const testNodeFactory = new AtomicNodeFactory(testParser);
 
-    const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider, testParser, silentLogger);
+    // DocReader (chỉ dùng TextExtractor vì test chỉ cần .md, tiết kiệm tài nguyên)
+    const testDocReader = new DocumentReaderTool([new TextExtractor(testFs)]);
+
+    const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider, testParser, silentLogger, testDocReader);
     const reducer = new ReducerPhase(testLlm, testNodeRepo, silentLogger);
     const planner = new PlannerPhase(testLlm, configProvider, silentLogger);
     const refiner = new RefinerPhase(testFs, testMd, configProvider, testParser, silentLogger, testNodeFactory);

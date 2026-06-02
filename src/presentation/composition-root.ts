@@ -6,6 +6,8 @@ import { GrayMatterParser } from '../infrastructure/parsers/gray-matter.parser.t
 import { AtomicNodeFactory } from '../infrastructure/parsers/atomic-node-factory.ts';
 import { FileSystemNodeRepository } from '../infrastructure/repositories/file-system-node-repository.ts';
 import { ConsoleLogger } from '../infrastructure/logging/console-logger.ts';
+import { DocumentReaderTool } from '../infrastructure/tools/document-reader/document-reader.tool.ts';
+import { TextExtractor, PdfTextExtractor, DocxExtractor } from '../infrastructure/tools/document-reader/extractors.ts';
 import { TokenTracker } from '../application/services/token-tracker.ts';
 import { PipelineDashboard } from './ui/pipeline-dashboard.ts';
 import { IngestDocumentUseCase } from '../application/use-cases/ingest-document.use-case.ts';
@@ -29,11 +31,17 @@ const tokenTracker = new TokenTracker();
 const pipelineDashboard = new PipelineDashboard(tokenTracker);
 const nodeRepository = new FileSystemNodeRepository(fileSystem, configProvider);
 
+// Document Reader Tool (Strategy Pattern)
+const textExtractor = new TextExtractor(fileSystem);
+const pdfExtractor = new PdfTextExtractor(fileSystem);
+const docxExtractor = new DocxExtractor(fileSystem);
+const docReader = new DocumentReaderTool([textExtractor, pdfExtractor, docxExtractor]);
+
 // Khởi tạo base logger và logger tích hợp với Dashboard
 const baseLogger = new ConsoleLogger();
 const logger = pipelineDashboard.createLogger(baseLogger);
 
-const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider, frontmatterParser, logger);
+const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider, frontmatterParser, logger, docReader);
 const reducer = new ReducerPhase(llmClient, nodeRepository, logger);
 const planner = new PlannerPhase(llmClient, configProvider, logger);
 const atomicNodeFactory = new AtomicNodeFactory(frontmatterParser);

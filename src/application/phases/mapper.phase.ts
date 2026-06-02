@@ -2,6 +2,7 @@ import type { ILLMProvider } from '../../domain/interfaces/llm-provider.interfac
 import type { LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
+import type { IDocumentReader } from '../../domain/interfaces/document-reader.interface.ts';
 import { SourceDoc } from '../../domain/entities/source-doc.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
@@ -17,6 +18,7 @@ export class MapperPhase {
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
   private logger: ILogger;
+  private docReader: IDocumentReader;
 
   constructor(
     llm: ILLMProvider,
@@ -24,7 +26,8 @@ export class MapperPhase {
     mdGenerator: IMarkdownGenerator,
     config: IConfigProvider,
     parser: IFrontmatterParser,
-    logger: ILogger
+    logger: ILogger,
+    docReader: IDocumentReader
   ) {
     this.llm = llm;
     this.fs = fs;
@@ -32,24 +35,32 @@ export class MapperPhase {
     this.config = config;
     this.parser = parser;
     this.logger = logger;
+    this.docReader = docReader;
   }
 
   async execute(sourcePath: string, onTokenUsed?: (usage: LLMUsage) => void): Promise<MappedData | null> {
     const slug = this.extractSlug(sourcePath);
 
-    // Đọc file thô
+    // Đọc file thô qua DocumentReader (hỗ trợ .md, .pdf, .docx, ...)
     if (!this.fs.fileExists(sourcePath)) {
       this.logger.error(`❌ Lỗi: Không tìm thấy file [${sourcePath}]`);
       return null;
     }
 
-    const content = this.fs.readFile(sourcePath);
+    let content: string;
+    try {
+      content = await this.docReader.readAsText(sourcePath);
+    } catch (err: any) {
+      this.logger.error(`❌ Lỗi đọc file: ${err.message}`);
+      return null;
+    }
+
     if (!content.trim()) {
       this.logger.error(`❌ Lỗi: File rỗng [${sourcePath}]`);
       return null;
     }
 
-    const frontmatter = SourceDoc.parseFrontmatter(content, this.parser);
+    const frontmatter = SourceDoc.parseFrontmatter(content, this.parser, sourcePath);
     this.logger.info(`📄 Slug: ${slug}`);
     this.logger.info(`  Tiêu đề: ${frontmatter.title}`);
     this.logger.info(`  Trạng thái: ${frontmatter.status}`);
@@ -59,7 +70,9 @@ export class MapperPhase {
       return null;
     }
 
-    const rawContent = content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+    const rawContent = sourcePath.toLowerCase().endsWith('.md')
+      ? content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim()
+      : content;
 
     // Gọi LLM
     this.logger.info('  🔄 Đang chắt lọc...');
@@ -155,6 +168,6 @@ Yêu cầu đầu ra (JSON):
   }
 
   private extractSlug(filepath: string): string {
-    return filepath.replace(/\.md$/, '').split('/').pop() || 'unknown';
+    return filepath.replace(/\.[^.]+$/, '').split('/').pop() || 'unknown';
   }
 }

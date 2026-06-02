@@ -8,6 +8,10 @@ export class NodeFileSystem implements IFileSystem {
     return fs.readFileSync(filepath, 'utf-8');
   }
 
+  readFileBuffer(filepath: string): Buffer {
+    return fs.readFileSync(filepath);
+  }
+
   writeFile(filepath: string, content: string): void {
     fs.mkdirSync(path.dirname(filepath), { recursive: true });
     fs.writeFileSync(filepath, content, 'utf-8');

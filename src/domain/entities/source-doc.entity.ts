@@ -44,7 +44,22 @@ export class SourceDoc {
    * Parse frontmatter YAML từ nội dung file markdown.
    * Nhận parser từ tầng Infrastructure (DI) — Domain không biết gray-matter.
    */
-  static parseFrontmatter(content: string, parser: IFrontmatterParser): Frontmatter {
+  static parseFrontmatter(content: string, parser: IFrontmatterParser, filepath?: string): Frontmatter {
+    // Pseudo-frontmatter cho file không phải .md (PDF, DOCX, ...)
+    if (filepath && !filepath.toLowerCase().endsWith('.md')) {
+      const ext = filepath.split('.').pop()?.toLowerCase() || 'raw';
+      const filename = filepath.split(/[/\\]/).pop() || 'unknown';
+      const title = filename.replace(`.${ext}`, '').replace(/[-_]/g, ' ');
+      return {
+        id: '',
+        title: title.charAt(0).toUpperCase() + title.slice(1),
+        category: 'Raw Knowledge Source',
+        tags: [ext, 'raw-document'],
+        date: '',
+        status: 'to-process',
+      };
+    }
+
     try {
       const parsed = parser.parse(content);
       const data = parsed.data || {};

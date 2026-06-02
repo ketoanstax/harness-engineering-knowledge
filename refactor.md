@@ -1,356 +1,328 @@
-## muốn làm ra một giao diện CLI "xịn xò", mượt mà và đẹp mắt như **Claude Code**
-Hoàn toàn có thể! Thực tế, để làm ra một giao diện CLI "xịn xò", mượt mà và đẹp mắt như **Claude Code**, **Vercel CLI** hay **Stripe CLI**, bạn không cần phải tự viết code can thiệp vào TTY (luồng nhập xuất thô) như hàm `interactiveSelect` hiện tại đâu.
+Rất tuyệt vời! Quyết định làm **ReadTool trước** và thiết kế ưu tiên **Khả năng mở rộng (Extensibility)** là một tư duy System Design rất chính xác. 
 
-Hệ sinh thái Node.js hiện nay có những thư viện UI cho Terminal cực kỳ mạnh mẽ. 
+Để giải quyết bài toán: *"Hôm nay đọc PDF text, ngày mai có thể đổi sang PDF OCR mà không làm hỏng code cũ"*, chúng ta sẽ áp dụng **Strategy Pattern (Mẫu Chiến lược)**. 
 
-Dưới đây là **"Tech Stack" (Bộ công cụ) để nâng cấp UI** cho dự án MRP của bạn và cách áp dụng ngay lập tức:
+Bằng cách này, `DocumentReaderTool` sẽ không tự đọc file, mà nó là một "Người quản lý". Nó sẽ nhận các `Extractor` (chiến lược đọc) từ bên ngoài truyền vào. Sau này muốn đổi cách đọc PDF, bạn chỉ việc viết một `PdfOcrExtractor` mới và tráo đổi ở file cấu hình gốc (Composition Root), các layer khác không hề hay biết.
 
-### 1. Bộ công cụ tạo CLI "Premium" (Khuyên dùng)
+Dưới đây là triển khai chi tiết theo chuẩn **Clean Architecture**:
 
-Thay vì dùng `console.log` thuần, bạn hãy kết hợp các thư viện sau (cài đặt qua `pnpm`):
+---
 
+### Bước 1: Cài đặt thư viện
+Bạn mở terminal và cài đặt các thư viện cần thiết cho việc bóc tách văn bản:
 ```bash
-pnpm add @clack/prompts chalk boxen ora marked marked-terminal
-pnpm add -D @types/marked-terminal
+pnpm add pdf-parse mammoth
+pnpm add -D @types/pdf-parse
 ```
-
-*   **`@clack/prompts`**: Thư viện làm Prompt đẹp nhất hiện nay (giống hệt giao diện lúc bạn khởi tạo Next.js hay Svelte mới). Nó có sẵn danh sách chọn, input, spinner mượt mà.
-*   **`chalk`**: Tô màu chữ (đỏ, xanh, gradient...).
-*   **`boxen`**: Vẽ khung (box) xung quanh text, có bo góc, đổ bóng.
-*   **`ora`**: Hiển thị vòng xoay (spinner) siêu mượt khi đang gọi LLM.
-*   **`marked` + `marked-terminal`**: Render file Markdown thẳng ra Terminal (có in đậm, màu sắc, code block) thay vì in text thô.
 
 ---
 
-### 2. Áp dụng vào dự án của bạn (Ví dụ thực tế)
+### Bước 2: Chuẩn bị Domain (Interfaces)
 
-#### A. Nâng cấp hàm chọn File (`interactiveSelect`)
-Thay vì tự viết hàm bắt sự kiện phím mũi tên dài hơn 100 dòng, bạn dùng `@clack/prompts`. Giao diện sẽ tự động có màu sắc, highlight, và hiệu ứng mượt.
-
-Sửa lại trong `index.ts`:
-
+**1. Cập nhật `IFileSystem`**
+File PDF và DOCX là dạng nhị phân (binary). Hiện tại `IFileSystem` chỉ đọc được string (UTF-8). Ta cần bổ sung khả năng đọc Buffer.
+*Mở file `src/domain/interfaces/file-system.interface.ts` và thêm:*
 ```typescript
-import { intro, outro, select, spinner, isCancel } from '@clack/prompts';
-import chalk from 'chalk';
-
-async function pickFileForPipeline(): Promise<void> {
-  // Bắt đầu giao diện xịn xò
-  intro(chalk.bgCyan.black(' 🚀 MRP KNOWLEDGE INGESTION PIPELINE '));
-
-  // ... (Code đọc file như cũ của bạn)
-  const files = [...]; // Danh sách file
-
-  if (files.length === 0) {
-    console.log(chalk.yellow('📭 Không có file nào ở trạng thái "to-process"'));
-    return;
-  }
-
-  // Thay thế toàn bộ hàm interactiveSelect cũ bằng đoạn này:
-  const chosenFilepath = await select({
-    message: '📋 Chọn tài liệu thô để nạp vào hệ thống:',
-    options: files.map(f => ({
-      value: f.filepath,
-      label: f.title,
-      hint: chalk.gray(f.filename) // Chữ mờ phụ họa
-    })),
-    maxItems: 10,
-  });
-
-  // Nếu người dùng bấm ESC hoặc Ctrl+C
-  if (isCancel(chosenFilepath)) {
-    outro(chalk.gray('Đã hủy thao tác.'));
-    return;
-  }
-
-  // Chạy pipeline
-  const orchestrator = new MRPOrchestrator(chosenFilepath as string);
-  await orchestrator.run();
-  
-  outro(chalk.green('✅ Hoàn tất luồng công việc!'));
+export interface IFileSystem {
+  readFile(filepath: string): string;
+  readFileBuffer(filepath: string): Buffer; // <-- THÊM DÒNG NÀY
+  // ... (giữ nguyên các hàm cũ)
 }
 ```
 
-#### B. Nâng cấp hiệu ứng chạy Pipeline (`orchestrator.ts`)
-Thay vì in ra một loạt `console.log` trôi tuột trên màn hình, bạn có thể dùng **Spinner** để hiển thị trạng thái đang xử lý (đặc biệt khi chờ LLM phản hồi).
-
-Sửa trong các hàm của Orchestrator hoặc các Phase (ví dụ `run()`):
-
+*Cập nhật file `src/infrastructure/fs/node-file-system.ts`:*
 ```typescript
-import { spinner } from '@clack/prompts';
-import chalk from 'chalk';
+  // Thêm hàm này vào class
+  readFileBuffer(filepath: string): Buffer {
+    return fs.readFileSync(filepath);
+  }
+```
 
-async run(): Promise<boolean> {
-  const s = spinner();
-  
-  try {
-    // PHASE MAP
-    s.start('Phase M: Đang phân tích tài liệu thô bằng LLM (Mapper)...');
-    const successMap = await this.runMap();
-    if (!successMap) throw new Error('Mapper failed');
-    s.stop(chalk.green('✔ Phase M: Đã phân tích xong (Structured Doc created)'));
+**2. Tạo Interface cho Document Reader**
+*Tạo file `src/domain/interfaces/document-reader.interface.ts`:*
+```typescript
+export interface IDocumentReader {
+  readAsText(filepath: string): Promise<string>;
+  isSupported(filepath: string): boolean;
+}
+```
 
-    // PHASE REDUCE
-    s.start('Phase R: Đang tìm xung đột và trộn ngữ cảnh (Reducer)...');
-    const successReduce = await this.runReduce();
-    if (!successReduce) throw new Error('Reducer failed');
-    s.stop(chalk.green('✔ Phase R: Đã lọc xong nốt trùng lặp'));
+---
 
-    // PHASE PLAN
-    s.start('Phase P: Đang lập kế hoạch Graph (Planner)...');
-    const successPlan = await this.runPlan();
-    s.stop(chalk.cyan('⏸️ Phase P: Kế hoạch đã sẵn sàng để duyệt.'));
+### Bước 3: Triển khai Infrastructure với Strategy Pattern
+
+Chúng ta tạo một interface nội bộ cho Infrastructure là `IFileExtractor`. Mỗi định dạng file sẽ có một Extractor riêng.
+
+*Tạo file `src/infrastructure/tools/document-reader/extractors.ts`:*
+```typescript
+import path from 'node:path';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import type { IFileSystem } from '../../../domain/interfaces/file-system.interface.ts';
+
+// 1. Interface cốt lõi cho các chiến lược đọc (Strategy)
+export interface IFileExtractor {
+  supports(ext: string): boolean;
+  extract(filepath: string): Promise<string>;
+}
+
+// 2. Chiến lược đọc Text thuần (.md, .txt, .csv)
+export class TextExtractor implements IFileExtractor {
+  constructor(private fs: IFileSystem) {}
+
+  supports(ext: string): boolean {
+    return ['.md', '.txt', '.csv'].includes(ext);
+  }
+
+  async extract(filepath: string): Promise<string> {
+    return this.fs.readFile(filepath); // Đọc chuỗi UTF-8
+  }
+}
+
+// 3. Chiến lược đọc PDF Text (Dễ dàng thay thế bằng PDF OCR sau này)
+export class PdfTextExtractor implements IFileExtractor {
+  constructor(private fs: IFileSystem) {}
+
+  supports(ext: string): boolean {
+    return ext === '.pdf';
+  }
+
+  async extract(filepath: string): Promise<string> {
+    const buffer = this.fs.readFileBuffer(filepath);
+    const data = await pdfParse(buffer);
     
-    // ...
-  } catch(e) {
-    s.stop(chalk.red(`✖ Lỗi: ${e.message}`));
+    // Logic mở rộng tương lai: 
+    // Nếu data.text quá ngắn (< 50 ký tự), có thể throw ra OCRRequiredError
+    // để hệ thống chuyển sang hàng đợi OCR.
+    
+    return data.text;
+  }
+}
+
+// 4. Chiến lược đọc DOCX
+export class DocxExtractor implements IFileExtractor {
+  constructor(private fs: IFileSystem) {}
+
+  supports(ext: string): boolean {
+    return ext === '.docx';
+  }
+
+  async extract(filepath: string): Promise<string> {
+    const buffer = this.fs.readFileBuffer(filepath);
+    // Mammoth cung cấp API đọc trực tiếp từ Buffer rất an toàn
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
   }
 }
 ```
 
-#### C. In kế hoạch Markdown cực đẹp khi chờ duyệt (Phase Planner)
-Lúc dừng lại chờ duyệt Plan, thay vì chỉ báo đường dẫn file, bạn có thể in luôn nội dung Plan ra màn hình giống như đọc trên Obsidian.
-
+*Tạo file `src/infrastructure/tools/document-reader/document-reader.tool.ts`:*
 ```typescript
-import boxen from 'boxen';
-import { marked } from 'marked';
-import TerminalRenderer from 'marked-terminal';
+import path from 'node:path';
+import type { IDocumentReader } from '../../../domain/interfaces/document-reader.interface.ts';
+import type { IFileExtractor } from './extractors.ts';
 
-// Cấu hình marked để render ra terminal
-marked.setOptions({
-  renderer: new TerminalRenderer()
-});
+export class DocumentReaderTool implements IDocumentReader {
+  // Nhận danh sách các chiến lược (Extractors) từ bên ngoài truyền vào
+  constructor(private extractors: IFileExtractor[]) {}
 
-// Trong Orchestrator, khi dừng lại chờ duyệt:
-const planContent = fs.readFileSync(planFilepath, 'utf-8');
-const renderedMarkdown = marked(planContent);
+  isSupported(filepath: string): boolean {
+    const ext = path.extname(filepath).toLowerCase();
+    return this.extractors.some(extractor => extractor.supports(ext));
+  }
 
-console.log(boxen(renderedMarkdown, {
-  padding: 1,
-  margin: 1,
-  borderStyle: 'round',
-  borderColor: 'cyan',
-  title: `📜 Kế hoạch: mrp_plan_${this.timestamp}.md`,
-  titleAlignment: 'center'
-}));
-```
+  async readAsText(filepath: string): Promise<string> {
+    const ext = path.extname(filepath).toLowerCase();
+    
+    // Tìm chiến lược phù hợp với đuôi file
+    const extractor = this.extractors.find(e => e.supports(ext));
+    
+    if (!extractor) {
+      throw new Error(`Định dạng không được hỗ trợ: ${ext}`);
+    }
 
----
-
-### 3. Giải pháp "Ultimate": Dùng React cho CLI (Ink)
-Nếu bạn thực sự muốn giao diện CLI của mình có bố cục phức tạp (chia đôi màn hình, thanh tiến trình chạy real-time ở dưới đáy, log cuộn ở trên - giống hệt Docker CLI hay Claude Code), bạn có thể tìm hiểu thư viện **[Ink](https://github.com/vadimdemedes/ink)**.
-
-Ink cho phép bạn viết CLI bằng... **React components**:
-```tsx
-const PipelineDashboard = ({ status, file }) => (
-  <Box flexDirection="column" borderStyle="round" borderColor="green">
-    <Text color="cyan">🚀 Đang xử lý: {file}</Text>
-    <Box marginTop={1}>
-      <Text>MAP: {status.map ? <Text color="green">✔</Text> : <Spinner/>}</Text>
-    </Box>
-    {/* ... */}
-  </Box>
-);
-```
-*(Tuy nhiên với dự án MRP hiện tại của bạn, chỉ cần dùng bộ **`@clack/prompts` + `boxen` + `ora`** là đã khiến giao diện "lột xác" 90% thành một công cụ xịn như của các tập đoàn công nghệ rồi, không cần đập đi xây lại bằng Ink).*
-
-**Tóm lại:** Bạn hãy thay thế `interactiveSelect` bằng `@clack/prompts`, thay `console.log` thông thường thành `spinner()` khi gọi LLM, dự án của bạn sẽ chuyên nghiệp lên một tầm cao mới ngay lập tức!
-
-
-## Tối ưu lại dự án để đạt tiêu chuẩn Clean Architecture và Clean Code. Lưu ý không tự ý bùa phép code mà phải code theo tiêu chuẩn (clean)
-
-Để tái cấu trúc (refactor) dự án theo đúng chuẩn **Clean Architecture** và **Clean Code** (nguyên tắc SOLID, không dùng "bùa phép" / hacks, không sửa state ẩn), chúng ta cần nhìn thẳng vào những "mùi code" (code smells) hiện tại trong dự án của bạn và giải quyết chúng tận gốc.
-
-Dưới đây là bản thiết kế kiến trúc chuẩn mực và cách refactor từng phần.
-
----
-
-### 1. Phân tích các vi phạm Clean Code hiện tại
-
-1. **State Mutation (Đột biến trạng thái ẩn):** Các Phase (Mapper, Reducer...) nhận nguyên cục `orchestrator` (chứa state chung) và tự ý sửa đổi bên trong (`this.o.state.mapped_data = ...`). Đây là tối kỵ trong Clean Code vì nó tạo ra **side-effects**, khiến code không thể test độc lập và cực kỳ khó debug.
-2. **Tight Coupling (Ghép nối chặt):** `Orchestrator` tự khởi tạo `new LLMClient()`, tự gọi `node:fs`. Nó bị trói buộc với cơ sở hạ tầng (Infrastructure).
-3. **Domain trộn lẫn Infrastructure:** Các model (`AtomicNode`, `StructuredDoc`) chứa logic sinh Markdown. Theo Clean Architecture, Entity chỉ chứa dữ liệu và rule nghiệp vụ, việc format ra Markdown hay JSON là việc của Infrastructure/Presentation.
-4. **God Object:** File `index.ts` vừa làm CLI Routing, vừa chứa logic UI (Interactive Shell), vừa đọc file hệ thống.
-
----
-
-### 2. Sơ đồ thư mục chuẩn Clean Architecture
-
-Bạn nên cấu trúc lại thư mục như sau để tách biệt rõ 4 lớp (Layers):
-
-```text
-src/
-├── domain/                  # Lớp cốt lõi: Không phụ thuộc vào thư viện ngoài
-│   ├── entities/            # AtomicNode, Plan, StructuredDoc (Chỉ chứa data & core rules)
-│   └── interfaces/          # IFileSystem, ILLMProvider, IRepository
-├── application/             # Lớp nghiệp vụ (Use Cases)
-│   ├── use-cases/           # IngestDocumentUseCase, ApprovePlanUseCase
-│   └── phases/              # Mapper, Reducer (Là pure functions/classes, nhận Input -> trả Output)
-├── infrastructure/          # Lớp hạ tầng (Implementations)
-│   ├── fs/                  # NodeFileSystem (implement IFileSystem)
-│   ├── llm/                 # AnthropicProvider (implement ILLMProvider)
-│   └── formatters/          # MarkdownGenerator (chuyển Entity -> Text)
-└── presentation/            # Lớp giao diện (CLI)
-    ├── cli/                 # Các lệnh Commander
-    └── ui/                  # @clack/prompts, shell logic
-```
-
----
-
-### 3. Hướng dẫn Refactor chi tiết (Nguyên tắc: Không bùa phép)
-
-#### Bước 1: Loại bỏ "God Object Orchestrator" và "State Mutation" ở các Phase
-*Nguyên tắc:* Dữ liệu phải chảy theo một luồng rõ ràng (Pipeline). Các Phase là các hàm thuần túy (Pure classes): Nhận Input, trả Output, KHÔNG chạm vào biến toàn cục.
-
-**TRƯỚC KHI REFACTOR (Bad):**
-```typescript
-class PhaseMapper {
-  constructor(private o: any) {}
-  async execute() {
-    const raw = fs.readFileSync(this.o.sourcePath); // Phụ thuộc cứng vào fs
-    this.o.state.mapped_data = parsedData; // Đột biến state ẩn (Side-effect)
+    // Giao việc trích xuất cho Strategy đó
+    return await extractor.extract(filepath);
   }
 }
 ```
+*(Bạn thấy đấy, sau này có code thêm OCR, class `DocumentReaderTool` này **hoàn toàn không bị sửa đổi gì**. Đây chính là nguyên lý Open/Closed (O trong SOLID)).*
 
-**SAU KHI REFACTOR (Clean Code):**
+---
+
+### Bước 4: Điều chỉnh Tầng Application và Domain
+
+**1. Sửa `SourceDoc.parseFrontmatter`**
+Để hệ thống không bị crash khi cố đọc YAML từ file PDF.
+*Sửa file `src/domain/entities/source-doc.entity.ts`:*
 ```typescript
-// application/phases/mapper.ts
-import { ILLMProvider } from '../../domain/interfaces/llm.interface';
-import { RawDocument, StructuredData } from '../../domain/entities';
+  // Thêm tham số filepath vào hàm
+  static parseFrontmatter(content: string, parser: IFrontmatterParser, filepath: string): Frontmatter {
+    const ext = filepath.split('.').pop()?.toLowerCase();
+    
+    // PSEUDO-FRONTMATTER cho file PDF/DOCX
+    if (ext && ext !== 'md') {
+      const filename = filepath.split(/[/\\]/).pop() || 'unknown';
+      const title = filename.replace(`.${ext}`, '').replace(/[-_]/g, ' ');
+      return {
+        id: '',
+        title: title, // Lấy tên file làm tiêu đề tạm
+        category: 'Raw Knowledge Source',
+        tags: [ext, 'raw-document'],
+        date: new Date().toISOString().slice(0, 10),
+        status: 'to-process',
+      };
+    }
+
+    // ... (Giữ nguyên logic Try/Catch cũ của file .md)
+```
+
+**2. Nâng cấp `MapperPhase`**
+*Sửa file `src/application/phases/mapper.phase.ts`:*
+```typescript
+import type { IDocumentReader } from '../../domain/interfaces/document-reader.interface.ts';
+// ... các import cũ
 
 export class MapperPhase {
-  // Dependency Injection (Tiêm phụ thuộc)
-  constructor(private llm: ILLMProvider) {}
-
-  // Nhận Input chuẩn, Trả Output chuẩn. Không tác động bên ngoài.
-  async execute(rawDoc: RawDocument): Promise<StructuredData> {
-    const prompt = this.buildPrompt(rawDoc.content);
-    const response = await this.llm.generate(prompt, '', true);
-    
-    // Validate và trả về DTO/Entity
-    return this.parseResponse(response); 
-  }
-}
-```
-
-#### Bước 2: Đảo ngược phụ thuộc (Dependency Inversion) cho Use Case
-*Nguyên tắc:* `Orchestrator` (bây giờ gọi là Use Case) không được tự `new LLMClient()` hay dùng `node:fs`. Nó chỉ nhận các Interfaces do bạn định nghĩa.
-
-**application/use-cases/ingest-document.use-case.ts**
-```typescript
-import { ILLMProvider, IFileSystem, IMarkdownGenerator } from '../../domain/interfaces';
-import { MapperPhase, ReducerPhase, PlannerPhase } from '../phases';
-
-export class IngestDocumentUseCase {
-  // DI: Nhận vào các giao diện trừu tượng, không phải implementation cụ thể
+  // Thêm docReader vào Constructor
   constructor(
-    private fs: IFileSystem,
     private llm: ILLMProvider,
-    private markdownFormatter: IMarkdownGenerator
+    private fs: IFileSystem,
+    private mdGenerator: IMarkdownGenerator,
+    private config: IConfigProvider,
+    private parser: IFrontmatterParser,
+    private logger: ILogger,
+    private docReader: IDocumentReader // <-- INJECT
   ) {}
 
-  async execute(sourceFilePath: string): Promise<void> {
-    // 1. Đọc file thông qua Interface
-    const rawContent = await this.fs.readFile(sourceFilePath);
-    const rawDoc = { path: sourceFilePath, content: rawContent };
+  async execute(sourcePath: string, onTokenUsed?: (usage: LLMUsage) => void): Promise<MappedData | null> {
+    const slug = this.extractSlug(sourcePath);
 
-    // 2. Chạy Phase 1 (Mapper)
-    const mapper = new MapperPhase(this.llm);
-    const mappedData = await mapper.execute(rawDoc); // Trả về dữ liệu sạch
-
-    // 3. Chạy Phase 2 (Reducer)
-    const reducer = new ReducerPhase(this.llm, this.fs); // Tương tự
-    const reducedData = await reducer.execute(mappedData);
-
-    // 4. Lưu trạng thái / Checkpoint thông qua Interface
-    await this.fs.saveCheckpoint(sourceFilePath, { mappedData, reducedData });
-
-    // ... tiếp tục các pha
-  }
-}
-```
-
-#### Bước 3: Tách Logic UI ra khỏi Domain
-Các model như `AtomicNode` hiện đang chứa logic render Markdown. Hãy gỡ nó ra.
-
-**domain/entities/atomic-node.entity.ts (Chỉ chứa Data)**
-```typescript
-export class AtomicNode {
-  constructor(
-    public readonly slug: string,
-    public readonly title: string,
-    public readonly tags: string[],
-    public readonly definition: string,
-    // ...
-  ) {
-    // Validation rule đặt ở đây
-    if (!slug) throw new Error('Slug is required');
-  }
-}
-```
-
-**infrastructure/formatters/markdown.generator.ts (Chịu trách nhiệm format)**
-```typescript
-import { AtomicNode } from '../../domain/entities/atomic-node.entity';
-import { IMarkdownGenerator } from '../../domain/interfaces';
-
-export class MarkdownGenerator implements IMarkdownGenerator {
-  generateAtomicNode(node: AtomicNode): string {
-    return `---
-id: ${node.slug}
-title: "${node.title}"
-tags:
-${node.tags.map(t => `  - ${t}`).join('\n')}
----
-# ${node.title}
-
-## 💡 Định nghĩa
-${node.definition}
-`;
-  }
-}
-```
-
-#### Bước 4: Lắp ráp mọi thứ ở lớp vỏ ngoài cùng (Composition Root / CLI)
-Chỉ tại điểm bắt đầu của ứng dụng (`index.ts` hoặc tệp cấu hình DI), chúng ta mới gọi chữ `new` để tạo các Implementation và "bơm" (inject) chúng vào Use Case.
-
-**presentation/cli/index.ts**
-```typescript
-import { Command } from 'commander';
-import { NodeFileSystem } from '../../infrastructure/fs/node-fs';
-import { AnthropicProvider } from '../../infrastructure/llm/anthropic-provider';
-import { MarkdownGenerator } from '../../infrastructure/formatters/markdown.generator';
-import { IngestDocumentUseCase } from '../../application/use-cases/ingest-document.use-case';
-
-const program = new Command();
-
-program
-  .command('run <file>')
-  .action(async (file) => {
-    // 1. Khởi tạo Hạ tầng (Infrastructure)
-    const fsService = new NodeFileSystem();
-    const llmService = new AnthropicProvider(process.env.ANTHROPIC_KEY);
-    const mdGenerator = new MarkdownGenerator();
-
-    // 2. Tiêm (Inject) hạ tầng vào Lớp Nghiệp vụ (Use Case)
-    const useCase = new IngestDocumentUseCase(fsService, llmService, mdGenerator);
-
-    // 3. Thực thi
-    try {
-      await useCase.execute(file);
-      console.log('✅ Hoàn tất!');
-    } catch (error) {
-      console.error('❌ Lỗi:', error.message);
+    if (!this.fs.fileExists(sourcePath)) {
+      this.logger.error(`❌ Lỗi: Không tìm thấy file [${sourcePath}]`);
+      return null;
     }
-  });
 
-program.parse();
+    // 1. ĐỌC FILE QUA READ TOOL MỚI (Hỗ trợ PDF/DOCX)
+    let rawContent = '';
+    try {
+      rawContent = await this.docReader.readAsText(sourcePath);
+    } catch (err: any) {
+      this.logger.error(`❌ Lỗi đọc file: ${err.message}`);
+      return null;
+    }
+
+    if (!rawContent.trim()) {
+      this.logger.error(`❌ Lỗi: File rỗng hoặc không trích xuất được text [${sourcePath}]`);
+      return null;
+    }
+
+    // 2. PARSE FRONTMATTER
+    const frontmatter = SourceDoc.parseFrontmatter(rawContent, this.parser, sourcePath);
+    
+    this.logger.info(`📄 Slug: ${slug}`);
+    this.logger.info(`  Tiêu đề: ${frontmatter.title}`);
+    
+    if (frontmatter.status === 'processed') {
+      this.logger.info('  ⏭️ File đã được xử lý trước đó. Bỏ qua.');
+      return null;
+    }
+
+    // 3. LỌC BỎ YAML CỦA FILE MD (File PDF/DOCX thì giữ nguyên toàn bộ Text)
+    const cleanContentToLLM = sourcePath.toLowerCase().endsWith('.md')
+      ? rawContent.replace(/^---\n[\s\S]*?\n---\n?/, '').trim()
+      : rawContent;
+
+    // 4. GỌI LLM (Truyền cleanContentToLLM vào thay vì rawContent cũ)
+    this.logger.info('  🔄 Đang chắt lọc...');
+    // ... Giữ nguyên toàn bộ logic tạo StructuredDoc và gọi this.callLLM(cleanContentToLLM)
 ```
 
 ---
 
-### Tóm tắt lợi ích của cách làm này (Tại sao nó "Clean")
+### Bước 5: Đưa vào DI Container & UI (Lắp ráp hệ thống)
 
-1. **Khả năng Test (Testability):** Bạn muốn test `MapperPhase`? Bạn không cần phải chuẩn bị thư mục hay file thật. Bạn chỉ cần truyền một đối tượng Mock (giả) của `ILLMProvider` vào constructor là test được ngay lập tức (không cần "bùa" file `core/llm.ts`).
-2. **Khả năng thay thế (Replaceability):** Ngày mai bạn muốn đổi từ Markdown sang lưu vào database PostgreSQL? Bạn không cần đụng vào Core Logic (các Use Cases hay Entities). Bạn chỉ cần viết một `PostgresRepository` mới implement Interface `IFileSystem` và gắn nó vào `index.ts`.
-3. **Luồng dữ liệu tường minh:** Không còn `this.o.state...` nhảy múa toán loạn. Mỗi Phase nhận một Input rõ ràng và trả về một Output rõ ràng. Nếu lỗi, bạn nhìn Stack Trace là biết ngay nó đứt ở Phase nào.
+**1. Sửa `composition-root.ts`**
+*Mở file `src/presentation/composition-root.ts`:*
+```typescript
+import { DocumentReaderTool } from '../infrastructure/tools/document-reader/document-reader.tool.ts';
+import { TextExtractor, PdfTextExtractor, DocxExtractor } from '../infrastructure/tools/document-reader/extractors.ts';
+
+// ...
+const fileSystem = new NodeFileSystem();
+
+// THIẾT LẬP READ TOOL (Lắp ráp các chiến lược)
+const textExtractor = new TextExtractor(fileSystem);
+const pdfExtractor = new PdfTextExtractor(fileSystem);
+const docxExtractor = new DocxExtractor(fileSystem);
+
+const docReader = new DocumentReaderTool([
+  textExtractor,
+  pdfExtractor,
+  docxExtractor
+]);
+
+// ... 
+const mapper = new MapperPhase(
+  llmClient, 
+  fileSystem, 
+  markdownGenerator, 
+  configProvider, 
+  frontmatterParser, 
+  logger,
+  docReader // <-- TRUYỀN READ TOOL VÀO MAPPER
+);
+```
+
+**2. Sửa UI Chọn File (`file-picker.ts`)**
+*Mở file `src/presentation/ui/file-picker.ts` và sửa bộ lọc tìm kiếm:*
+```typescript
+  // Cập nhật bộ lọc ở khoảng dòng 17
+  const supportedExts = ['.md', '.txt', '.pdf', '.docx', '.csv'];
+
+  const files = fs.readdir(config.dirRaw)
+    .filter(f => supportedExts.some(ext => f.toLowerCase().endsWith(ext)) && f !== 'RULE.md' && f !== 'index.md')
+    .map(f => {
+      const filepath = path.join(config.dirRaw, f);
+      const ext = path.extname(f).toLowerCase();
+      
+      let title = f;
+      let status = 'to-process';
+      
+      if (ext === '.md') {
+        try {
+          const content = fs.readFile(filepath);
+          const parsed = matter(content);
+          title = parsed.data?.title || f;
+          status = parsed.data?.status || 'unknown';
+        } catch { return null; }
+      }
+
+      // Gán Icon
+      let icon = '📄';
+      if (ext === '.pdf') icon = '📕';
+      if (ext === '.docx') icon = '📘';
+
+      return {
+        filename: f,
+        filepath,
+        title: `${icon} ${title}`,
+        status,
+      };
+    })
+    .filter((f): f is NonNullable<typeof f> => f !== null && f.status === 'to-process');
+```
+
+*(Lưu ý: Tương tự, nếu bạn dùng hack `fzf` ở dòng 78, bạn nhớ đổi lệnh bash từ `*.md` thành `\*.md -o -name \*.pdf -o -name \*.docx` để quét được toàn bộ).*
+
+---
+
+### 🎉 Hoàn tất!
+Lúc này, hệ thống của bạn đã có thể nuốt bất kỳ file PDF hay DOCX nào đưa vào thư mục `00_raw_docs`.
+
+**Tương lai:** Khi bạn muốn thêm OCR cho PDF (ví dụ dùng `tesseract.js`), bạn chỉ cần:
+1. Viết 1 class `PdfOcrExtractor implements IFileExtractor`.
+2. Vào `composition-root.ts` đổi `new PdfTextExtractor()` thành `new PdfOcrExtractor()`.
+3. Toàn bộ logic hệ thống, Application, Domain **đều không thay đổi dù chỉ 1 dòng code**.
+
+Đây chính là sức mạnh tối thượng của Clean Architecture kết hợp Strategy Pattern! Chúc bạn tích hợp thành công! Nếu gặp vướng mắc chỗ nào cứ báo lại tôi.
