@@ -388,9 +388,6 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
       const input = line.trim();
       process.stdout.write('\r\x1b[J'); // Dọn dẹp menu gợi ý
       
-      // In đè lại lệnh user vừa gõ (chống rác màn hình)
-      const finalInputText = input.startsWith('/') ? chalk.cyan.bold(input) : chalk.white(input);
-      process.stdout.write(`${chalk.bold.magenta('mrp❯ ')}${finalInputText}\n`);
       
       // Chốt đường kẻ viền DƯỚI bao bọc Input
       printBottomDivider(); 
