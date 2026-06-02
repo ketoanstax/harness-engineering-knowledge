@@ -423,9 +423,13 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
     });
 
     r.on('close', () => {
-      if (isInteractiveMode) {
+      if (isInteractiveMode && process.stdin.isTTY) {
+        // Terminal tương tác thật — recreate readline cho lượt kế tiếp
         rl = createReadline();
         triggerPrompt();
+      } else if (isInteractiveMode) {
+        // Pipe/EOF — thoát sạch sẽ
+        process.exit(0);
       }
     });
 

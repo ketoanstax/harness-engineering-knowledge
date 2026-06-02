@@ -5,7 +5,9 @@ category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
   - draft
-date: 2026-06-01
+date: 2026-06-02
+children:
+  - song-hoa-hop-samaggavasa
 ---
 
 # Gioi
@@ -15,6 +17,9 @@ Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ đ�
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Khái niệm này đang ở trạng thái chờ nạp dữ liệu chi tiết.
+## 🌳 Nốt con (Sub-Nodes)
+- [Song Hoa Hop Samaggavasa](02_atomic_nodes/HAE-concept-song-hoa-hop-samaggavasa.md)
+
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: Không có — Khái niệm nền tảng sinh ra khái niệm này.
 - **Hội tụ Duyên (Supporting Conditions)**: Không có — Các khái niệm hỗ trợ trực tiếp.

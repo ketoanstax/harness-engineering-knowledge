@@ -1,37 +1,20 @@
 ---
-id: HAE-concept-bat-chanh-dao
-title: "Bat Chanh Dao"
+id: HAE-concept-tri-tuc
+title: "Tri Tuc"
 category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
   - draft
 date: 2026-06-02
-children:
-  - chanh-dinh
-  - doan-giam-sallekha
-  - chanh-tri-kien
-  - bay-giac-chi
-  - ba-la-mon
-  - dao-len
-  - khong-phong-dat-appamada
 ---
 
-# Bat Chanh Dao
+# Tri Tuc
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
 Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ được tự động cập nhật khi hệ thống quét qua các bài kinh liên quan.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Khái niệm này đang ở trạng thái chờ nạp dữ liệu chi tiết.
-## 🌳 Nốt con (Sub-Nodes)
-- [Chanh Dinh](02_atomic_nodes/HAE-concept-chanh-dinh.md)
-- [Doan Giam Sallekha](02_atomic_nodes/HAE-concept-doan-giam-sallekha.md)
-- [Chanh Tri Kien](02_atomic_nodes/HAE-concept-chanh-tri-kien.md)
-- [Bay Giac Chi](02_atomic_nodes/HAE-concept-bay-giac-chi.md)
-- [Ba La Mon](02_atomic_nodes/HAE-concept-ba-la-mon.md)
-- [Dao Len](02_atomic_nodes/HAE-concept-dao-len.md)
-- [Khong Phong Dat Appamada](02_atomic_nodes/HAE-concept-khong-phong-dat-appamada.md)
-
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: Không có — Khái niệm nền tảng sinh ra khái niệm này.
 - **Hội tụ Duyên (Supporting Conditions)**: Không có — Các khái niệm hỗ trợ trực tiếp.

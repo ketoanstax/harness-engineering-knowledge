@@ -1,29 +1,30 @@
 ---
 id: sutta-mn-025-processed
-title: "Kinh Bẫy mồi (Nivàpa sutta)"
+title: "25. Kinh Bẫy mồi"
 category: "Structured Knowledge"
 tags:
   - structured
   - processed
-date: 2026-06-01
+date: 2026-06-02
 source: "00_raw_docs/sutta-mn-025.md"
 ---
 
-# Kinh Bẫy mồi (Nivàpa sutta)
+# 25. Kinh Bẫy mồi
 
 ## 💡 Key Takeaways
-- Sự tham đắm vào ngũ dục (đồ mồi) khiến con người trở nên mê loạn, phóng dật và đánh mất tự do.
-- Việc né tránh cực đoan (từ bỏ vật dụng, lánh vào rừng) nếu không đi kèm với sự tỉnh giác thì khi gặp khó khăn, cám dỗ vẫn sẽ quay trở lại.
-- Kể cả khi áp dụng kỹ thuật khôn ngoan để tận hưởng mà không dính mắc, nếu không thoát khỏi hoàn toàn bẫy mồi (thế gian), con người vẫn nằm trong sự kiểm soát của nghiệp và các thế lực tiêu cực.
-- Giải thoát chân chính đòi hỏi sự từ bỏ hoàn toàn các bẫy mồi thay vì tìm cách thỏa hiệp với chúng.
+- Bài kinh dùng ẩn dụ đàn nai và người thợ săn để chỉ các hành giả và Ma vương; bẫy mồi tượng trưng cho dục lạc.
+- Ba đàn nai đầu đều không thoát khỏi tầm kiểm soát của thợ săn vì hoặc sa đà, hoặc bỏ chạy nhưng yếu sức quay lại, hoặc trú ẩn gần đó nhưng bị phát hiện.
+- Chỉ có đàn nai thứ tư hoàn toàn từ bỏ khu vực bẫy mồi và trú ẩn nơi an toàn mới thực sự thoát khỏi, nhấn mạnh sự cần thiết của việc dứt bỏ hoàn toàn dục vọng.
 
 ## 🗝️ Keywords & Core Concepts
-- **Đồ mồi**: Hình ảnh ẩn dụ cho ngũ dục, các khoái lạc thế gian được thế giới bày ra để dẫn dụ tâm thức.
-- **Người thợ săn**: Ẩn dụ cho Ma vương hoặc các lực bất thiện tìm cách thao túng và giam hãm chúng sinh.
-- **Phóng dật**: Trạng thái tâm không làm chủ được mình, buông lung theo các đối tượng bên ngoài, dẫn đến mất chánh niệm.
+- **Bẫy mồi**: Cạm bẫy của dục vọng hoặc các uẩn do Ma vương (tham ái) bày ra.
+- **Đồ mồi**: Các đối tượng dục lạc mà hành giả dễ bị lôi cuốn.
+- **Mê loạn**: Trạng thái tâm bị chi phối bởi tham ái và vô minh.
+- **Phóng dật**: Sự buông lung, mất chánh niệm do mê loạn.
+- **Chỗ ẩn nấp**: Nơi trú ẩn an toàn tránh xa dục lạc, ví dụ như thiền định hay nơi thanh vắng.
 
 ## 📝 AI-Ready Summary
-Kinh Bẫy mồi sử dụng ẩn dụ về đàn nai để minh họa các mức độ tiếp cận với dục lạc thế gian của con người. Từ việc tham đắm mù quáng đến nỗ lực né tránh cực đoan hoặc tìm cách tận hưởng trong sự khôn ngoan đều không phải là lối thoát cuối cùng. Đức Phật dạy rằng chỉ khi nhận ra bản chất nguy hiểm của 'đồ mồi' và từ bỏ hoàn toàn sự lệ thuộc vào chúng, hành giả mới thực sự đạt được tự do và thoát khỏi tầm kiểm soát của các lực bất thiện.
+Trong Kinh Bẫy mồi (Nivāpa Sutta), Đức Phật dùng ẩn dụ bốn đàn nai và người thợ săn để dạy về cách đối trị với dục lạc. Đàn nai đầu tiên sa đà vào bẫy mồi và bị kiểm soát; đàn thứ hai bỏ trốn nhưng vì thiếu lương thực phải quay lại; đàn thứ ba trú ẩn gần đó nhưng vẫn bị phát hiện; chỉ có đàn thứ tư hoàn toàn rời khỏi khu vực bẫy mồi mới thực sự thoát thân. Bài kinh khuyến khích hành giả dứt bỏ hoàn toàn mọi ràng buộc vào dục lạc và kiên trì tu tập để đạt giải thoát.
 
 ---
 

@@ -1,14 +1,11 @@
 ---
 id: sutta-mn-031
-title: "Tiểu kinh Rừng sừng bò"
+title: Tiểu kinh Rừng sừng bò
 category: Nikaya Raw Sutta
-tags: 
-source: https://www.budsas.org/uni/u-kinh-trungbo/trung31.htm
-date: 2026-05-25
-status: to-process
-  - raw-source
-  - nikaya
-  - trung-bo-kinh
+tags: null
+source: 'https://www.budsas.org/uni/u-kinh-trungbo/trung31.htm'
+date: 2026-05-25T00:00:00.000Z
+status: processed
 ---
 
 ****Trung Bộ Kinh
