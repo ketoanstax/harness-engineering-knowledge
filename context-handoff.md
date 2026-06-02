@@ -6,61 +6,41 @@
 ## 🎯 1. Prompt Bàn Giao (Copy-paste cho session mới)
 
 ```markdown
-Bạn đang làm việc trong dự án Harness Engineering — một hệ thống quản lý tri thức đa domain 
-với MRP Ingestion Pipeline (TypeScript). Branch hiện tại: `feature/rewrite-engine-in-typescript`.
+Bạn đang làm việc trong dự án Harness Engineering — hệ thống quản lý tri thức đa domain 
+với MRP Ingestion Pipeline (TypeScript). Branch: `feature/rewrite-engine-in-typescript`.
 
 ## Trạng thái hiện tại
-Dự án đã được refactor hoàn TOÀN theo Clean Architecture 4 tầng:
-- Domain (entities + interfaces thuần TS, không NPM)
-- Application (use-cases + phases thuần business logic)
-- Infrastructure (implement cụ thể: FS, LLM, parsers, repositories)
-- Presentation (CLI, Interactive Shell, UI tools)
+✅ Clean Architecture 4 tầng hoàn chỉnh (Domain, Application, Infrastructure, Presentation)
+✅ Runtime: **Bun** (v1.3.14) — không dùng Node/pnpm nữa
+✅ Test: **Bun Test** (Unit/Integration/E2E) — `bun test` 
+✅ `bunx tsc --noEmit` = 0 errors, `bun test` = 20/20 pass, `bun start` hoạt động
 
-pnpm tsc --noEmit = 0 errors. pnpm start hoạt động bình thường.
+## 11 commits gần nhất (từ cũ đến mới):
+1. chore: chuyển đổi runtime sang Bun
+2. feat: tách phần test ra khỏi source + Bun Test
+3. refactor: loại bỏ magic strings + regex manipulation nguy hiểm
+4. refactor: inject ILogger thay vì console.log ở Application layer
+5. refactor: tách God function runStateMachine → Phase Step pattern
+6. refactor: chuyển AtomicNode.fromFile() từ Domain → Infrastructure Factory
+7. refactor: config hoá hardcoded values + inject atomicPrefix
+8. fix: shell không nhắc lại lệnh khi input từ pipe
+9. fix: xoá in đè prompt gây lệnh xuất hiện 2 lần
 
 ## Kiến trúc Layer
-Domain:        domain/interfaces/ (IFileSystem, ILLMProvider, IMarkdownGenerator,
-               IConfigProvider, IPipelineObserver, IFrontmatterParser, INodeRepository)
-               domain/entities/ (source-doc, structured-doc, atomic-node, plan)
-Application:   application/use-cases/ingest-document.use-case.ts
-               application/phases/ (mapper, reducer, planner, refiner, verifier, committer)
-Infrastructure: infrastructure/fs/node-file-system.ts
-                infrastructure/llm/ (anthropic, openai, gemini, deepseek, mock)
-                infrastructure/parsers/gray-matter.parser.ts
-                infrastructure/repositories/file-system-node-repository.ts
-                infrastructure/formatters/markdown.generator.ts
-                infrastructure/config/config-provider.ts
-Presentation:  presentation/composition-root.ts (DI container)
-               presentation/cli/commands.ts (Commander CLI)
-               presentation/ui/ (interactive-shell, file-picker, plan-displayer, pipeline-dashboard)
-               presentation/tools/ (domain-scanner, graph-viz, vault-stats)
-
-## 5 Commits chính trong session này (từ cũ đến mới):
-1. feat: hoàn thiện TS engine tools + tổ chức domain subdirs
-2. fix: Clean Architecture — tách Presentation khỏi Application layer
-3. refactor: DRY + Repository pattern + tách God class context-filter
-4. fix: tách gray-matter khỏi Domain/Application + UI dùng ConfigProvider
-5. fix: restore gray-matter trong Presentation tools, bỏ regex thủ công
-
-## Những gì đã hoàn thành
-✅ 3 TS engine tools mới: /scan, /graph, /status (trong interactive shell)
-✅ /doctor mở rộng: validate domain + sync rules + env check
-✅ Tổ chức 00_raw_docs/ theo domain subdirectories (loi_phat_day, trung_bo_kinh)
-✅ scripts/validate_raw_docs.py — auto-detect file sai domain
-✅ IPipelineObserver (Domain) — UseCase không biết Presentation
-✅ runStateMachine() duy nhất thay vì 2 hàm copy-paste
-✅ INodeRepository (Domain) + FileSystemNodeRepository (Infra)
-✅ context-filter.ts: bỏ FS/gray-matter, chỉ còn thuật toán thuần
-✅ IFrontmatterParser (Domain) + GrayMatterParser (Infra)
-✅ Bỏ gray-matter khỏi Domain và Application
-✅ Presentation tools dùng IConfigProvider thay vì core/config.ts
+- **Domain:** interfaces/ (ILogger, IPipelineObserver, IConfigProvider...) + entities/
+- **Application:** use-cases/ingest-document.use-case.ts (Phase Step SM) + phases/ (6 phase)
+- **Infrastructure:** fs/, llm/, parsers/ (AtomicNodeFactory, GrayMatterParser), repositories/, formatters/ (MarkdownGenerator inject atomicPrefix), config/, logging/ (ConsoleLogger, SilentLogger)
+- **Presentation:** composition-root.ts (DI), cli/, ui/ (Dashboard, Logger tích hợp), tools/
 
 ## Lưu ý kỹ thuật
-- Node.js dùng `--experimental-strip-types` → KHÔNG dùng parameter properties
-  (VD: constructor(private fs: IFileSystem) là SAI → phải khai báo this.fs = fs tường minh)
-- .env cấu hình GEMINI_API_KEY đang active (model: gemini-3.1-flash-lite)
-- core/config.ts vẫn tồn tại — Presentation và Infrastructure import nó (OK)
-- Các file tools ở presentation/tools/ dùng gray-matter (Presentation layer được phép)
+- **Bun** — không cần --experimental-strip-types, import .ts vẫn giữ
+- **Clean Architecture**: Domain/Application KHÔNG import NPM
+- **Logging**: Mọi Phase/UseCase dùng ILogger (injected), không console.log
+- **State Machine**: runStateMachine = vòng lặp handler Map (thêm phase = viết 1 method + 1 dòng)
+- **Config**: core/config.ts cung cấp ensureDirectories(), IConfigProvider implement ở Infra
+- **Import test**: tests/ nằm trong tsconfig include — type-checked
+- **Shell**: isTTY guard tránh recreate readline vô tận khi pipe
+- **Hiện tại đang dùng Anthropic KhaBoDo_1.0** (xem .env)
 ```
 
 ---
@@ -70,92 +50,91 @@ Presentation:  presentation/composition-root.ts (DI container)
 ### Domain Layer (`src/domain/`) — Pure TS, 0 NPM
 ```
 interfaces/
-├── file-system.interface.ts          # IFileSystem
-├── llm-provider.interface.ts         # ILLMProvider + LLMUsage
-├── markdown-generator.interface.ts   # IMarkdownGenerator
-├── config-provider.interface.ts      # IConfigProvider
-├── pipeline-observer.interface.ts    # IPipelineObserver + NullPipelineObserver
-├── frontmatter-parser.interface.ts   # IFrontmatterParser
-└── node-repository.interface.ts      # INodeRepository + AtomicNodeMeta
+├── file-system.interface.ts       # IFileSystem
+├── llm-provider.interface.ts      # ILLMProvider + LLMUsage
+├── markdown-generator.interface.ts # IMarkdownGenerator
+├── config-provider.interface.ts   # IConfigProvider
+├── pipeline-observer.interface.ts # IPipelineObserver + NullPipelineObserver
+├── frontmatter-parser.interface.ts # IFrontmatterParser
+├── node-repository.interface.ts   # INodeRepository + AtomicNodeMeta
+└── logger.interface.ts            # ILogger (info/success/warn/error/log)
 
 entities/
-├── source-doc.entity.ts              # SourceDoc (parseFrontmatter nhận parser qua tham số)
-├── structured-doc.entity.ts          # StructuredDoc
-├── atomic-node.entity.ts             # AtomicNode + CausalWeb
-└── plan.entity.ts                    # PlanFile + PlanItem
+├── source-doc.entity.ts
+├── structured-doc.entity.ts
+├── atomic-node.entity.ts          # Thuần data + getters, KHÔNG có fromFile()
+└── plan.entity.ts
 ```
 
-### Application Layer (`src/application/`) — Business logic, 0 NPM
+### Application Layer (`src/application/`)
 ```
 use-cases/
-└── ingest-document.use-case.ts       # IngestDocumentUseCase
-                                      # - runStateMachine() duy nhất (autoApprove + onPlanGenerated)
-                                      # - query() dùng INodeRepository
-                                      # - runBatch() tuần tự
+└── ingest-document.use-case.ts    # runStateMachine = vòng lặp handler Map
 
 phases/
-├── mapper.phase.ts                   # Đọc file thô → structured doc (DI: parser)
-├── reducer.phase.ts                  # So khớp trùng lặp (DI: nodeRepo)
-├── planner.phase.ts                  # Thiết kế atomic nodes + Causal Web
-├── refiner.phase.ts                  # Tạo/cập nhật file .md
-├── verifier.phase.ts                 # Kiểm toán link + tree healing (DI: parser)
-├── committer.phase.ts                # Cập nhật status, INDEX.md
-├── _types.ts                         # Zod schemas
-└── _utils.ts                         # extractJson()
+├── mapper.phase.ts                # Đọc file thô → structured doc
+├── reducer.phase.ts               # So khớp trùng lặp
+├── planner.phase.ts               # Thiết kế atomic nodes
+├── refiner.phase.ts               # Tạo/cập nhật file .md
+├── verifier.phase.ts              # Kiểm toán link + tree healing
+├── committer.phase.ts             # Cập nhật status, INDEX.md
+├── _types.ts                      # Zod schemas
+└── _utils.ts                      # extractJson()
 
 services/
-└── token-tracker.ts                  # TokenEntry + tổng hợp
+└── token-tracker.ts               # TokenEntry + tổng hợp
 ```
 
 ### Infrastructure Layer (`src/infrastructure/`) — Cụ thể, có NPM
 ```
-fs/node-file-system.ts               # Node.js FS implementation
+fs/node-file-system.ts
 llm/
-├── llm-client.ts                     # Factory: chọn provider theo env
-├── anthropic-sdk.provider.ts         # Anthropic SDK
-├── anthropic-rest.provider.ts        # Anthropic REST
-├── openai.provider.ts                # OpenAI
-├── gemini.provider.ts                # Google Gemini
-├── deepseek.provider.ts              # DeepSeek
-└── mock.provider.ts                  # Mock (khi không có API key)
-
+├── llm-client.ts                  # Factory: chọn provider theo env
+├── anthropic-sdk.provider.ts
+├── anthropic-rest.provider.ts
+├── openai.provider.ts             # max_tokens từ OPENAI_MAX_TOKENS env
+├── gemini.provider.ts
+├── deepseek.provider.ts           # Kế thừa OpenAIProvider
+└── mock.provider.ts               # Mock LLM responses
 parsers/
-└── gray-matter.parser.ts            # GrayMatterParser implement IFrontmatterParser
-
+├── gray-matter.parser.ts
+└── atomic-node-factory.ts         # fromFile() di chuyển từ Domain
 repositories/
-└── file-system-node-repository.ts   # Đọc 02_atomic_nodes/ → AtomicNodeMeta[]
-
-config/config-provider.ts            # IConfigProvider implementation
-formatters/markdown.generator.ts     # Sinh .md cho atomic nodes, structured docs, plan
+└── file-system-node-repository.ts
+logging/
+├── console-logger.ts              # Dùng chalk
+└── silent-logger.ts               # No-op cho test
+config/config-provider.ts
+formatters/markdown.generator.ts   # Inject atomicPrefix qua constructor
 ```
 
-### Presentation Layer (`src/presentation/`) — UI, CLI
+### Presentation Layer (`src/presentation/`)
 ```
-composition-root.ts                   # DI Container (wire toàn bộ dependencies)
-cli/commands.ts                       # Commander: run, batch, approve, reject, guide
+composition-root.ts                # DI container
+cli/commands.ts                    # Commander: run, batch, approve, reject, guide
 ui/
-├── interactive-shell.ts              # Shell với real-time suggestion + /commands
-├── file-picker.ts                    # File browser (clack prompts)
-├── plan-displayer.ts                 # Plan render (boxen)
-└── pipeline-dashboard.ts             # Dashboard real-time (implement IPipelineObserver)
+├── interactive-shell.ts           # Shell với real-time suggestion + /commands
+├── file-picker.ts
+├── plan-displayer.ts
+└── pipeline-dashboard.ts          # Dashboard + DashboardLogger (thay console hijacking)
 tools/
-├── domain-scanner.ts                 # /scan command
-├── graph-viz.ts                      # /graph command
-└── vault-stats.ts                    # /status command
+├── domain-scanner.ts              # /scan
+├── graph-viz.ts                   # /graph
+└── vault-stats.ts                 # /status
 ```
 
 ### Core (Layer trung gian)
 ```
 core/
-├── config.ts                         # Hằng số path + loadCategories() — Presentation/Infra import
-└── context-filter.ts                 # filterRelevantNodes() thuần túy (nhận nodes từ Repository)
+├── config.ts                      # ensureDirectories(), hằng số path, ATOMIC_PREFIX...
+└── context-filter.ts              # filterRelevantNodes() configurable threshold + ILogger
 ```
 
 ---
 
 ## 📋 3. Các CLI Commands
 
-### Interactive Shell (`pnpm start`)
+### Interactive Shell (`bun start`)
 | Lệnh | Mô tả |
 |---|---|
 | `/run` | Chọn file → chạy pipeline (có duyệt plan) |
@@ -168,14 +147,23 @@ core/
 | `/help` | Danh sách lệnh |
 | `/exit` | Thoát |
 
-### CLI Direct (`pnpm start <command>`)
+### CLI Direct (`bun start <command>`)
 ```bash
-pnpm start run -s <file.md>           # Chạy pipeline cho 1 file
-pnpm start batch                      # Batch tuần tự
-pnpm start batch --auto-approve       # Batch tự động
-pnpm start approve -t <timestamp>     # Duyệt plan
-pnpm start reject -t <timestamp>       # Từ chối plan
-pnpm start guide                      # Hướng dẫn
+bun start run -s <file.md>           # Chạy pipeline cho 1 file
+bun start batch                      # Batch tuần tự
+bun start batch --auto-approve       # Batch tự động
+bun start approve -t <timestamp>     # Duyệt plan
+bun start reject -t <timestamp>      # Từ chối plan
+bun start guide                      # Hướng dẫn
+```
+
+### Lệnh test
+```bash
+bun test                  # Toàn bộ suite (20 tests)
+bun run test:unit         # Unit tests (6)
+bun run test:integration  # Integration tests (13)
+bun run test:e2e          # E2E pipeline test (1)
+bun run typecheck         # bunx tsc --noEmit
 ```
 
 ### Python Scripts
@@ -188,16 +176,28 @@ python3 scripts/sync_rules_and_memory.py     # Audit links + sync rules
 
 ## 🔧 4. Cấu hình Môi trường
 
-File `.env`:
+File `.env` (đang active):
 ```env
-# Gemini (đang active)
-GEMINI_API_KEY=AIzaSyBoKcUg1b0RI9w3tmlLTeUzGzm-PDKlFbY
-GEMINI_MODEL=gemini-3.1-flash-lite
+# Anthropic (đang active - bun start thấy Anthropic SDK KhaBoDo_1.0)
+ANTHROPIC_BASE_URL=http://localhost:20128/v1
+ANTHROPIC_AUTH_TOKEN=sk-...
+ANTHROPIC_MODEL=KhaBoDo_1.0
+ANTHROPIC_CONNECTION_MODE=sdk
 
-# Anthropic (comment — có thể dùng thay thế)
-# ANTHROPIC_AUTH_TOKEN=...
-# ANTHROPIC_MODEL=KhaBoDo_1.0
-# ANTHROPIC_CONNECTION_MODE=sdk
+# Gemini (comment)
+# GEMINI_API_KEY=...
+# GEMINI_MODEL=gemini-3.1-flash-lite
+
+# DeepSeek
+DEEPSEEK_API_KEY=sk-...
+DEEPSEEK_MODEL=deepseek-v4-flash
+
+# OpenAI (comment)
+# OPENAI_API_KEY=...
+# OPENAI_MODEL=gpt-4o
+
+# Tuỳ chọn thêm
+# OPENAI_MAX_TOKENS=3000
 ```
 
 ---
@@ -207,15 +207,9 @@ GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 vault/
 ├── 00_raw_docs/                    # Layer 1: Tài liệu thô
-│   ├── RULE.md                     # Domain subdirectory architecture
+│   ├── RULE.md
 │   ├── loi_phat_day/               # Domain: Giảng giải Phật học
-│   │   ├── RULE.md
-│   │   └── buoi_*.md
-│   ├── trung_bo_kinh/              # Domain: Giảng giải Trung Bộ Kinh
-│   │   ├── RULE.md
-│   │   └── mn-*.md
-│   ├── sutta-mn-*.md              # Legacy (Nikaya)
-│   └── lecture-*.md               # Legacy (Harness Engineering)
+│   └── trung_bo_kinh/              # Domain: Giảng giải Trung Bộ Kinh
 ├── 01_structured_docs/             # Layer 2: Chắt lọc
 ├── 02_atomic_nodes/                # Lõi tri thức: nốt nguyên tử
 ├── 03_neural_map/                  # INDEX.md + AI_ROUTING_TABLE.md
@@ -230,16 +224,20 @@ vault/
 
 ## 📌 6. Điểm cần lưu ý cho Session tiếp theo
 
-1. **Node.js `--experimental-strip-types`**: Không hỗ trợ parameter properties. Luôn viết tường minh.
+1. **Runtime**: Dùng `bun`, KHÔNG dùng `pnpm` hoặc `node`. `bunx tsc --noEmit` để typecheck.
 
-2. **Clean Architecture**: Domain/Application KHÔNG import NPM packages. Mọi thư viện bên ngoài chỉ dùng ở Infrastructure và Presentation.
+2. **Clean Architecture**: Domain/Application KHÔNG import NPM. Infrastructure có NPM, Presentation có NPM.
 
-3. **Code style**: File `.ts` import nhau với đuôi `.ts` (VD: `from './foo.ts'`) — do `--experimental-strip-types` yêu cầu.
+3. **Logging**: Mọi Phase dùng `this.logger.info/success/warn/error` (ILogger). Inject từ DI.
 
-4. **Config**: `core/config.ts` vẫn được Presentation/Infra import trực tiếp. Application layer không import nó.
+4. **State Machine**: Muốn thêm phase → viết 1 private method + thêm 1 dòng vào `handlers` map trong `runStateMachine()`.
 
-5. **Test**: `pnpm test` = `node --experimental-strip-types src/test_mrp_pipeline.ts` — chạy pipeline test với dữ liệu tạm.
+5. **Entity**: `AtomicNode` thuần data + getters. Parse từ Markdown file dùng `AtomicNodeFactory` (Infrastructure).
 
-6. **Vault data**: 00_raw_docs/ có thể mở rộng thêm domain mới bằng cách tạo thư mục con + RULE.md + validate bằng `python3 scripts/validate_raw_docs.py`.
+6. **Config**: `core/config.ts` có `ensureDirectories()` gọi ở entry point. Các hằng số path, prefix ở đây.
 
-7. **Commit gần nhất**: `bd0618f` — restore gray-matter trong Presentation tools.
+7. **Shell**: Tránh in đè prompt (readline tự echo). `close` event check `isTTY` để tránh loop.
+
+8. **Test**: E2E test xoá env vars (kể cả DEEPSEEK) để ép Mock mode. Timeout mặc định 5s.
+
+9. **Commit gần nhất**: `ed0e3de` — fix double prompt.
