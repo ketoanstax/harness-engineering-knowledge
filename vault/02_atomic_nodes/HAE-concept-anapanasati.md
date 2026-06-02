@@ -7,7 +7,7 @@ tags:
   - thien
   - hơi-thở
 date: 2026-06-02
-parent: samatha
+parent: satipatthana
 ---
 
 # Anapanasati

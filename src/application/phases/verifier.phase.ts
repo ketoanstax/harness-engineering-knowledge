@@ -6,6 +6,7 @@ import type { VerificationResult } from './_types.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
+import type { AtomicNodeFactory } from '../../infrastructure/parsers/atomic-node-factory.ts';
 import * as path from 'node:path';
 
 export class VerifierPhase {
@@ -14,19 +15,22 @@ export class VerifierPhase {
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
   private logger: ILogger;
+  private nodeFactory: AtomicNodeFactory;
 
   constructor(
     fs: IFileSystem,
     mdGenerator: IMarkdownGenerator,
     config: IConfigProvider,
     parser: IFrontmatterParser,
-    logger: ILogger
+    logger: ILogger,
+    nodeFactory: AtomicNodeFactory
   ) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
     this.logger = logger;
+    this.nodeFactory = nodeFactory;
   }
 
   execute(): VerificationResult {
@@ -247,7 +251,7 @@ export class VerifierPhase {
 
   private addChildToParentFile(filepath: string, childSlug: string): void {
     const content = this.fs.readFile(filepath);
-    const parentNode = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
+    const parentNode = this.nodeFactory.fromFile(content, this.config.atomicPrefix);
     if (!parentNode.children.includes(childSlug)) {
       parentNode.children.push(childSlug);
       this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(parentNode));
@@ -256,7 +260,7 @@ export class VerifierPhase {
 
   private updateParentInChildFile(filepath: string, parentSlug: string): void {
     const content = this.fs.readFile(filepath);
-    const childNode = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
+    const childNode = this.nodeFactory.fromFile(content, this.config.atomicPrefix);
     if (childNode.parent !== parentSlug) {
       childNode.parent = parentSlug;
       this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(childNode));

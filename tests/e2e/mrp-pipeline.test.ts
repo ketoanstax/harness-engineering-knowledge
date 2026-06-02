@@ -19,6 +19,7 @@ import { RefinerPhase } from '../../src/application/phases/refiner.phase.ts';
 import { CommitterPhase } from '../../src/application/phases/committer.phase.ts';
 import { FileSystemNodeRepository } from '../../src/infrastructure/repositories/file-system-node-repository.ts';
 import { SilentLogger } from '../../src/infrastructure/logging/silent-logger.ts';
+import { AtomicNodeFactory } from '../../src/infrastructure/parsers/atomic-node-factory.ts';
 
 const TEST_DIR_RAW = path.join(path.dirname(DIR_RAW), 'test_raw_docs');
 
@@ -217,12 +218,13 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
     const testNodeRepo = new FileSystemNodeRepository(testFs, configProvider);
     const testParser = new GrayMatterParser();
     const silentLogger = new SilentLogger();
+    const testNodeFactory = new AtomicNodeFactory(testParser);
 
     const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider, testParser, silentLogger);
     const reducer = new ReducerPhase(testLlm, testNodeRepo, silentLogger);
     const planner = new PlannerPhase(testLlm, configProvider, silentLogger);
-    const refiner = new RefinerPhase(testFs, testMd, configProvider, testParser, silentLogger);
-    const testVerifier = new VerifierPhase(testFs, testMd, configProvider, testParser, silentLogger);
+    const refiner = new RefinerPhase(testFs, testMd, configProvider, testParser, silentLogger, testNodeFactory);
+    const testVerifier = new VerifierPhase(testFs, testMd, configProvider, testParser, silentLogger, testNodeFactory);
     const committer = new CommitterPhase(testFs, testMd, configProvider, testParser, silentLogger);
 
     const useCase = new IngestDocumentUseCase(
@@ -264,7 +266,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
     expect(fs.existsSync(sgvPath)).toBe(true);
 
     // Chạy bộ kiểm toán tĩnh xác nhận 0 lỗi
-    const verifier = new VerifierPhase(new NodeFileSystem(), new MarkdownGenerator(), configProvider, new GrayMatterParser(), silentLogger);
+    const verifier = new VerifierPhase(new NodeFileSystem(), new MarkdownGenerator(), configProvider, new GrayMatterParser(), silentLogger, new AtomicNodeFactory(new GrayMatterParser()));
     const { brokenLinks, portabilityViolations, inconsistencies } = verifier.execute();
 
     expect(brokenLinks).toBe(0);

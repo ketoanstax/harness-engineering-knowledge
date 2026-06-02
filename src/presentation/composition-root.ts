@@ -3,6 +3,7 @@ import { LLMClient } from '../infrastructure/llm/llm-client.ts';
 import { MarkdownGenerator } from '../infrastructure/formatters/markdown.generator.ts';
 import { ConfigProvider } from '../infrastructure/config/config-provider.ts';
 import { GrayMatterParser } from '../infrastructure/parsers/gray-matter.parser.ts';
+import { AtomicNodeFactory } from '../infrastructure/parsers/atomic-node-factory.ts';
 import { FileSystemNodeRepository } from '../infrastructure/repositories/file-system-node-repository.ts';
 import { ConsoleLogger } from '../infrastructure/logging/console-logger.ts';
 import { TokenTracker } from '../application/services/token-tracker.ts';
@@ -35,8 +36,9 @@ const logger = pipelineDashboard.createLogger(baseLogger);
 const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider, frontmatterParser, logger);
 const reducer = new ReducerPhase(llmClient, nodeRepository, logger);
 const planner = new PlannerPhase(llmClient, configProvider, logger);
-const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser, logger);
-const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser, logger);
+const atomicNodeFactory = new AtomicNodeFactory(frontmatterParser);
+const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser, logger, atomicNodeFactory);
+const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser, logger, atomicNodeFactory);
 const committer = new CommitterPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser, logger);
 
 const useCase = new IngestDocumentUseCase(

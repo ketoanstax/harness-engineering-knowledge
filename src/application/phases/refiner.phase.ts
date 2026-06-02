@@ -4,6 +4,7 @@ import type { IConfigProvider } from '../../domain/interfaces/config-provider.in
 import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
 import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
+import type { AtomicNodeFactory } from '../../infrastructure/parsers/atomic-node-factory.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
@@ -13,19 +14,22 @@ export class RefinerPhase {
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
   private logger: ILogger;
+  private nodeFactory: AtomicNodeFactory;
 
   constructor(
     fs: IFileSystem,
     mdGenerator: IMarkdownGenerator,
     config: IConfigProvider,
     parser: IFrontmatterParser,
-    logger: ILogger
+    logger: ILogger,
+    nodeFactory: AtomicNodeFactory
   ) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
     this.logger = logger;
+    this.nodeFactory = nodeFactory;
   }
 
   execute(planResult: PlanResult, sourceSlug: string): void {
@@ -81,7 +85,7 @@ export class RefinerPhase {
       }
 
       const content = this.fs.readFile(filepath);
-      const node = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
+      const node = this.nodeFactory.fromFile(content, this.config.atomicPrefix);
 
       // Cập nhật định nghĩa
       if (mn.updated_definition) {
@@ -145,7 +149,7 @@ export class RefinerPhase {
     if (!this.fs.fileExists(parentFilepath)) return;
 
     const pContent = this.fs.readFile(parentFilepath);
-    const parentNode = AtomicNode.fromFile(pContent, this.parser, this.config.atomicPrefix);
+    const parentNode = this.nodeFactory.fromFile(pContent, this.config.atomicPrefix);
 
     if (!parentNode.children.includes(childSlug)) {
       parentNode.children.push(childSlug);

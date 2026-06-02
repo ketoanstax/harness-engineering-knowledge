@@ -6,7 +6,7 @@ tags:
   - bat-chanh-dao
   - tri-tue
 date: 2026-06-02
-parent: tu-dieu-de
+parent: bat-chanh-dao
 ---
 
 # Chánh tri kiến

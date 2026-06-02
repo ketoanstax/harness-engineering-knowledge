@@ -6,7 +6,7 @@ tags:
   - tinh-tan
   - thuc-hanh
 date: 2026-06-02
-parent: nguoi-co-tri
+parent: bat-chanh-dao
 ---
 
 # Đào lên

@@ -7,7 +7,7 @@ tags:
   - bat-toai-nguyen
   - kho-de
 date: 2026-06-02
-parent: tu-thanh-de
+parent: vo-thuong
 ---
 
 # Khổ đau (Dukkha)
