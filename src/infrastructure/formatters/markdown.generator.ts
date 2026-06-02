@@ -1,11 +1,16 @@
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { PlanFile, PlanItem } from '../../domain/entities/plan.entity.ts';
-import { ATOMIC_PREFIX } from '../../core/config.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import matter from 'gray-matter';
 
 export class MarkdownGenerator implements IMarkdownGenerator {
+  private atomicPrefix: string;
+
+  constructor(atomicPrefix = 'HAE-concept-') {
+    this.atomicPrefix = atomicPrefix;
+  }
+
   generateFromFrontmatter(data: Record<string, any>, body: string): string {
     return matter.stringify(body, data);
   }
@@ -24,7 +29,7 @@ export class MarkdownGenerator implements IMarkdownGenerator {
 
     // Causal Web
     const coreLink = node.causalWeb.causalCore
-      ? `[${this.toTitle(node.causalWeb.causalCore)}](02_atomic_nodes/${ATOMIC_PREFIX}${node.causalWeb.causalCore}.md)`
+      ? `[${this.toTitle(node.causalWeb.causalCore)}](02_atomic_nodes/${this.atomicPrefix}${node.causalWeb.causalCore}.md)`
       : 'Không có';
 
     const duyenStr = this.makeLinkList(node.causalWeb.supportingConditions, 'Không có');
@@ -52,7 +57,7 @@ export class MarkdownGenerator implements IMarkdownGenerator {
     let subnodesSection = '';
     if (node.children.length > 0) {
       const subnodesLinks = node.children
-        .map(c => `- [${this.toTitle(c)}](02_atomic_nodes/${ATOMIC_PREFIX}${c}.md)`)
+        .map(c => `- [${this.toTitle(c)}](02_atomic_nodes/${this.atomicPrefix}${c}.md)`)
         .join('\n');
       subnodesSection = `\n## 🌳 Nốt con (Sub-Nodes)\n${subnodesLinks}\n`;
     }
@@ -186,7 +191,7 @@ ${mergeNodesStr}
 - Nếu kế hoạch **OK**, user chọn \`✅ Duyệt & chạy tiếp\`
 - Nếu kế hoạch **không phù hợp**, user chọn \`❌ Từ chối & dọn dẹp\`
 `;
-  } 
+  }
 
   // --- Helpers ---
 
@@ -197,7 +202,7 @@ ${mergeNodesStr}
   private makeLinkList(slugs: string[], fallback: string): string {
     if (slugs.length === 0) return fallback;
     return slugs
-      .map(d => `[${this.toTitle(d)}](02_atomic_nodes/${ATOMIC_PREFIX}${d}.md)`)
+      .map(d => `[${this.toTitle(d)}](02_atomic_nodes/${this.atomicPrefix}${d}.md)`)
       .join(', ');
   }
 }

@@ -53,7 +53,7 @@ export class VerifierPhase {
     for (const filePath of allFiles) {
       const relPath = path.relative(this.config.dirVault, filePath);
 
-      if (relPath.startsWith('Templates/') || relPath.startsWith('docs/')) continue;
+      if (relPath.startsWith('Templates/') || relPath.startsWith('docs/') || relPath.startsWith('.obsidian/')) continue;
 
       const content = this.fs.readFile(filePath);
       checkedFiles++;

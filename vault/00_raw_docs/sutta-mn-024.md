@@ -1,14 +1,11 @@
 ---
 id: sutta-mn-024
-title: "Kinh Trạm xe"
+title: Kinh Trạm xe
 category: Nikaya Raw Sutta
-tags: 
-source: https://www.budsas.org/uni/u-kinh-trungbo/trung24.htm
-date: 2026-05-25
+tags: null
+source: 'https://www.budsas.org/uni/u-kinh-trungbo/trung24.htm'
+date: 2026-05-25T00:00:00.000Z
 status: processed
-  - raw-source
-  - nikaya
-  - trung-bo-kinh
 ---
 
 ****Trung Bộ Kinh**  ***Majjhima Nikaya*****

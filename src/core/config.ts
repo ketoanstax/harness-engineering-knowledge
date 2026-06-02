@@ -89,9 +89,15 @@ export const ATOMIC_PREFIX = 'HAE-concept-';
 export const STRUCTURED_SUFFIX = '-processed';
 export const PLAN_PREFIX = 'mrp_plan_';
 
-// Đảm bảo các thư mục tồn tại
-for (const d of [DIR_VAULT, DIR_RAW, DIR_STRUCTURED, DIR_ATOMIC, DIR_NEURAL_MAP, DIR_DISTILLED, DIR_JOURNAL]) {
-  if (!fs.existsSync(d)) {
-    fs.mkdirSync(d, { recursive: true });
+/**
+ * Đảm bảo các thư mục Vault tồn tại.
+ * Gọi function này ở entry point (src/index.ts) thay vì chạy side-effect khi import.
+ */
+export function ensureDirectories(): void {
+  const dirs = [DIR_VAULT, DIR_RAW, DIR_STRUCTURED, DIR_ATOMIC, DIR_NEURAL_MAP, DIR_DISTILLED, DIR_JOURNAL];
+  for (const d of dirs) {
+    if (!fs.existsSync(d)) {
+      fs.mkdirSync(d, { recursive: true });
+    }
   }
 }

@@ -88,7 +88,7 @@ function setupChronologicalTimes(): void {
 
 describe('E2E MRP Ingestion Pipeline', () => {
   const originalEnv: Record<string, string | undefined> = {};
-  const envVars = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY'];
+  const envVars = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'DEEPSEEK_API_KEY', 'DEEPSEEK_MODEL'];
 
   beforeAll(() => {
     // Ép chạy ở Mock Mode khi chạy test E2E để bảo vệ đồ thị tri thức tĩnh và tránh gọi LLM thật

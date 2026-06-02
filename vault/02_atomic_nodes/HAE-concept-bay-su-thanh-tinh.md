@@ -6,18 +6,24 @@ tags:
   - thiền-tập
   - lộ-trình-giải-thoát
   - tu-chứng
-date: 2026-06-01
+date: 2026-06-02
 parent: giới-định-tuệ
+children:
+  - tram-xe
 ---
 
 # Bảy sự thanh tịnh (Satta Visuddhi)
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Một lộ trình tiệm tiến gồm bảy giai đoạn làm sạch tâm thức, từ việc giữ giới luật cho đến đạt được tuệ giác giải thoát hoàn toàn. Đây là khung sườn thực hành căn bản để chuyển hóa tâm từ phàm phu thành bậc Thánh.
+Bảy sự thanh tịnh là các giai đoạn làm trong sạch tâm trí, bao gồm: giới thanh tịnh, tâm thanh tịnh, kiến thanh tịnh, đoạn nghi thanh tịnh, đạo phi đạo tri kiến thanh tịnh, hành đạo tri kiến thanh tịnh, và tri kiến thanh tịnh.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Sự thanh tịnh của giới là nền tảng cho sự thanh tịnh của tâm.
 - Trí tuệ chỉ phát sinh khi tâm đã được thanh lọc qua các tầng định và tuệ quán.
+- Mỗi giai đoạn là nền tảng cho giai đoạn tiếp theo
+## 🌳 Nốt con (Sub-Nodes)
+- [Tram Xe](02_atomic_nodes/HAE-concept-tram-xe.md)
+
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: [Bay Su Thanh Tinh](02_atomic_nodes/HAE-concept-bay-su-thanh-tinh.md) — Khái niệm nền tảng sinh ra khái niệm này.
 - **Hội tụ Duyên (Supporting Conditions)**: [Gioi Luat](02_atomic_nodes/HAE-concept-gioi-luat.md), [Thien Dinh](02_atomic_nodes/HAE-concept-thien-dinh.md) — Các khái niệm hỗ trợ trực tiếp.

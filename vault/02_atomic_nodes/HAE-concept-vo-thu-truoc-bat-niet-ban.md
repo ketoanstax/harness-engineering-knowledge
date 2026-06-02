@@ -6,14 +6,14 @@ tags:
   - niết-bàn
   - giải-thoát
   - buông-xả
-date: 2026-06-01
+date: 2026-06-02
 parent: tu-thanh-de
 ---
 
 # Vô thủ trước Bát-niết-bàn
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Trạng thái tâm không còn bất kỳ sự chấp thủ, dính mắc hay nắm giữ nào đối với các pháp hữu vi. Đây là quả vị của việc tận diệt tham ái và vô minh.
+Vô thủ trước Bát-niết-bàn là trạng thái giải thoát hoàn toàn, không còn chấp thủ, đạt đến Niết-bàn tối hậu.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Chấp thủ là nguyên nhân chính tạo tác luân hồi.

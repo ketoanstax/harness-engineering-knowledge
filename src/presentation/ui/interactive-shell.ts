@@ -15,22 +15,11 @@ let activeProgram: Command | null = null;
 export let isInteractiveMode = false;
 let isProcessing = false;
 
-// Custom Error ES6 chuẩn
-export class ShellCommandComplete extends Error {
-  code: number;
-  constructor(code: number) {
-    super(`Command completed with code ${code}`);
-    this.name = 'ShellCommandComplete';
-    this.code = code;
-  }
-}
-
-export function safeExit(code: number): void {
+export function safeExit(code: number): boolean {
   if (isInteractiveMode) {
-    throw new ShellCommandComplete(code);
-  } else {
-    process.exit(code);
+    return false; // Trả về false để runShell biết user muốn thoát
   }
+  process.exit(code);
 }
 
 // === UI Helpers (Claude Code Style) ===
@@ -147,8 +136,8 @@ function redrawLine(rl: readline.Interface, line: string, selectedIndex = -1, ma
   }
 }
 
-// === Logic Xử lý Lệnh ===
-async function handleCommand(input: string, useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Promise<void> {
+// === Logic Xử lý Lệnh (trả về false nếu cần thoát shell) ===
+async function handleCommand(input: string, useCase: IngestDocumentUseCase, fileSystem: IFileSystem, config: IConfigProvider): Promise<boolean | void> {
   if (!input || input.startsWith('#')) return;
 
   if (input === '/exit' || input === '/quit') {
@@ -252,7 +241,6 @@ async function handleCommand(input: string, useCase: IngestDocumentUseCase, file
       await activeProgram.parseAsync(['node', 'mrp', ...args], { from: 'user' });
     }
   } catch (e: any) {
-    if (e.name === 'ShellCommandComplete') return;
     if (e.code !== 'commander.exit' || e.exitCode !== 0) {
       process.stderr.write(`⚠️ ${e.message}\n`);
     }
@@ -411,7 +399,12 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
         if (!input) return;
 
         if (input.startsWith('/') || input === 'help' || input === 'run') {
-          await handleCommand(input, useCase, fileSystem, config);
+          const shouldExit = await handleCommand(input, useCase, fileSystem, config);
+          if (shouldExit === false) {
+            r.close();
+            isProcessing = false;
+            return;
+          }
         } else {
           await handleQuery(input, useCase);
         }

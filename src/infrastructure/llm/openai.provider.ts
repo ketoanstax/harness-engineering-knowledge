@@ -17,7 +17,8 @@ export class OpenAIProvider implements ILLMProvider {
       ? [{ role: 'system' as const, content: systemPrompt }, { role: 'user' as const, content: prompt }]
       : [{ role: 'user' as const, content: prompt }];
 
-    const payload: any = { model: this.model, messages, max_tokens: 3000 };
+    const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '3000', 10);
+    const payload: any = { model: this.model, messages, max_tokens: maxTokens };
     if (responseJson) {
       payload.response_format = { type: 'json_object' };
     }

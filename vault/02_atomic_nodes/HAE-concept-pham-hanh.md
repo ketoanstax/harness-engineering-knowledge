@@ -5,18 +5,19 @@ category: "Giới Định Tuệ (Virtue, Concentration, Wisdom)"
 tags:
   - đời-sống-tâm-linh
   - thanh-tịnh
-date: 2026-06-01
+date: 2026-06-02
 parent: giới-định-tuệ
 ---
 
 # Phạm hạnh
 
 ## 💡 Định nghĩa & Nội dung Cốt lõi
-Lối sống tu tập tinh khiết, xa rời các dục lạc hạ liệt, lấy việc trau dồi giáo pháp làm trọng tâm. Mục đích tối thượng của phạm hạnh là đoạn tận khổ đau.
+Phạm hạnh là đời sống cao thượng, thanh tịnh, được thực hành dưới sự hướng dẫn của Đức Phật nhằm đạt đến giải thoát.
 
 ## ⚙️ Nguyên lý Kỹ thuật & Thực tiễn
 - Phạm hạnh bắt đầu bằng việc tiết chế giác quan.
 - Sự sống phạm hạnh tạo ra năng lượng an ổn cần thiết cho tuệ giác.
+- Tuân theo giới luật do Phật chế
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: [Pham Hanh](02_atomic_nodes/HAE-concept-pham-hanh.md) — Khái niệm nền tảng sinh ra khái niệm này.
 - **Hội tụ Duyên (Supporting Conditions)**: [Gioi Luat](02_atomic_nodes/HAE-concept-gioi-luat.md) — Các khái niệm hỗ trợ trực tiếp.

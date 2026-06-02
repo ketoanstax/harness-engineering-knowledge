@@ -1,28 +1,29 @@
 ---
 id: sutta-mn-024-processed
-title: "Trung Bộ Kinh: Kinh Trạm xe (Rathavinìta sutta)"
+title: "24. Kinh Trạm xe (Rathavinīta sutta)"
 category: "Structured Knowledge"
 tags:
   - structured
   - processed
-date: 2026-06-01
+date: 2026-06-02
 source: "00_raw_docs/sutta-mn-024.md"
 ---
 
-# Trung Bộ Kinh: Kinh Trạm xe (Rathavinìta sutta)
+# 24. Kinh Trạm xe (Rathavinīta sutta)
 
 ## 💡 Key Takeaways
-- Việc thực hành giới, định, tuệ và các trạng thái thanh tịnh không phải là mục đích cuối cùng, mà chỉ là phương tiện hỗ trợ.
-- Mục đích tối hậu của đời sống phạm hạnh trong Phật giáo là sự giải thoát hoàn toàn, hay còn gọi là vô thủ trước Bát-niết-bàn.
-- Sự đàm luận giữa hai vị Tỷ-kheo ưu tú (Sariputta và Punna Mantaniputta) minh chứng cho tinh thần cầu thị và trao đổi giáo pháp dựa trên trí tuệ thay vì giáo điều.
+- Đời sống phạm hạnh dưới sự chỉ dạy của Thế Tôn không nhằm mục đích đạt được bất kỳ thanh tịnh riêng lẻ nào như giới thanh tịnh, tâm thanh tịnh, tri kiến thanh tịnh, mà là vì mục đích vô thủ trước Bát-niết-bàn.
+- Các thanh tịnh (giới, tâm, kiến, đoạn nghi, đạo phi đạo tri kiến, đạo tri kiến, tri kiến) là những phương tiện tuần tự, giống như các trạm xe trung gian, dẫn đến mục tiêu cuối cùng.
+- Mục đích tối hậu của Phạm hạnh là Niết-bàn không chấp thủ (anupādāparinibbāna), vượt lên trên mọi giai đoạn thanh tịnh.
 
 ## 🗝️ Keywords & Core Concepts
-- **Bảy sự thanh tịnh (Satta Visuddhi)**: Chuỗi các giai đoạn tu tập bao gồm giới, tâm, kiến, đoạn nghi, đạo phi đạo tri kiến, đạo tri kiến và tri kiến thanh tịnh.
-- **Vô thủ trước Bát-niết-bàn**: Trạng thái giải thoát tối hậu, nơi tâm không còn dính mắc hay chấp thủ vào bất kỳ pháp nào.
-- **Phạm hạnh**: Đời sống tu tập thanh tịnh theo giáo pháp của Thế Tôn nhằm mục đích đạt đến giác ngộ.
+- **Phạm hạnh**: Đời sống tu tập thanh tịnh dưới sự hướng dẫn của Đức Phật, hướng đến giải thoát.
+- **Thanh tịnh**: Các giai đoạn làm trong sạch tâm trí, bao gồm giới, tâm, kiến, đoạn nghi, v.v., nhưng không phải cứu cánh.
+- **Vô thủ trước Bát-niết-bàn**: Niết-bàn không còn chấp thủ, mục đích tối hậu của con đường tu tập.
+- **Trạm xe**: Ẩn dụ chỉ các giai đoạn thanh tịnh trung gian, mỗi giai đoạn là phương tiện để đạt đến giai đoạn kế tiếp, cuối cùng là Niết-bàn.
 
 ## 📝 AI-Ready Summary
-Kinh Trạm xe ghi lại cuộc đối thoại giữa Tôn giả Sariputta và Tôn giả Punna Mantaniputta về mục đích cuối cùng của đời sống phạm hạnh. Thông qua ẩn dụ về các trạm xe, Tôn giả Punna làm sáng tỏ rằng các tầng bậc thanh tịnh (giới, định, tuệ) chỉ là những phương tiện trung gian, không phải đích đến. Đích đến duy nhất và tối hậu của người tu hành chính là sự giải thoát hoàn toàn, vô thủ trước Bát-niết-bàn.
+Trong Kinh Trạm Xe, Tôn giả Punna Mantaniputta giải thích rằng mục đích sống phạm hạnh dưới sự chỉ dạy của Đức Phật không phải là đạt được một thanh tịnh cụ thể nào (giới, tâm, kiến, v.v.), mà là đạt đến vô thủ trước Bát-niết-bàn. Các thanh tịnh này là những phương tiện tuần tự, giống như các trạm xe trên đường, dẫn đến Niết-bàn. Qua đối thoại với Sariputta, kinh nhấn mạnh rằng mọi giai đoạn thực hành đều có giá trị tương đối, nhưng cứu cánh duy nhất là giải thoát hoàn toàn khỏi chấp thủ.
 
 ---
 

@@ -57,10 +57,10 @@ describe('context-filter', () => {
   // ─── filterRelevantNodes ────────────────────────────────────────────────────
   describe('filterRelevantNodes', () => {
     const sampleNodes: AtomicNodeMeta[] = [
-      { slug: 'tu-de', title: 'Tứ Diệu Đế', tags: ['dharma'], definition: 'Bốn chân lý cao quý', parent: null, children: ['bat-chanh-dao'] },
-      { slug: 'bat-chanh-dao', title: 'Bát Chánh Đạo', tags: ['practice', 'path'], definition: 'Con đường tám ngành', parent: 'tu-de', children: [] },
-      { slug: 'duyen-khoi', title: 'Duyên Khởi', tags: ['dharma', 'causality'], definition: 'Lý nhân duyên', parent: null, children: [] },
-      { slug: 'vo-thuong', title: 'Vô Thường', tags: ['existence'], definition: 'Mọi sự đều biến đổi', parent: null, children: [] },
+      { slug: 'tu-de', title: 'Tứ Diệu Đế', category: 'dharma', tags: ['dharma'], definition: 'Bốn chân lý cao quý', parent: undefined, children: ['bat-chanh-dao'], filename: 'HAE-concept-tu-de.md' },
+      { slug: 'bat-chanh-dao', title: 'Bát Chánh Đạo', category: 'path', tags: ['practice', 'path'], definition: 'Con đường tám ngành', parent: 'tu-de', children: [], filename: 'HAE-concept-bat-chanh-dao.md' },
+      { slug: 'duyen-khoi', title: 'Duyên Khởi', category: 'dharma', tags: ['dharma', 'causality'], definition: 'Lý nhân duyên', parent: undefined, children: [], filename: 'HAE-concept-duyen-khoi.md' },
+      { slug: 'vo-thuong', title: 'Vô Thường', category: 'existence', tags: ['existence'], definition: 'Mọi sự đều biến đổi', parent: undefined, children: [], filename: 'HAE-concept-vo-thuong.md' },
     ];
 
     test('trả về mảng rỗng nếu allNodes trống', () => {

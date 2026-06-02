@@ -1,4 +1,5 @@
 import type { AtomicNodeMeta } from '../domain/interfaces/node-repository.interface.ts';
+import type { ILogger } from '../domain/interfaces/logger.interface.ts';
 
 /**
  * Tách từ thô, chuẩn hóa viết thường để tính toán độ tương đồng.
@@ -36,11 +37,19 @@ export function calculateJaccard(set1: Set<string>, set2: Set<string>): number {
  * @param keywords — danh sách từ khóa cần so khớp
  * @param allNodes — toàn bộ nodes từ INodeRepository
  * @param maxResults — số lượng kết quả tối đa
+ * @param minScore — ngưỡng điểm tối thiểu để chọn nốt (mặc định 0.02)
+ * @param titleBoost — điểm cộng khi trùng tiêu đề (mặc định 0.2)
+ * @param seedRatio — tỷ lệ seed để mở rộng đồ thị (mặc định 0.5 tương đương maxResults/2)
+ * @param logger — logger tùy chọn, nếu không cung cấp sẽ dùng console.log
  */
 export function filterRelevantNodes(
   keywords: Array<{ name: string; definition: string }>,
   allNodes: AtomicNodeMeta[],
   maxResults = 10,
+  minScore = 0.02,
+  titleBoost = 0.2,
+  seedRatio = 0.5,
+  logger?: ILogger,
 ): AtomicNodeMeta[] {
   if (allNodes.length === 0) return [];
 
@@ -76,7 +85,7 @@ export function filterRelevantNodes(
     }
 
     if (hasTitleOverlap) {
-      score += 0.2;
+      score += titleBoost;
     }
 
     scoredNodes.push({ score, node });
@@ -89,10 +98,10 @@ export function filterRelevantNodes(
   const topMatches: AtomicNodeMeta[] = [];
   const seenSlugs = new Set<string>();
 
-  const seedCount = Math.max(2, Math.floor(maxResults / 2));
+  const seedCount = Math.max(2, Math.floor(maxResults * seedRatio));
   for (let i = 0; i < seedCount && i < scoredNodes.length; i++) {
     const { score, node } = scoredNodes[i];
-    if (score > 0.02) { // Ngưỡng tối thiểu
+    if (score > minScore) {
       topMatches.push(node);
       seenSlugs.add(node.slug);
     }
@@ -123,6 +132,7 @@ export function filterRelevantNodes(
     }
   }
 
-  console.log(`  🔍 Active Context Filter: Quét ${allNodes.length} nốt cũ -> Lọc ra ${expandedNodes.length} nốt liên quan nhất (tiết kiệm ~85% token).`);
+  const log = logger || { info: (msg: string) => console.log(msg), success: (msg: string) => console.log(msg), warn: (msg: string) => console.warn(msg), error: (msg: string) => console.error(msg), log: (msg: string) => console.log(msg) };
+  log.info(`  🔍 Active Context Filter: Quét ${allNodes.length} nốt cũ -> Lọc ra ${expandedNodes.length} nốt liên quan nhất (tiết kiệm ~85% token).`);
   return expandedNodes.slice(0, maxResults);
 }
