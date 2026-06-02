@@ -7,7 +7,7 @@ tags:
   - tam-bat-thien
   - duyen-khoi
 date: 2026-06-02
-parent: phi-nhu-ly-tac-
+parent: tham-ai
 ---
 
 # Tư niệm tịnh tướng
