@@ -7,7 +7,7 @@ tags:
   - tham-ai
   - tam-thuc
 date: 2026-06-01
-parent: nguoi-tho-san
+parent: duyen-khoi
 ---
 
 # Đồ mồi
