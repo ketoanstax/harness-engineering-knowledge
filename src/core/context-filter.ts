@@ -4,7 +4,7 @@ import type { AtomicNodeMeta } from '../domain/interfaces/node-repository.interf
  * Tách từ thô, chuẩn hóa viết thường để tính toán độ tương đồng.
  */
 export function tokenize(text: string): Set<string> {
-  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  const words = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
   return new Set(words);
 }
 

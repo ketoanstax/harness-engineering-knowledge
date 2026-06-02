@@ -9,7 +9,10 @@
   },
   "scripts": {
     "start": "bun src/index.ts",
-    "test": "bun src/test_mrp_pipeline.ts",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:e2e": "bun test tests/e2e",
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
@@ -32,6 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
     "@types/marked-terminal": "^6.1.1",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2"

@@ -7,7 +7,7 @@ tags:
   - chap-thu
   - ta-kien
 date: 2026-06-01
-parent: bon-chap-thu
+parent: du-luu
 ---
 
 # Giới cấm thủ (Silabbata-paramasa)

@@ -40,3 +40,21 @@ Agent có thể kích hoạt các kỹ năng chuyên gia trong thư mục `.agen
 Trước khi bắt đầu bất kỳ Turn nào, Agent PHẢI:
 1.  Đọc tệp [memory/MEMORY.md](memory/MEMORY.md) và [memory/RULE.md](memory/RULE.md) để nạp bộ nhớ cục bộ.
 2.  Chạy script kiểm toán và tự động đồng bộ hóa `scripts/sync_rules_and_memory.py` trước khi bàn giao công việc cho con người để đảm bảo không có liên kết gãy nào trong vault. (FB-004)
+
+---
+
+## 🧪 Hệ thống Kiểm thử (Testing with Bun)
+Hệ thống sử dụng **Bun Test** làm runner chính. Các file kiểm thử nằm hoàn toàn trong thư mục `tests/`:
+
+- **Unit Test** (`tests/unit/`): Kiểm thử các module/logic cô lập (ví dụ: `TokenTracker`).
+- **Integration Test** (`tests/integration/`): Kiểm thử sự phối hợp giữa thuật toán và data structures (ví dụ: `context-filter`).
+- **E2E Test** (`tests/e2e/`): Chạy tích hợp toàn bộ MRP pipeline với Mock LLM.
+
+### Lệnh chạy test:
+```bash
+bun test                  # Chạy toàn bộ test suite
+bun run test:unit         # Chỉ chạy unit tests
+bun run test:integration  # Chỉ chạy integration tests
+bun run test:e2e          # Chỉ chạy E2E pipeline tests
+bun run typecheck         # Kiểm tra kiểu dữ liệu toàn bộ project
+```

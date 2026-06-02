@@ -8,7 +8,7 @@ tags:
   - tue
   - thuc-hanh
 date: 2026-06-01
-parent: satipatthana
+parent: bat-chanh-dao
 ---
 
 # Bảy Giác Chi (Satta Bojjhanga)
