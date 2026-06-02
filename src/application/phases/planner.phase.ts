@@ -1,15 +1,18 @@
 import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { type MappedData, type ReducedData, type PlanResult, type NewNodeOutput, type MergeNodeOutput, PlanResultSchema } from './_types.ts';
 import { extractJson } from './_utils.ts';
 
 export class PlannerPhase {
   private llm: ILLMProvider;
   private config: IConfigProvider;
+  private logger: ILogger;
 
-  constructor(llm: ILLMProvider, config: IConfigProvider) {
+  constructor(llm: ILLMProvider, config: IConfigProvider, logger: ILogger) {
     this.llm = llm;
     this.config = config;
+    this.logger = logger;
   }
 
   async execute(reducedData: ReducedData, mappedData: MappedData, onTokenUsed?: (usage: LLMUsage) => void): Promise<PlanResult> {
@@ -18,7 +21,7 @@ export class PlannerPhase {
     const categories = this.config.loadCategories();
     const categoriesStr = categories.map(c => c.name).join(' / ');
 
-    console.log('  🔄 Đang thiết kế chi tiết các nốt và cấu trúc đồ thị nhân quả...');
+    this.logger.info('  🔄 Đang thiết kế chi tiết các nốt và cấu trúc đồ thị nhân quả...');
 
     try {
       const llmPrompt = `Bạn là Kỹ sư trưởng thiết kế hệ thống Harness.
@@ -92,11 +95,11 @@ Yêu cầu thiết kế:
         updated_causal_derivative: mn.updated_causal_derivative,
       }));
 
-      console.log('  ✅ Đã thiết kế xong cấu trúc chi tiết bằng LLM.');
+      this.logger.success('  ✅ Đã thiết kế xong cấu trúc chi tiết bằng LLM.');
       return { new_nodes: newNodes, merge_nodes: mergeNodes, reasoning: parsed.reasoning };
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
-      console.log(`  ⚠️ Lỗi thiết kế LLM: ${err}. Tạo plan cơ bản...`);
+      this.logger.error(`  ⚠️ Lỗi thiết kế LLM: ${err}. Tạo plan cơ bản...`);
       return this.fallbackPlan(newConcepts);
     }
   }

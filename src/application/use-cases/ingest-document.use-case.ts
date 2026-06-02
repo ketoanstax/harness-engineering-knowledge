@@ -5,6 +5,7 @@ import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-genera
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IPipelineObserver } from '../../domain/interfaces/pipeline-observer.interface.ts';
 import type { INodeRepository } from '../../domain/interfaces/node-repository.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { PlanFile } from '../../domain/entities/plan.entity.ts';
 import type { MapperPhase } from '../phases/mapper.phase.ts';
 import type { ReducerPhase } from '../phases/reducer.phase.ts';
@@ -52,6 +53,7 @@ export class IngestDocumentUseCase {
   private nodeRepo: INodeRepository;
   private currentPhaseName: string | null = null;
   private llm: ILLMProvider;
+  private logger: ILogger;
 
   constructor(
     mapper: MapperPhase,
@@ -67,6 +69,7 @@ export class IngestDocumentUseCase {
     observer: IPipelineObserver,
     llm: ILLMProvider,
     nodeRepo: INodeRepository,
+    logger: ILogger,
   ) {
     this.mapper = mapper;
     this.reducer = reducer;
@@ -81,6 +84,7 @@ export class IngestDocumentUseCase {
     this.observer = observer;
     this.llm = llm;
     this.nodeRepo = nodeRepo;
+    this.logger = logger;
   }
 
   // ============ Public API ============
@@ -239,7 +243,7 @@ Yêu cầu trả lời:
           }
         } else {
           // Batch mode không auto-approve — dừng chờ user CLI
-          console.log(`
+          this.logger.info(`
 ═══════════════════════════════════════════════════════════════════════
 ⏸️  PIPELINE ĐÃ HOÀN TẤT PHA PLAN - CHỜ DUYỆT
 ═══════════════════════════════════════════════════════════════════════
@@ -249,13 +253,13 @@ Yêu cầu trả lời:
 Vui lòng chọn hành động tiếp theo:
 
   [A] ✅ Duyệt & chạy tiếp
-      → pnpm start approve -t ${state.timestamp}
+      → bun start approve -t ${state.timestamp}
 
   [R] ❌ Từ chối & dọn dẹp
-      → pnpm start reject -t ${state.timestamp}
+      → bun start reject -t ${state.timestamp}
 
   [V] 📖 Xem hướng dẫn vận hành
-      → pnpm start guide
+      → bun start guide
 
   [Q] 🚪 Thoát
 `);
@@ -285,12 +289,12 @@ Vui lòng chọn hành động tiếp theo:
         this.observer.onPhaseStart('VERIFY');
         this.currentPhaseName = 'VERIFY';
         if (opts.skipVerify) {
-          console.log('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
+          this.logger.info('  ⏭️ Chế độ Batch chuyển tiếp: Tạm thời bỏ qua kiểm toán đồ thị để tránh báo động giả.');
           this.observer.onPhaseSkip('VERIFY');
         } else {
           const result = this.verifier.execute();
           if (result.brokenLinks > 0 || result.portabilityViolations > 0 || result.inconsistencies > 0) {
-            console.log(`  ❌ Phát hiện lỗi kiểm toán: brokenLinks=${result.brokenLinks}, portabilityViolations=${result.portabilityViolations}, inconsistencies=${result.inconsistencies}`);
+            this.logger.error(`  ❌ Phát hiện lỗi kiểm toán: brokenLinks=${result.brokenLinks}, portabilityViolations=${result.portabilityViolations}, inconsistencies=${result.inconsistencies}`);
             this.observer.onPhaseComplete('VERIFY', false);
             return false;
           }
@@ -314,7 +318,7 @@ Vui lòng chọn hành động tiếp theo:
         this.observer.onPhaseComplete('COMMIT', true);
         this.currentPhaseName = null;
         this.observer.onFinalize();
-        console.log(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
+        this.logger.success(`\n🎉 HOÀN THÀNH MRP PIPELINE THÀNH CÔNG CHO [${state.source_slug}]!`);
         return true;
       } else {
         this.observer.onPhaseSkip('COMMIT');
@@ -324,7 +328,7 @@ Vui lòng chọn hành động tiếp theo:
       if (this.currentPhaseName) {
         this.observer.onPhaseFail(this.currentPhaseName, err);
       }
-      console.log(`❌ Lỗi thực thi Pipeline: ${err}`);
+      this.logger.error(`❌ Lỗi thực thi Pipeline: ${err}`);
       this.saveCheckpoint(state);
       throw e;
     }
@@ -366,11 +370,11 @@ Vui lòng chọn hành động tiếp theo:
     if (this.fs.fileExists(cpPath)) {
       try {
         const saved = JSON.parse(this.fs.readFile(cpPath));
-        console.log(`🔄 Khôi phục checkpoint! Pha hiện tại: ${saved.current_phase}`);
+        this.logger.info(`🔄 Khôi phục checkpoint! Pha hiện tại: ${saved.current_phase}`);
         return { ...state, ...saved };
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.log(`⚠️ Không thể đọc checkpoint: ${msg}. Tạo mới.`);
+        this.logger.warn(`⚠️ Không thể đọc checkpoint: ${msg}. Tạo mới.`);
       }
     }
     return state;
@@ -382,7 +386,7 @@ Vui lòng chọn hành động tiếp theo:
       this.fs.writeFile(cpPath, JSON.stringify(state, null, 2));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.log(`⚠️ Lỗi lưu checkpoint: ${msg}`);
+      this.logger.warn(`⚠️ Lỗi lưu checkpoint: ${msg}`);
     }
   }
 
@@ -393,7 +397,7 @@ Vui lòng chọn hành động tiếp theo:
         this.fs.unlink(cpPath);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.log(`⚠️ Lỗi xóa checkpoint: ${msg}`);
+        this.logger.warn(`⚠️ Lỗi xóa checkpoint: ${msg}`);
       }
     }
   }
@@ -403,32 +407,32 @@ Vui lòng chọn hành động tiếp theo:
   async runBatch(directory: string, autoApprove: boolean): Promise<boolean> {
     const files = this.scanAndSortFiles(directory);
     if (files.length === 0) {
-      console.log('\n🎉 Không có tài liệu thô nào cần xử lý (status: to-process)!');
+      this.logger.info('\n🎉 Không có tài liệu thô nào cần xử lý (status: to-process)!');
       return true;
     }
 
-    console.log(`\n=======================================================`);
-    console.log(`📦 BẮT ĐẦU CHẠY BATCH TUẦN TỰ CHO ${files.length} FILES`);
-    console.log(`=======================================================`);
+    this.logger.info(`\n=======================================================`);
+    this.logger.info(`📦 BẮT ĐẦU CHẠY BATCH TUẦN TỰ CHO ${files.length} FILES`);
+    this.logger.info(`=======================================================`);
 
     for (let i = 0; i < files.length; i++) {
       const filepath = files[i];
       const filename = path.basename(filepath);
-      console.log(`\n[TIẾN TRÌNH ${i + 1}/${files.length}] ───────────────`);
-      console.log(`👉 Đang xử lý: ${filename}`);
+      this.logger.info(`\n[TIẾN TRÌNH ${i + 1}/${files.length}] ───────────────`);
+      this.logger.info(`👉 Đang xử lý: ${filename}`);
 
       if (autoApprove) {
         const success = await this.runAutoToEnd(filepath, true);
         if (!success) {
-          console.log(`❌ Lỗi: Chạy tự động thất bại tại file: ${filename}`);
+          this.logger.error(`❌ Lỗi: Chạy tự động thất bại tại file: ${filename}`);
           return false;
         }
       } else {
         const success = await this.execute(filepath);
         if (!success) return false;
 
-        console.log(`\n⏸️ Hàng đợi Batch tạm dừng tại [${filename}].`);
-        console.log(`👉 Vui lòng duyệt kế hoạch trước khi Batch tự động chuyển sang file tiếp theo.`);
+        this.logger.info(`\n⏸️ Hàng đợi Batch tạm dừng tại [${filename}].`);
+        this.logger.info(`👉 Vui lòng duyệt kế hoạch trước khi Batch tự động chuyển sang file tiếp theo.`);
         break;
       }
     }

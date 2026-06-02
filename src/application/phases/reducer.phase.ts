@@ -1,5 +1,6 @@
 import type { ILLMProvider, LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { INodeRepository } from '../../domain/interfaces/node-repository.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { filterRelevantNodes } from '../../core/context-filter.ts';
 import type { MappedData, ReducedData } from './_types.ts';
 import { extractJson } from './_utils.ts';
@@ -7,24 +8,26 @@ import { extractJson } from './_utils.ts';
 export class ReducerPhase {
   private llm: ILLMProvider;
   private nodeRepo: INodeRepository;
+  private logger: ILogger;
 
-  constructor(llm: ILLMProvider, nodeRepo: INodeRepository) {
+  constructor(llm: ILLMProvider, nodeRepo: INodeRepository, logger: ILogger) {
     this.llm = llm;
     this.nodeRepo = nodeRepo;
+    this.logger = logger;
   }
 
   async execute(mappedData: MappedData, onTokenUsed?: (usage: LLMUsage) => void): Promise<ReducedData> {
     const keywords = mappedData.keywords || [];
 
     if (keywords.length === 0) {
-      console.log('  ⚠️ Không có keywords nào được trích xuất. Chuyển tiếp.');
+      this.logger.warn('  ⚠️ Không có keywords nào được trích xuất. Chuyển tiếp.');
       return { conflicts: [], new_concepts: [] };
     }
 
     // Lấy nodes từ Repository, không tự đọc FS
     const allNodes = this.nodeRepo.findAll();
     const relevantNodes = filterRelevantNodes(keywords, allNodes, 12);
-    console.log(`  🧠 Active Context: Chỉ chọn ${relevantNodes.length} nốt liên quan nhất để so khớp LLM.`);
+    this.logger.info(`  🧠 Active Context: Chỉ chọn ${relevantNodes.length} nốt liên quan nhất để so khớp LLM.`);
 
     // Gọi LLM
     try {
@@ -71,12 +74,12 @@ So sánh đối đầu giữa các khái niệm MỚI và CŨ.
         new_concepts: parsed.new_concepts || [],
       };
 
-      console.log(`  ✅ Đã phát hiện ${result.conflicts.length} xung đột/cập nhật và ${result.new_concepts.length} nốt mới!`);
+      this.logger.success(`  ✅ Đã phát hiện ${result.conflicts.length} xung đột/cập nhật và ${result.new_concepts.length} nốt mới!`);
       return result;
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
-      console.log(`  ⚠️ Lỗi phân tích trùng lặp LLM: ${err}`);
-      console.log('  ⏭️ Chuyển sang chế độ gộp mặc định (Tất cả tạo mới)...');
+      this.logger.error(`  ⚠️ Lỗi phân tích trùng lặp LLM: ${err}`);
+      this.logger.info('  ⏭️ Chuyển sang chế độ gộp mặc định (Tất cả tạo mới)...');
 
       const newConcepts = keywords.map(kw => {
         const name = kw.name || '';

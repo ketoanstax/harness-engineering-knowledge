@@ -1,4 +1,5 @@
 import type { IPipelineObserver } from '../../domain/interfaces/pipeline-observer.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import type { LLMUsage } from '../../domain/interfaces/llm-provider.interface.ts';
 import type { TokenTracker } from '../../application/services/token-tracker.ts';
 import chalk from 'chalk';
@@ -32,12 +33,6 @@ export class PipelineDashboard implements IPipelineObserver {
   private frameIndex = 0;
   private lastRenderedLines = 0;
   private readonly TABLE_WIDTH = 70;
-
-  // Console Hijacking
-  private isHooked = false;
-  private origLog = console.log;
-  private origError = console.error;
-  private origWarn = console.warn;
 
   constructor(tokenTracker: TokenTracker) {
     this.tokenTracker = tokenTracker;
@@ -94,6 +89,17 @@ export class PipelineDashboard implements IPipelineObserver {
     this.stopEngine();
   }
 
+  // ============ DashboardLogger Factory ============
+
+  /**
+   * Tạo một ILogger bọc quanh baseLogger, tự động đồng bộ hóa với vẽ bảng PipelineDashboard.
+   * Khi có log message, DashboardLogger sẽ xóa bảng, in log, vẽ lại bảng.
+   * Giải pháp thay thế cho kỹ thuật console hijacking cũ.
+   */
+  createLogger(baseLogger: ILogger): ILogger {
+    return new DashboardLogger(this, baseLogger);
+  }
+
   // ============ Internal Helpers ============
 
   reset(): void {
@@ -115,75 +121,20 @@ export class PipelineDashboard implements IPipelineObserver {
     ];
   }
 
-  // === HỆ THỐNG KIỂM SOÁT GIAO DIỆN ===
-
-  private hookConsole(): void {
-    if (this.isHooked) return;
-    this.isHooked = true;
-    process.stdout.write('\x1b[?25l');
-
-    const createHook = (originalFn: Function) => (...args: any[]) => {
-      this.clearTable();
-      originalFn.apply(console, args);
-      this.drawTable();
-    };
-
-    console.log = createHook(this.origLog);
-    console.error = createHook(this.origError);
-    console.warn = createHook(this.origWarn);
-  }
-
-  private unhookConsole(): void {
-    if (!this.isHooked) return;
-    console.log = this.origLog;
-    console.error = this.origError;
-    console.warn = this.origWarn;
-    this.isHooked = false;
-    process.stdout.write('\x1b[?25h');
-  }
-
-  private clearTable(): void {
+  /**
+   * Xóa khung bảng hiện tại khỏi terminal (public để DashboardLogger gọi)
+   */
+  clearTable(): void {
     if (this.lastRenderedLines > 0) {
       process.stdout.write(`\r\x1b[${this.lastRenderedLines}A\x1b[J`);
       this.lastRenderedLines = 0;
     }
   }
 
-  private startEngine(): void {
-    this.hookConsole();
-    if (!this.renderInterval) {
-      this.renderInterval = setInterval(() => {
-        this.frameIndex++;
-        this.clearTable();
-        this.drawTable();
-      }, 80);
-    }
-  }
-
-  private stopEngine(): void {
-    if (this.renderInterval) {
-      clearInterval(this.renderInterval);
-      this.renderInterval = null;
-    }
-    this.unhookConsole();
-    this.clearTable();
-    this.drawTable();
-  }
-
-  private syncTokens(phaseName: string): void {
-    const p = this.phases.find(p => p.name === phaseName);
-    if (p) {
-      const entry = this.tokenTracker.history.find(e => e.phase === phaseName);
-      if (entry) {
-        p.inputTokens = entry.inputTokens;
-        p.outputTokens = entry.outputTokens;
-        p.totalTokens = entry.totalTokens;
-      }
-    }
-  }
-
-  // === HÀM VẼ BẢNG ===
-  private drawTable(): void {
+  /**
+   * Vẽ khung bảng pipeline lên terminal (public để DashboardLogger gọi)
+   */
+  drawTable(): void {
     const lines: string[] = [];
     const H = chalk.cyan;
 
@@ -246,5 +197,84 @@ export class PipelineDashboard implements IPipelineObserver {
 
     process.stdout.write(lines.join('\n') + '\n');
     this.lastRenderedLines = lines.length;
+  }
+
+  private startEngine(): void {
+    process.stdout.write('\x1b[?25l');
+    if (!this.renderInterval) {
+      this.renderInterval = setInterval(() => {
+        this.frameIndex++;
+        this.clearTable();
+        this.drawTable();
+      }, 80);
+    }
+  }
+
+  private stopEngine(): void {
+    if (this.renderInterval) {
+      clearInterval(this.renderInterval);
+      this.renderInterval = null;
+    }
+    process.stdout.write('\x1b[?25h');
+    this.clearTable();
+    this.drawTable();
+  }
+
+  private syncTokens(phaseName: string): void {
+    const p = this.phases.find(p => p.name === phaseName);
+    if (p) {
+      const entry = this.tokenTracker.history.find(e => e.phase === phaseName);
+      if (entry) {
+        p.inputTokens = entry.inputTokens;
+        p.outputTokens = entry.outputTokens;
+        p.totalTokens = entry.totalTokens;
+      }
+    }
+  }
+}
+
+// ============ DashboardLogger ============
+
+/**
+ * Logger wrapper tự động đồng bộ hóa với PipelineDashboard (xóa bảng → in log → vẽ lại bảng).
+ * Giúp loại bỏ kỹ thuật Console Hijacking tiềm ẩn rủi ro.
+ */
+export class DashboardLogger implements ILogger {
+  private dashboard: PipelineDashboard;
+  private baseLogger: ILogger;
+
+  constructor(dashboard: PipelineDashboard, baseLogger: ILogger) {
+    this.dashboard = dashboard;
+    this.baseLogger = baseLogger;
+  }
+
+  info(message: string): void {
+    this.dashboard.clearTable();
+    this.baseLogger.info(message);
+    this.dashboard.drawTable();
+  }
+
+  success(message: string): void {
+    this.dashboard.clearTable();
+    this.baseLogger.success(message);
+    this.dashboard.drawTable();
+  }
+
+  warn(message: string): void {
+    this.dashboard.clearTable();
+    this.baseLogger.warn(message);
+    this.dashboard.drawTable();
+  }
+
+  error(message: string): void {
+    this.dashboard.clearTable();
+    this.baseLogger.error(message);
+    this.dashboard.drawTable();
+  }
+
+  log(message: string): void {
+    this.dashboard.clearTable();
+    this.baseLogger.log(message);
+    this.dashboard.drawTable();
   }
 }

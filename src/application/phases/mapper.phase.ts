@@ -6,6 +6,7 @@ import { SourceDoc } from '../../domain/entities/source-doc.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { type MappedData, LLMStructuredResponseSchema, type KeywordItem } from './_types.ts';
 import { extractJson } from './_utils.ts';
 
@@ -15,13 +16,22 @@ export class MapperPhase {
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
+  private logger: ILogger;
 
-  constructor(llm: ILLMProvider, fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
+  constructor(
+    llm: ILLMProvider,
+    fs: IFileSystem,
+    mdGenerator: IMarkdownGenerator,
+    config: IConfigProvider,
+    parser: IFrontmatterParser,
+    logger: ILogger
+  ) {
     this.llm = llm;
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
+    this.logger = logger;
   }
 
   async execute(sourcePath: string, onTokenUsed?: (usage: LLMUsage) => void): Promise<MappedData | null> {
@@ -29,30 +39,30 @@ export class MapperPhase {
 
     // Đọc file thô
     if (!this.fs.fileExists(sourcePath)) {
-      console.log(`❌ Lỗi: Không tìm thấy file [${sourcePath}]`);
+      this.logger.error(`❌ Lỗi: Không tìm thấy file [${sourcePath}]`);
       return null;
     }
 
     const content = this.fs.readFile(sourcePath);
     if (!content.trim()) {
-      console.log(`❌ Lỗi: File rỗng [${sourcePath}]`);
+      this.logger.error(`❌ Lỗi: File rỗng [${sourcePath}]`);
       return null;
     }
 
     const frontmatter = SourceDoc.parseFrontmatter(content, this.parser);
-    console.log(`📄 Slug: ${slug}`);
-    console.log(`  Tiêu đề: ${frontmatter.title}`);
-    console.log(`  Trạng thái: ${frontmatter.status}`);
+    this.logger.info(`📄 Slug: ${slug}`);
+    this.logger.info(`  Tiêu đề: ${frontmatter.title}`);
+    this.logger.info(`  Trạng thái: ${frontmatter.status}`);
 
     if (frontmatter.status === 'processed') {
-      console.log('  ⏭️ File đã được xử lý trước đó (status: processed). Bỏ qua.');
+      this.logger.info('  ⏭️ File đã được xử lý trước đó (status: processed). Bỏ qua.');
       return null;
     }
 
     const rawContent = content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
 
     // Gọi LLM
-    console.log('  🔄 Đang chắt lọc...');
+    this.logger.info('  🔄 Đang chắt lọc...');
     const structuredDoc = new StructuredDoc(
       `${slug}-processed`,
       `${frontmatter.title} - Bản Chắt Lọc Cấu Trúc`,
@@ -74,11 +84,11 @@ export class MapperPhase {
       );
 
       structuredDoc.summary = parsed.summary || '';
-      console.log('  ✅ Chắt lọc thành công!');
+      this.logger.success('  ✅ Chắt lọc thành công!');
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
-      console.log(`  ⚠️ Không thể gọi LLM: ${err}`);
-      console.log('  ⏭️ Fallback suy luận cơ bản...');
+      this.logger.warn(`  ⚠️ Không thể gọi LLM: ${err}`);
+      this.logger.info('  ⏭️ Fallback suy luận cơ bản...');
       this.fallbackStructuredDoc(structuredDoc, rawContent, frontmatter.title);
       keywords = structuredDoc.keywords.map(k => ({ name: k.name, definition: k.definition }));
     }
@@ -87,7 +97,7 @@ export class MapperPhase {
     const outputPath = `${this.config.dirStructured}/${slug}-processed.md`;
     this.fs.writeFile(outputPath, this.mdGenerator.generateStructuredDoc(structuredDoc));
 
-    console.log(`  ✅ Đã tạo structured doc: [${outputPath}]`);
+    this.logger.success(`  ✅ Đã tạo structured doc: [${outputPath}]`);
 
     // Return mapped data
     return {

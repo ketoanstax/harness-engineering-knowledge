@@ -2,6 +2,7 @@ import type { IFileSystem } from '../../domain/interfaces/file-system.interface.
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
@@ -11,12 +12,20 @@ export class RefinerPhase {
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
+  private logger: ILogger;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
+  constructor(
+    fs: IFileSystem,
+    mdGenerator: IMarkdownGenerator,
+    config: IConfigProvider,
+    parser: IFrontmatterParser,
+    logger: ILogger
+  ) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
+    this.logger = logger;
   }
 
   execute(planResult: PlanResult, sourceSlug: string): void {
@@ -51,7 +60,7 @@ export class RefinerPhase {
 
       const filepath = path.join(this.config.dirAtomic, `${node.fullSlug}.md`);
       this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
-      console.log(`  ✅ Tạo nốt mới: [${node.fullSlug}.md]`);
+      this.logger.success(`  ✅ Tạo nốt mới: [${node.fullSlug}.md]`);
 
       // TỰ ĐỘNG CẬP NHẬT CHILDREN CỦA NODE CHA
       if (node.parent) {
@@ -67,7 +76,7 @@ export class RefinerPhase {
 
       const filepath = path.join(this.config.dirAtomic, `${this.config.atomicPrefix}${mn.slug}.md`);
       if (!this.fs.fileExists(filepath)) {
-        console.log(`  ⚠️ Nốt [${mn.slug}.md] không tồn tại (skipped).`);
+        this.logger.warn(`  ⚠️ Nốt [${mn.slug}.md] không tồn tại (skipped).`);
         continue;
       }
 
@@ -103,10 +112,10 @@ export class RefinerPhase {
       }
 
       this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
-      console.log(`  ✅ Cập nhật nốt hiện có và nối dẫn chứng nguồn mới: [${mn.slug}.md]`);
+      this.logger.success(`  ✅ Cập nhật nốt hiện có và nối dẫn chứng nguồn mới: [${mn.slug}.md]`);
     }
 
-    console.log(`  ✅ Hoàn tất tạo/cập nhật ${newNodes.length} nốt mới + ${mergeNodes.length} nốt merge.`);
+    this.logger.success(`  ✅ Hoàn tất tạo/cập nhật ${newNodes.length} nốt mới + ${mergeNodes.length} nốt merge.`);
   }
 
   private ensurePlaceholderNode(slug?: string): void {
@@ -128,7 +137,7 @@ export class RefinerPhase {
     );
 
     this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
-    console.log(`  🔗 Tự động phục hồi đồ thị: Đã tạo nốt nháp [${node.fullSlug}.md]`);
+    this.logger.info(`  🔗 Tự động phục hồi đồ thị: Đã tạo nốt nháp [${node.fullSlug}.md]`);
   }
 
   private updateParentChildren(parentSlug: string, childSlug: string): void {
@@ -141,7 +150,7 @@ export class RefinerPhase {
     if (!parentNode.children.includes(childSlug)) {
       parentNode.children.push(childSlug);
       this.fs.writeFile(parentFilepath, this.mdGenerator.generateAtomicNode(parentNode));
-      console.log(`  🔗 Đã tự động nối nốt con [${childSlug}] vào nốt cha [${parentSlug}]`);
+      this.logger.info(`  🔗 Đã tự động nối nốt con [${childSlug}] vào nốt cha [${parentSlug}]`);
     }
   }
 }

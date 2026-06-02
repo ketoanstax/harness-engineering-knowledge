@@ -2,6 +2,7 @@ import type { IFileSystem } from '../../domain/interfaces/file-system.interface.
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
 
@@ -10,12 +11,20 @@ export class CommitterPhase {
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
+  private logger: ILogger;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
+  constructor(
+    fs: IFileSystem,
+    mdGenerator: IMarkdownGenerator,
+    config: IConfigProvider,
+    parser: IFrontmatterParser,
+    logger: ILogger
+  ) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
+    this.logger = logger;
   }
 
   execute(planResult: PlanResult, sourcePath: string, planTimestamp: string): void {
@@ -33,7 +42,7 @@ export class CommitterPhase {
       parsed.data.status = 'processed';
       const updated = this.mdGenerator.generateFromFrontmatter(parsed.data, parsed.content);
       this.fs.writeFile(sourcePath, updated);
-      console.log('  ✅ Cập nhật trạng thái file nguồn gốc sang [processed].');
+      this.logger.success('  ✅ Cập nhật trạng thái file nguồn gốc sang [processed].');
     } catch {
       let updatedContent = content;
       if (content.includes('status: to-process')) {
@@ -42,7 +51,7 @@ export class CommitterPhase {
         updatedContent = content.replace(/^status:.*$/m, 'status: processed');
       }
       this.fs.writeFile(sourcePath, updatedContent);
-      console.log('  ✅ Cập nhật trạng thái file nguồn gốc sang [processed] (fallback).');
+      this.logger.success('  ✅ Cập nhật trạng thái file nguồn gốc sang [processed] (fallback).');
     }
   }
 
@@ -58,7 +67,7 @@ export class CommitterPhase {
     content = content.replace('Trạng thái: `approved`', 'Trạng thái: `executed`');
 
     this.fs.writeFile(planFilepath, content);
-    console.log('  ✅ Đánh dấu tệp kế hoạch sang [executed].');
+    this.logger.success('  ✅ Đánh dấu tệp kế hoạch sang [executed].');
   }
 
   private updateIndexFile(planResult: PlanResult): void {
@@ -96,6 +105,6 @@ export class CommitterPhase {
     }
 
     this.fs.writeFile(this.config.pathIndex, content);
-    console.log('  ✅ Đã tự động cập nhật INDEX.md.');
+    this.logger.success('  ✅ Đã tự động cập nhật INDEX.md.');
   }
 }

@@ -1,6 +1,7 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
+import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import type { VerificationResult } from './_types.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
@@ -12,16 +13,24 @@ export class VerifierPhase {
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
   private parser: IFrontmatterParser;
+  private logger: ILogger;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
+  constructor(
+    fs: IFileSystem,
+    mdGenerator: IMarkdownGenerator,
+    config: IConfigProvider,
+    parser: IFrontmatterParser,
+    logger: ILogger
+  ) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
     this.parser = parser;
+    this.logger = logger;
   }
 
   execute(): VerificationResult {
-    console.log('\n=== BẮT ĐẦU KIỂM TOÁN & TỰ VÁ ĐỒ THỊ (GRAPH HEALING) ===');
+    this.logger.info('\n=== BẮT ĐẦU KIỂM TOÁN & TỰ VÁ ĐỒ THỊ (GRAPH HEALING) ===');
 
     const allFiles = this.getAllMarkdownFiles(this.config.dirVault);
 
@@ -59,7 +68,7 @@ export class VerifierPhase {
         const dirRawName = path.basename(this.config.dirRaw);
         // Kiểm tra Portability
         if ((link.startsWith('/') || link.includes('../')) && !relPath.startsWith(dirRawName)) {
-          console.log(`⚠️ Vi phạm Portability tại [${relPath}]: dùng đường dẫn [${link}]`);
+          this.logger.warn(`⚠️ Vi phạm Portability tại [${relPath}]: dùng đường dẫn [${link}]`);
           portabilityViolations++;
         }
 
@@ -82,7 +91,7 @@ export class VerifierPhase {
           const checkLink = link.endsWith('.md') ? link : `${link}.md`;
           const checkName = linkName.endsWith('.md') ? linkName : `${linkName}.md`;
           if (!fileMap.has(checkName) && !fileMap.has(checkLink)) {
-            console.log(`⚠️ Phát hiện liên kết hỏng tại [${relPath}] trỏ tới [${link}]`);
+            this.logger.warn(`⚠️ Phát hiện liên kết hỏng tại [${relPath}] trỏ tới [${link}]`);
 
             // 🔥 THỰC HIỆN TỰ VÁ (GRAPH HEALING) BẰNG CÁCH TẠO PLACEHOLDER
             this.healBrokenLink(link);
@@ -92,13 +101,13 @@ export class VerifierPhase {
       }
     }
 
-    console.log(`Đã kiểm tra ${checkedFiles} tệp markdown.`);
+    this.logger.info(`Đã kiểm tra ${checkedFiles} tệp markdown.`);
 
     // Thực hiện tự vá liên kết cha-con
     const inconsistencies = this.healTreeIntegrity();
 
     // Nếu tự vá thành công (hoặc đã tạo placeholder cho toàn bộ), ta trả về 0 lỗi để không crash pipeline
-    console.log(`\n🎉 GRAPH HEALING HOÀN TẤT: Đã tự động vá ${brokenLinks} liên kết hỏng và sửa ${inconsistencies} điểm không nhất quán!`);
+    this.logger.success(`\n🎉 GRAPH HEALING HOÀN TẤT: Đã tự động vá ${brokenLinks} liên kết hỏng và sửa ${inconsistencies} điểm không nhất quán!`);
 
     return {
       brokenLinks: 0, // Trả về 0 lỗi vì đã được tự động chữa lành
@@ -135,7 +144,7 @@ export class VerifierPhase {
           { supportingConditions: [], derivativeEffects: [] }
         );
         this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
-        console.log(`  🩹 [Graph Healing] Đã tự tạo nốt nguyên tử nháp: [${node.fullSlug}.md]`);
+        this.logger.info(`  🩹 [Graph Healing] Đã tự tạo nốt nguyên tử nháp: [${node.fullSlug}.md]`);
       }
     }
     // Hướng 2: Trỏ tới dirStructured
@@ -154,7 +163,7 @@ export class VerifierPhase {
           'Nội dung đang được cập nhật.'
         );
         this.fs.writeFile(filepath, this.mdGenerator.generateStructuredDoc(doc));
-        console.log(`  🩹 [Graph Healing] Đã tự tạo structured doc nháp: [${slug}.md]`);
+        this.logger.info(`  🩹 [Graph Healing] Đã tự tạo structured doc nháp: [${slug}.md]`);
       }
     }
   }
@@ -163,7 +172,7 @@ export class VerifierPhase {
    * Tự động sửa YAML frontmatter để đồng bộ quan hệ cha-con
    */
   private healTreeIntegrity(): number {
-    console.log('\n=== BẮT ĐẦU TỰ VÁ CÂY CHA-CON (TREE INTEGRITY HEALING) ===');
+    this.logger.info('\n=== BẮT ĐẦU TỰ VÁ CÂY CHA-CON (TREE INTEGRITY HEALING) ===');
     if (!this.fs.fileExists(this.config.dirAtomic)) {
       return 0;
     }
@@ -190,7 +199,7 @@ export class VerifierPhase {
         children = Array.isArray(data.children) ? data.children : [];
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.log(`⚠️ Lỗi cú pháp YAML tại [${dirAtomicName}/${file}]: ${msg}`);
+        this.logger.error(`⚠️ Lỗi cú pháp YAML tại [${dirAtomicName}/${file}]: ${msg}`);
       }
 
       nodes.set(slug, { file, parent, children, filepath });
@@ -209,7 +218,7 @@ export class VerifierPhase {
           // Parent có tồn tại, nhưng parent không có slug này trong children -> Vá parent
           const parentNode = nodes.get(info.parent)!;
           if (!parentNode.children.includes(slug)) {
-            console.log(`⚠️ Sửa lỗi cây: Node cha [${info.parent}] thiếu nốt con [${slug}]. Tiến hành tự vá...`);
+            this.logger.warn(`⚠️ Sửa lỗi cây: Node cha [${info.parent}] thiếu nốt con [${slug}]. Tiến hành tự vá...`);
             this.addChildToParentFile(parentNode.filepath, slug);
             inconsistencies++;
           }
@@ -225,7 +234,7 @@ export class VerifierPhase {
           // Con tồn tại, nhưng con khai báo parent khác slug này -> Vá con
           const childNode = nodes.get(child)!;
           if (childNode.parent !== slug) {
-            console.log(`⚠️ Sửa lỗi cây: Node con [${child}] có parent là [${childNode.parent}] (Kỳ vọng: [${slug}]). Tiến hành tự vá...`);
+            this.logger.warn(`⚠️ Sửa lỗi cây: Node con [${child}] có parent là [${childNode.parent}] (Kỳ vọng: [${slug}]). Tiến hành tự vá...`);
             this.updateParentInChildFile(childNode.filepath, slug);
             inconsistencies++;
           }
