@@ -5,8 +5,8 @@ category: "Bát Chánh Đạo (Noble Eightfold Path)"
 tags:
   - tinh-tan
   - thuc-hanh
-date: 2026-06-01
-parent: nguoi-co-tri
+date: 2026-06-02
+parent: bat-chanh-dao
 ---
 
 # Đào lên

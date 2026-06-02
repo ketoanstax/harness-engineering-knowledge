@@ -30,9 +30,9 @@ const nodeRepository = new FileSystemNodeRepository(fileSystem, configProvider);
 const mapper = new MapperPhase(llmClient, fileSystem, markdownGenerator, configProvider, frontmatterParser);
 const reducer = new ReducerPhase(llmClient, nodeRepository);
 const planner = new PlannerPhase(llmClient, configProvider);
-const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider);
+const refiner = new RefinerPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser);
 const verifier = new VerifierPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser);
-const committer = new CommitterPhase(fileSystem, markdownGenerator, configProvider);
+const committer = new CommitterPhase(fileSystem, markdownGenerator, configProvider, frontmatterParser);
 
 const useCase = new IngestDocumentUseCase(
   mapper,

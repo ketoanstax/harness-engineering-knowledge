@@ -6,8 +6,8 @@ tags:
   - dukkha
   - bat-toai-nguyen
   - kho-de
-date: 2026-06-01
-parent: tu-thanh-de
+date: 2026-06-02
+parent: vo-thuong
 ---
 
 # Khổ đau (Dukkha)

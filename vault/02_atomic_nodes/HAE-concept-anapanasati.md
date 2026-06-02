@@ -6,8 +6,8 @@ tags:
   - dinh
   - thien
   - hơi-thở
-date: 2026-06-01
-parent: samatha
+date: 2026-06-02
+parent: satipatthana
 ---
 
 # Anapanasati
@@ -26,11 +26,8 @@ Anapanasati là phương pháp niệm hơi thở, bao gồm 16 bước thực h�
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
   - [Ghi chú cấu trúc: Buoi_12](01_structured_docs/buoi_12-processed.md)
-  - [Ghi chú thô: Buoi_12](00_raw_docs/buoi_12.md)
   - [Ghi chú cấu trúc: Buoi_11](01_structured_docs/buoi_11-processed.md)
+  - [Ghi chú thô: Buoi_12](00_raw_docs/buoi_12.md)
   - [Ghi chú thô: Buoi_11](00_raw_docs/buoi_11.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
-
-- Cấu trúc 16 bước chia làm 4 nhóm (Thân, Thọ, Tâm, Pháp) tương ứng với Tứ Niệm Xứ.
-- Hơi thở đóng vai trò là mỏ neo sinh lý kết nối thân và tâm trong suốt quá trình giác ngộ.

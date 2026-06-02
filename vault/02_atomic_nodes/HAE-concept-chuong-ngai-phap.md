@@ -6,7 +6,7 @@ tags:
   - tam-linh
   - tu-tap
   - tri-chuong
-date: 2026-06-01
+date: 2026-06-02
 parent: null
 children:
   - duc

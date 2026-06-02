@@ -56,13 +56,24 @@ export class VerifierPhase {
         if (link.startsWith('http://') || link.startsWith('https://') || link.startsWith('#') || link.startsWith('mailto:')) continue;
         if (link.includes('{') || link.includes('}') || link.includes('...')) continue;
 
+        const dirRawName = path.basename(this.config.dirRaw);
         // Kiểm tra Portability
-        if ((link.startsWith('/') || link.includes('../')) && !relPath.startsWith('00_raw_docs')) {
+        if ((link.startsWith('/') || link.includes('../')) && !relPath.startsWith(dirRawName)) {
           console.log(`⚠️ Vi phạm Portability tại [${relPath}]: dùng đường dẫn [${link}]`);
           portabilityViolations++;
         }
 
-        const validDirs = ['00_raw_docs', '01_structured_docs', '02_atomic_nodes', '03_neural_map', '04_distilled', '05_journal', 'memory', '.agent', 'Templates'];
+        const validDirs = [
+          path.basename(this.config.dirRaw),
+          path.basename(this.config.dirStructured),
+          path.basename(this.config.dirAtomic),
+          path.basename(this.config.dirNeuralMap),
+          path.basename(this.config.dirDistilled),
+          path.basename(this.config.dirJournal),
+          'memory',
+          '.agent',
+          'Templates'
+        ];
         const isInternal = validDirs.some(d => link.includes(d)) || !link.includes('/');
         if (!isInternal) continue;
 
@@ -102,9 +113,11 @@ export class VerifierPhase {
   private healBrokenLink(link: string): void {
     const filename = path.basename(link);
     const prefix = this.config.atomicPrefix;
+    const dirAtomicName = path.basename(this.config.dirAtomic);
+    const dirStructuredName = path.basename(this.config.dirStructured);
 
-    // Hướng 1: Trỏ tới 02_atomic_nodes
-    if (link.includes('02_atomic_nodes') || filename.startsWith(prefix)) {
+    // Hướng 1: Trỏ tới dirAtomic
+    if (link.includes(dirAtomicName) || filename.startsWith(prefix)) {
       const slug = filename.replace(prefix, '').replace('.md', '');
       const filepath = path.join(this.config.dirAtomic, `${prefix}${slug}.md`);
 
@@ -125,17 +138,17 @@ export class VerifierPhase {
         console.log(`  🩹 [Graph Healing] Đã tự tạo nốt nguyên tử nháp: [${node.fullSlug}.md]`);
       }
     }
-    // Hướng 2: Trỏ tới 01_structured_docs
-    else if (link.includes('01_structured_docs') || filename.endsWith('-processed.md')) {
+    // Hướng 2: Trỏ tới dirStructured
+    else if (link.includes(dirStructuredName) || filename.endsWith(`${this.config.structuredSuffix}.md`)) {
       const slug = filename.replace('.md', '');
       const filepath = path.join(this.config.dirStructured, `${slug}.md`);
 
       if (!this.fs.fileExists(filepath)) {
-        const title = slug.replace('-processed', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const title = slug.replace(this.config.structuredSuffix, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         const doc = new StructuredDoc(
           slug,
           `${title} - Bản Chắt Lọc Cấu Trúc Nháp`,
-          slug.replace('-processed', ''),
+          slug.replace(this.config.structuredSuffix, ''),
           ['Tài liệu chắt lọc nháp do liên kết tự động phục hồi.'],
           [],
           'Nội dung đang được cập nhật.'
@@ -168,6 +181,7 @@ export class VerifierPhase {
 
       let parent: string | undefined;
       let children: string[] = [];
+      const dirAtomicName = path.basename(this.config.dirAtomic);
 
       try {
         const parsed = this.parser.parse(content);
@@ -176,19 +190,20 @@ export class VerifierPhase {
         children = Array.isArray(data.children) ? data.children : [];
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.log(`⚠️ Lỗi cú pháp YAML tại [02_atomic_nodes/${file}]: ${msg}`);
+        console.log(`⚠️ Lỗi cú pháp YAML tại [${dirAtomicName}/${file}]: ${msg}`);
       }
 
       nodes.set(slug, { file, parent, children, filepath });
     }
 
     let inconsistencies = 0;
+    const dirAtomicName = path.basename(this.config.dirAtomic);
     for (const [slug, info] of nodes.entries()) {
       // 1. Kiểm tra parent
       if (info.parent) {
         if (!nodes.has(info.parent)) {
           // Tạo parent placeholder
-          this.healBrokenLink(`02_atomic_nodes/${prefix}${info.parent}.md`);
+          this.healBrokenLink(`${dirAtomicName}/${prefix}${info.parent}.md`);
           inconsistencies++;
         } else {
           // Parent có tồn tại, nhưng parent không có slug này trong children -> Vá parent
@@ -204,7 +219,7 @@ export class VerifierPhase {
       // 2. Kiểm tra children
       for (const child of info.children) {
         if (!nodes.has(child)) {
-          this.healBrokenLink(`02_atomic_nodes/${prefix}${child}.md`);
+          this.healBrokenLink(`${dirAtomicName}/${prefix}${child}.md`);
           inconsistencies++;
         } else {
           // Con tồn tại, nhưng con khai báo parent khác slug này -> Vá con
@@ -222,28 +237,21 @@ export class VerifierPhase {
   }
 
   private addChildToParentFile(filepath: string, childSlug: string): void {
-    let content = this.fs.readFile(filepath);
-    const childrenMatch = content.match(/(children:\s*\n(?:  - .*\n?)*)(?:\n|$)/);
-    if (childrenMatch) {
-      content = content.replace(childrenMatch[1], childrenMatch[1].replace(/\n$/, '') + `\n  - ${childSlug}\n`);
-    } else if (content.includes('date:')) {
-      content = content.replace('date:', `children:\n  - ${childSlug}\ndate:`);
-    } else {
-      content = content.replace('---', `children:\n  - ${childSlug}\n---`);
+    const content = this.fs.readFile(filepath);
+    const parentNode = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
+    if (!parentNode.children.includes(childSlug)) {
+      parentNode.children.push(childSlug);
+      this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(parentNode));
     }
-    this.fs.writeFile(filepath, content);
   }
 
   private updateParentInChildFile(filepath: string, parentSlug: string): void {
-    let content = this.fs.readFile(filepath);
-    if (content.includes('parent:')) {
-      content = content.replace(/^parent:.*$/m, `parent: ${parentSlug}`);
-    } else if (content.includes('date:')) {
-      content = content.replace('date:', `parent: ${parentSlug}\ndate:`);
-    } else {
-      content = content.replace('---', `parent: ${parentSlug}\n---`);
+    const content = this.fs.readFile(filepath);
+    const childNode = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
+    if (childNode.parent !== parentSlug) {
+      childNode.parent = parentSlug;
+      this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(childNode));
     }
-    this.fs.writeFile(filepath, content);
   }
 
   private getAllMarkdownFiles(dir: string): string[] {

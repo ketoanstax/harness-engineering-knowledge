@@ -219,9 +219,9 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
     const mapper = new MapperPhase(testLlm, testFs, testMd, configProvider, testParser);
     const reducer = new ReducerPhase(testLlm, testNodeRepo);
     const planner = new PlannerPhase(testLlm, configProvider);
-    const refiner = new RefinerPhase(testFs, testMd, configProvider);
+    const refiner = new RefinerPhase(testFs, testMd, configProvider, testParser);
     const testVerifier = new VerifierPhase(testFs, testMd, configProvider, testParser);
-    const committer = new CommitterPhase(testFs, testMd, configProvider);
+    const committer = new CommitterPhase(testFs, testMd, configProvider, testParser);
 
     const useCase = new IngestDocumentUseCase(
       mapper,

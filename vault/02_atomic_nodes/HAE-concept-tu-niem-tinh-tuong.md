@@ -6,8 +6,8 @@ tags:
   - tham-ai
   - tam-bat-thien
   - duyen-khoi
-date: 2026-06-01
-parent: tham-ai
+date: 2026-06-02
+parent: phi-nhu-ly-tac-
 ---
 
 # Tư niệm tịnh tướng

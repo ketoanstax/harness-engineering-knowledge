@@ -6,8 +6,8 @@ tags:
   - practice
   - sequence
   - discipline
-date: 2026-06-01
-parent: dharma
+date: 2026-06-02
+parent: noble-eightfold-path
 ---
 
 # Gradual Training

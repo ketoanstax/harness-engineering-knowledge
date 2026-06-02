@@ -5,8 +5,8 @@ category: "Bát Chánh Đạo (Noble Eightfold Path)"
 tags:
   - bat-chanh-dao
   - tri-tue
-date: 2026-06-01
-parent: tu-dieu-de
+date: 2026-06-02
+parent: bat-chanh-dao
 ---
 
 # Chánh tri kiến
@@ -28,5 +28,3 @@ Là sự hiểu biết đúng đắn về thực tại, đặc biệt là bốn 
   - [Ghi chú thô: Sutta Mn 009](00_raw_docs/sutta-mn-009.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
-
-- Chánh tri kiến là sự thấu hiểu Tứ Diệu Đế, không còn bị che lấp bởi các căn bổn bất thiện.

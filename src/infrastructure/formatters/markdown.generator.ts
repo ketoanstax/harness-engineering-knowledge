@@ -3,8 +3,13 @@ import { StructuredDoc } from '../../domain/entities/structured-doc.entity.ts';
 import type { PlanFile, PlanItem } from '../../domain/entities/plan.entity.ts';
 import { ATOMIC_PREFIX } from '../../core/config.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
+import matter from 'gray-matter';
 
 export class MarkdownGenerator implements IMarkdownGenerator {
+  generateFromFrontmatter(data: Record<string, any>, body: string): string {
+    return matter.stringify(body, data);
+  }
+
   generateAtomicNode(node: AtomicNode): string {
     const tagsStr = node.tags.map(t => `  - ${t}`).join('\n');
     const principlesStr = node.principles

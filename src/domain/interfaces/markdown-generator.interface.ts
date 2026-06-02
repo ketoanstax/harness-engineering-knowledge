@@ -6,4 +6,5 @@ export interface IMarkdownGenerator {
   generateAtomicNode(node: AtomicNode): string;
   generateStructuredDoc(doc: StructuredDoc): string;
   generatePlan(plan: PlanFile): string;
+  generateFromFrontmatter(data: Record<string, any>, body: string): string;
 }

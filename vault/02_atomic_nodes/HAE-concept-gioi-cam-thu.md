@@ -6,8 +6,8 @@ tags:
   - kiet-su
   - chap-thu
   - ta-kien
-date: 2026-06-01
-parent: du-luu
+date: 2026-06-02
+parent: bon-chap-thu
 ---
 
 # Giới cấm thủ (Silabbata-paramasa)
@@ -26,10 +26,8 @@ Là một phần trong Bốn chấp thủ, ám chỉ sự bám víu mù quáng v
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
   - [Ghi chú cấu trúc: Sutta Mn 011](01_structured_docs/sutta-mn-011-processed.md)
-  - [Ghi chú thô: Sutta Mn 011](00_raw_docs/sutta-mn-011.md)
   - [Ghi chú cấu trúc: Buoi_06](01_structured_docs/buoi_06-processed.md)
+  - [Ghi chú thô: Sutta Mn 011](00_raw_docs/sutta-mn-011.md)
   - [Ghi chú thô: Buoi_06](00_raw_docs/buoi_06.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
-
-- Nghi lễ chỉ có giá trị khi nó là công cụ dẫn đến chuyển hóa tâm, không phải là đối tượng để bám víu.

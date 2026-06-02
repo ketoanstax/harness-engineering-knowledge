@@ -1,6 +1,7 @@
 import type { IFileSystem } from '../../domain/interfaces/file-system.interface.ts';
 import type { IMarkdownGenerator } from '../../domain/interfaces/markdown-generator.interface.ts';
 import type { IConfigProvider } from '../../domain/interfaces/config-provider.interface.ts';
+import type { IFrontmatterParser } from '../../domain/interfaces/frontmatter-parser.interface.ts';
 import { AtomicNode } from '../../domain/entities/atomic-node.entity.ts';
 import type { PlanResult } from './_types.ts';
 import * as path from 'node:path';
@@ -9,11 +10,13 @@ export class RefinerPhase {
   private fs: IFileSystem;
   private mdGenerator: IMarkdownGenerator;
   private config: IConfigProvider;
+  private parser: IFrontmatterParser;
 
-  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider) {
+  constructor(fs: IFileSystem, mdGenerator: IMarkdownGenerator, config: IConfigProvider, parser: IFrontmatterParser) {
     this.fs = fs;
     this.mdGenerator = mdGenerator;
     this.config = config;
+    this.parser = parser;
   }
 
   execute(planResult: PlanResult, sourceSlug: string): void {
@@ -68,46 +71,38 @@ export class RefinerPhase {
         continue;
       }
 
-      let content = this.fs.readFile(filepath);
+      const content = this.fs.readFile(filepath);
+      const node = AtomicNode.fromFile(content, this.parser, this.config.atomicPrefix);
 
       // Cập nhật định nghĩa
       if (mn.updated_definition) {
-        const oldDefMatch = content.match(/(## 💡 Định nghĩa & Nội dung Cốt lõi\n)([\s\S]+?)(?=\n##|\Z)/);
-        if (oldDefMatch) {
-          content = content.replace(
-            `## 💡 Định nghĩa & Nội dung Cốt lõi\n${oldDefMatch[2].trim()}`,
-            `## 💡 Định nghĩa & Nội dung Cốt lõi\n${mn.updated_definition}`,
-          );
-        }
+        node.definition = mn.updated_definition;
       }
 
       // Thêm nguyên lý mới
       for (const ap of (mn.added_principles || [])) {
-        content += `\n${ap.includes(':') ? `- **${ap.split(':')[0].trim()}:** ${ap.split(':').slice(1).join(':').trim()}` : `- ${ap}`}`;
+        if (!node.principles.includes(ap)) {
+          node.principles.push(ap);
+        }
       }
 
       // Thêm children mới
       for (const ac of (mn.added_children || [])) {
-        if (!content.includes(`- ${ac}`) && !content.includes(`- '${ac}'`)) {
-          const childrenMatch = content.match(/(children:\s*\n(?:  - .*\n?)*)(?:\n|$)/);
-          if (childrenMatch) {
-            content = content.replace(childrenMatch[1], childrenMatch[1].replace(/\n$/, '') + `\n  - ${ac}\n`);
-          }
+        if (!node.children.includes(ac)) {
+          node.children.push(ac);
         }
       }
 
-      // TỰ ĐỘNG THÊM DẪN CHỨNG NGUỒN
-      const evidenceStructuredRef = `01_structured_docs/${sourceSlug}-processed.md`;
-      if (!content.includes(evidenceStructuredRef)) {
-        const evidenceMarker = '- **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:';
-        if (content.includes(evidenceMarker)) {
-          const title = sourceSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          const newEvidence = `${evidenceMarker}\n  - [Ghi chú cấu trúc: ${title}](01_structured_docs/${sourceSlug}-processed.md)\n  - [Ghi chú thô: ${title}](00_raw_docs/${sourceSlug}.md)`;
-          content = content.replace(evidenceMarker, newEvidence);
-        }
+      // TỰ ĐỘNG THÊM DẪN CHỨNG NGUỒN (Tránh magic strings)
+      const evidenceStructuredRef = `${sourceSlug}${this.config.structuredSuffix}`;
+      if (!node.evidenceStructured.includes(evidenceStructuredRef)) {
+        node.evidenceStructured.push(evidenceStructuredRef);
+      }
+      if (!node.evidenceRaw.includes(sourceSlug)) {
+        node.evidenceRaw.push(sourceSlug);
       }
 
-      this.fs.writeFile(filepath, content);
+      this.fs.writeFile(filepath, this.mdGenerator.generateAtomicNode(node));
       console.log(`  ✅ Cập nhật nốt hiện có và nối dẫn chứng nguồn mới: [${mn.slug}.md]`);
     }
 
@@ -140,20 +135,12 @@ export class RefinerPhase {
     const parentFilepath = path.join(this.config.dirAtomic, `${this.config.atomicPrefix}${parentSlug}.md`);
     if (!this.fs.fileExists(parentFilepath)) return;
 
-    let pContent = this.fs.readFile(parentFilepath);
+    const pContent = this.fs.readFile(parentFilepath);
+    const parentNode = AtomicNode.fromFile(pContent, this.parser, this.config.atomicPrefix);
 
-    if (!pContent.includes(`- ${childSlug}`) && !pContent.includes(`- '${childSlug}'`)) {
-      const childrenMatch = pContent.match(/(children:\s*\n(?:  - .*\n?)*)(?:\n|$)/);
-      if (childrenMatch) {
-        const newSection = childrenMatch[1].replace(/\n$/, '') + `\n  - ${childSlug}\n`;
-        pContent = pContent.replace(childrenMatch[1], newSection);
-      } else if (pContent.includes('date:')) {
-        pContent = pContent.replace('date:', `children:\n  - ${childSlug}\ndate:`);
-      } else {
-        pContent = pContent.replace('---', `children:\n  - ${childSlug}\n---`);
-      }
-
-      this.fs.writeFile(parentFilepath, pContent);
+    if (!parentNode.children.includes(childSlug)) {
+      parentNode.children.push(childSlug);
+      this.fs.writeFile(parentFilepath, this.mdGenerator.generateAtomicNode(parentNode));
       console.log(`  🔗 Đã tự động nối nốt con [${childSlug}] vào nốt cha [${parentSlug}]`);
     }
   }
