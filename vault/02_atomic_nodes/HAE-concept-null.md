@@ -5,8 +5,6 @@ category: "Giáo lý Khác (Other Dharma)"
 tags:
   - placeholder
   - draft
-children:
-  - chuong-ngai-phap
 date: 2026-06-01
 ---
 

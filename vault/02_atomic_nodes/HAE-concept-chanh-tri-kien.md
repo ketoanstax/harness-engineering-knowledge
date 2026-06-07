@@ -5,8 +5,8 @@ category: "Bát Chánh Đạo (Noble Eightfold Path)"
 tags:
   - bat-chanh-dao
   - tri-tue
-date: 2026-06-02
-parent: tu-dieu-de
+date: 2026-06-07
+parent: bat-chanh-dao
 ---
 
 # Chánh tri kiến

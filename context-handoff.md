@@ -1,5 +1,5 @@
 # 📑 BIÊN BẢN BÀN GIAO SESSION (SESSION HANDOFF)
-*Ngày: 2026-06-02 | Branch: `feature/rewrite-engine-in-typescript`*
+*Ngày: 2026-06-07 | Branch: `feature/rewrite-engine-in-typescript`*
 
 ---
 
@@ -14,106 +14,47 @@ với MRP Ingestion Pipeline (TypeScript). Branch: `feature/rewrite-engine-in-ty
 ✅ Runtime: **Bun** (v1.3.14) — không dùng Node/pnpm nữa
 ✅ Test: **Bun Test** (Unit/Integration/E2E) — `bun test` 
 ✅ `bunx tsc --noEmit` = 0 errors, `bun test` = 20/20 pass
-✅ Hỗ trợ đa định dạng raw input: **.md, .txt, .pdf, .docx, .csv**
-✅ Đã kiểm toán lỗi hardcoded extension và sửa đổi toàn bộ glue code (initState, scanAndSortFiles, approve command) để PDF/DOCX chạy mượt mà trực tiếp không cần sinh file trung gian (Option B).
+✅ Đã khắc phục hoàn toàn 218 liên kết hỏng và 11 lỗi cây tri thức trong Vault.
+✅ Đã cấu trúc lại `00_raw_docs` theo đúng chuẩn domain/folder riêng.
 
-## Lịch sử commit gần đây & session hiện tại:
-1. chore: chuyển đổi runtime sang Bun
-2. feat: tách phần test ra khỏi source + Bun Test
-3. refactor: di chuyển AtomicNode.fromFile() từ Domain → Infrastructure Factory
-4. refactor: di chuyển cấu hình cứng + inject atomicPrefix
-5. feat: Tích hợp IDocumentReader (Strategy Pattern) hỗ trợ PDF (pdf-parse v2) & DOCX (mammoth)
-6. fix: Sửa toàn bộ lỗi hardcoded `.md` ở initState(), scanAndSortFiles() và approve command để hỗ trợ đa định dạng hoàn chỉnh.
+## Cấu trúc thư mục Domain (Layer 1) mới:
+1. **nikaya_trung_bo/**: Chứa 152 file thô nguyên bản Kinh điển Nikaya (định dạng `sutta-mn-*.md`), domain: "nikaya-trung-bo".
+2. **giang_giai_trung_bo_modern/**: Chứa 11 file thô giảng giải Trung Bộ hiện đại (định dạng `mn-*.md`), domain: "giang-giai-trung-bo-modern".
+3. **loi_phat_day_brahm/**: Chứa 15 file thô Lời Phật Dạy của thiền sư Ajahn Brahm (định dạng `buoi_*.md`), domain: "loi-phat-day-brahm".
+4. **lecture/**: Đã loại bỏ hoàn toàn (không còn rác từ bài giảng cũ).
 
-## Kiến trúc Layer
-- **Domain:** interfaces/ (IDocumentReader, IFileSystem, ILogger...) + entities/ (SourceDoc, StructuredDoc, AtomicNode, Plan)
-- **Application:** use-cases/ingest-document.use-case.ts + phases/ (MapperPhase, ReducerPhase, PlannerPhase...)
-- **Infrastructure:** fs/ (NodeFileSystem), llm/ (Anthropic, OpenAI, Gemini...), parsers/ (GrayMatterParser, AtomicNodeFactory), tools/document-reader/ (DocumentReaderTool, TextExtractor, PdfTextExtractor, DocxExtractor)
-- **Presentation:** cli/commands.ts, ui/ (file-picker.ts với icon 📕/📘/📊/📃)
+## File đúc kết vĩ mô (Layer 3)
+- Đã tạo **`vault/04_distilled/nikaya-distilled.md`** để làm nốt siêu tụ (super-hub) liên kết toàn bộ 215 nốt nguyên tử trên Obsidian Graph View.
 
-## Điểm cần lưu ý cho Session tiếp theo
-- E2E Test (`mrp-pipeline.test.ts`) đang mock DocumentReader qua TextExtractor.
-- pdf-parse v2.4.5 đã được wire hoàn chỉnh (sử dụng class PDFParse và destruct/destroy an toàn).
-- Mọi định dạng raw doc nạp vào vault/00_raw_docs đều được auto-detect và có thể chạy trực tiếp.
+## Lịch sử session hiện tại:
+- Reorganize `00_raw_docs` từ root vào đúng các thư mục domain con mới (`nikaya_trung_bo/`, `giang_giai_trung_bo_modern/`, `loi_phat_day_brahm/`).
+- Sửa lỗi YAML frontmatter `ndomain:` thành `domain:` và mapping chính xác với tên thư mục cha dạng slug.
+- Xóa bỏ folder `lecture/` và các liên kết hỏng trỏ về `lecture-14-blast-radius-advanced-processed.md` trong `HAE-concept-kho-dau.md`, `HAE-concept-vo-thuong.md` và `HAE-concept-sati.md`.
+- Sửa đổi metadata `parent`/`children` trong 11 nốt nguyên tử bị báo lệch.
+- Đồng bộ `vault/memory/project_context.md` khớp chính xác 100% với thực tế dự án.
+
+## Điểm cần lưu ý cho Session tiếp theo:
+- Chạy `python3 scripts/sync_rules_and_memory.py` và `python3 scripts/validate_raw_docs.py` để đảm bảo hệ thống luôn ở trạng thái 0 lỗi.
+- Hiện tại Vault đã sạch bóng liên kết hỏng (0 broken links) và cấu trúc cây hoàn hảo.
+- Việc tiếp theo là chạy MRP Ingestion Pipeline bằng TypeScript Engine để tinh lọc sâu các nốt nháp (draft/placeholder) cho Trung Bộ Kinh.
 ```
 
 ---
 
-## 🏗 2. Bản đồ Kiến trúc Đầy đủ (Cập nhật Document Reader)
+## 🏗 2. Danh sách Domain Mới & Mapping
 
-### Domain Layer (`src/domain/`) — Pure TS, 0 NPM
-```
-interfaces/
-├── document-reader.interface.ts   # IDocumentReader (isSupported, readAsText) - MỚI
-├── file-system.interface.ts       # IFileSystem (thêm readFileBuffer) - CẬP NHẬT
-├── logger.interface.ts            # ILogger
-└── ...
-entities/
-├── source-doc.entity.ts           # parseFrontmatter() hỗ trợ pseudo-frontmatter cho PDF/DOCX
-└── ...
-```
-
-### Infrastructure Layer (`src/infrastructure/`) — Có NPM
-```
-fs/
-└── node-file-system.ts            # Thêm readFileBuffer()
-tools/document-reader/             # MỚI (Strategy Pattern)
-├── extractors.ts                  # TextExtractor, PdfTextExtractor, DocxExtractor
-└── document-reader.tool.ts        # Orchestrator DocumentReaderTool
-```
+| Thư mục | Slug Domain | Định dạng File thô | RULE.md |
+| :--- | :--- | :--- | :--- |
+| `nikaya_trung_bo/` | `nikaya-trung-bo` | `sutta-mn-*.md` | [nikaya_trung_bo/RULE.md](vault/00_raw_docs/nikaya_trung_bo/RULE.md) |
+| `giang_giai_trung_bo_modern/` | `giang-giai-trung-bo-modern` | `mn-*.md` | [giang_giai_trung_bo_modern/RULE.md](vault/00_raw_docs/giang_giai_trung_bo_modern/RULE.md) |
+| `loi_phat_day_brahm/` | `loi-phat-day-brahm` | `buoi_*.md` | [loi_phat_day_brahm/RULE.md](vault/00_raw_docs/loi_phat_day_brahm/RULE.md) |
 
 ---
 
-## 💻 3. CLI & Hướng dẫn sử dụng Đa Định Dạng
-
-Bất kỳ file PDF, DOCX, TXT, CSV nào ném vào `vault/00_raw_docs/` đều được xử lý mượt mà.
-
-### Cách 1: Qua Shell tương tác
-```bash
-# Ném file PDF vào raw doc
-cp ~/tailieu.pdf vault/00_raw_docs/loi_phat_day/
-
-# Chạy shell
-bun start
-# Chọn /run -> File picker sẽ hiển thị file PDF với icon 📕 (hoặc DOCX với 📘)
-```
-
-### Cách 2: CLI trực tiếp
-```bash
-bun start run -s "vault/00_raw_docs/loi_phat_day/tailieu.pdf"
-```
-
-### Cách 3: Batch tự động
-```bash
-# Quét và xử lý tuần tự toàn bộ file MD, PDF, DOCX... trong thư mục
-bun start batch --auto-approve
-```
-
----
-
-## 🧪 4. Lệnh Test & Diagnostics
+## 🧪 3. Lệnh Verification & Diagnostics
 
 ```bash
-bunx tsc --noEmit          # Kiểm tra TypeScript (0 errors)
-bun test                   # Chạy toàn bộ suite (20/20 pass)
-bun run test:unit          # Chỉ chạy Unit test
-bun run test:integration   # Chỉ chạy Integration test
-bun run test:e2e           # Chạy E2E Pipeline test với Mock LLM
+python3 scripts/validate_raw_docs.py     # Đảm bảo 0 lỗi cấu trúc domain thô
+python3 scripts/sync_rules_and_memory.py # Đảm bảo 0 liên kết hỏng, 0 lỗi parent/children
+bun test                                 # Đảm bảo test suite TypeScript pass 100%
 ```
-
----
-
-## 🧠 5. Nhật ký Thiết kế & Quyết định Nghiệp vụ (Session 2026-06-02)
-
-### Vấn đề thảo luận: **Có nên convert PDF sang .md trước khi nạp?**
-
-Chúng ta đã thảo luận 3 phương án:
-- **Option A (Converter):** Tạo script convert PDF → .md trước khi chạy.
-- **Option B (Fix straight):** Sửa toàn bộ glue code (initState, approve, scanAndSortFiles) để pipeline nuốt trực tiếp PDF.
-- **Option C (Companion Metadata):** PDF đi kèm file `.md` metadata trong raw docs.
-
-**Quyết định:** Chọn **Option B (Fix straight)** vì:
-- Tối ưu về logic, không bị smell về thiết kế (1 tài liệu = 1 file duy nhất).
-- Tránh lệch trạng thái đồng bộ giữa PDF gốc và file metadata companion.
-- Tận dụng triệt để bộ hạ tầng `DocumentReader` Strategy Pattern đã xây dựng.
-- Output sinh ra (atomic nodes) vẫn là `.md` có đầy đủ cấu trúc để Obsidian/User search dễ dàng. Raw input chỉ đóng vai trò nguyên liệu đầu vào.

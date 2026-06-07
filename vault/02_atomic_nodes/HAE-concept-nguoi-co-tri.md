@@ -7,8 +7,6 @@ tags:
   - minh-sat
 date: 2026-06-01
 parent: ba-la-mon
-children:
-  - dao-len
 ---
 
 # Người có trí

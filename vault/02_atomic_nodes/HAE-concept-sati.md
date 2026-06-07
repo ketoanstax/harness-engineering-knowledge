@@ -31,12 +31,10 @@ Sati (Chánh niệm) là khả năng ghi nhận sự việc diễn ra trong hi�
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
 - **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
-  - [Ghi chú cấu trúc: Lecture 14 Blast Radius Advanced](01_structured_docs/lecture-14-blast-radius-advanced-processed.md)
-  - [Ghi chú thô: Lecture 14 Blast Radius Advanced](00_raw_docs/lecture-14-blast-radius-advanced.md)
   - [Ghi chú cấu trúc: Sutta Mn 010](01_structured_docs/sutta-mn-010-processed.md)
-  - [Ghi chú thô: Sutta Mn 010](00_raw_docs/sutta-mn-010.md)
+  - [Ghi chú thô: Sutta Mn 010](00_raw_docs/nikaya/sutta-mn-010.md)
   - [Ghi chú cấu trúc: Buoi_08](01_structured_docs/buoi_08-processed.md)
-  - [Ghi chú thô: Buoi_08](00_raw_docs/buoi_08.md)
+  - [Ghi chú thô: Buoi_08](00_raw_docs/loi_phat_day_brahm/buoi_08.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)
 

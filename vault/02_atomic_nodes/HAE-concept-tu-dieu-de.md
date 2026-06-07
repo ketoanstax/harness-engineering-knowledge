@@ -6,8 +6,6 @@ tags:
   - cot-loi
   - giao-phap
 date: 2026-06-01
-children:
-  - chanh-tri-kien
 ---
 
 # Tứ Diệu Đế (Four Noble Truths)

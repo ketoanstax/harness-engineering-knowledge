@@ -29,8 +29,5 @@ Vô thường là bản chất tự nhiên của mọi hiện tượng hữu vi,
 - **Quả chuyển hóa (Derivative Effects)**: [Kho Dau](02_atomic_nodes/HAE-concept-kho-dau.md) — Các giải pháp và hiệu quả kế thừa.
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
-- **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
-  - [Ghi chú cấu trúc: Lecture 14 Blast Radius Advanced](01_structured_docs/lecture-14-blast-radius-advanced-processed.md)
-  - [Ghi chú thô: Lecture 14 Blast Radius Advanced](00_raw_docs/lecture-14-blast-radius-advanced.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)

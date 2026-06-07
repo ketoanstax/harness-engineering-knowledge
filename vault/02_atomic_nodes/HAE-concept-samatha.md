@@ -7,8 +7,6 @@ tags:
   - tam-tinh
   - an-dinh
 date: 2026-06-01
-children:
-  - anapanasati
 ---
 
 # Samatha

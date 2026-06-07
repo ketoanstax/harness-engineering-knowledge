@@ -7,8 +7,6 @@ tags:
   - teachings
   - sutta
 date: 2026-06-01
-children:
-  - gradual-training
 ---
 
 # Dharma

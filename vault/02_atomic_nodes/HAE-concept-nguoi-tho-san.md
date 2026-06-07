@@ -8,8 +8,6 @@ tags:
   - tieu-cuc
 date: 2026-06-01
 parent: duyen-khoi
-children:
-  - do-moi
 ---
 
 # Người thợ săn

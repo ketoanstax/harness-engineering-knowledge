@@ -9,7 +9,6 @@ tags:
 date: 2026-06-01
 parent: duyen-khoi
 children:
-  - gioi-cam-thu
   - hy-luan
 
 ---

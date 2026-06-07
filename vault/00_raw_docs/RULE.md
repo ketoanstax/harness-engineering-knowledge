@@ -60,9 +60,9 @@ date: {{YYYY-MM-DD}}              # Khuyến khích
 
 | Thư mục | Domain | Trạng thái |
 |:---|:---|---|
-| *(root)* | Legacy: Nikaya + Lecture | 🟡 Di sản (giữ nguyên) |
-| `loi_phat_day/` | Giảng giải Phật học (Lời Phật dạy) | 🟢 Hoạt động |
-| `trung_bo_kinh/` | Giảng giải Trung Bộ Kinh | 🟢 Hoạt động |
+| `nikaya_trung_bo/` | Kinh điển Nikaya Trung Bộ | 🟢 Hoạt động |
+| `giang_giai_trung_bo_modern/` | Giảng giải Trung Bộ Modern | 🟢 Hoạt động |
+| `loi_phat_day_brahm/` | Lời Phật Dạy Brahm | 🟢 Hoạt động |
 
 ---
 

@@ -6,8 +6,8 @@ tags:
   - dukkha
   - bat-toai-nguyen
   - kho-de
-date: 2026-06-02
-parent: tu-thanh-de
+date: 2026-06-07
+parent: vo-thuong
 ---
 
 # Khổ đau (Dukkha)
@@ -24,8 +24,5 @@ Khổ đau là trạng thái bất toại nguyện nảy sinh từ sự dính m�
 - **Quả chuyển hóa (Derivative Effects)**: [Giai Thoat](02_atomic_nodes/HAE-concept-giai-thoat.md) — Các giải pháp và hiệu quả kế thừa.
 
 ## 🔗 Liên kết Tri thức (Knowledge Connections)
-- **Dẫn chứng & Nguồn gốc (Ngược dòng - Evidence & Context)**:
-  - [Ghi chú cấu trúc: Lecture 14 Blast Radius Advanced](01_structured_docs/lecture-14-blast-radius-advanced-processed.md)
-  - [Ghi chú thô: Lecture 14 Blast Radius Advanced](00_raw_docs/lecture-14-blast-radius-advanced.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
   - [Đúc kết Kinh điển Nikaya](04_distilled/nikaya-distilled.md)

@@ -10,10 +10,10 @@ children:
   - chanh-dinh
   - doan-giam-sallekha
   - chanh-tri-kien
-  - bay-giac-chi
   - ba-la-mon
   - dao-len
   - khong-phong-dat-appamada
+  - ta-kien
 ---
 
 # Bat Chanh Dao
@@ -31,6 +31,7 @@ Nốt nháp tự động. Nội dung chi tiết của khái niệm này sẽ đ�
 - [Ba La Mon](02_atomic_nodes/HAE-concept-ba-la-mon.md)
 - [Dao Len](02_atomic_nodes/HAE-concept-dao-len.md)
 - [Khong Phong Dat Appamada](02_atomic_nodes/HAE-concept-khong-phong-dat-appamada.md)
+- [Ta Kien](02_atomic_nodes/HAE-concept-ta-kien.md)
 
 ## 🔗 Mạng lưới Nhân Duyên Quả (Causal Web)
 - **Nhân gốc (Causal Core)**: Không có — Khái niệm nền tảng sinh ra khái niệm này.

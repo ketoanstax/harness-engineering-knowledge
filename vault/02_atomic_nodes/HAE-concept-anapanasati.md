@@ -6,8 +6,8 @@ tags:
   - dinh
   - thien
   - hơi-thở
-date: 2026-06-02
-parent: samatha
+date: 2026-06-07
+parent: satipatthana
 ---
 
 # Anapanasati

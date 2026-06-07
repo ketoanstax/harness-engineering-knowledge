@@ -10,9 +10,7 @@ date: 2026-06-01
 children:
   - kinh-chuyen-phap-luan
   - kho-uan
-  - kho-dau
   - vo-thu-truoc-bat-niet-ban
-
 ---
 
 # Tứ Thánh Đế
