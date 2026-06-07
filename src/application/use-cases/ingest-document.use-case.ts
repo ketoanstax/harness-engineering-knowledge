@@ -114,7 +114,8 @@ export class IngestDocumentUseCase {
 
       // Lấy nodes từ Repository thay vì context-filter tự đọc FS
       const allNodes = this.nodeRepo.findAll();
-      const relevantNodes = filterRelevantNodes(keywords, allNodes, 8);
+      const maxResults = process.env.MAX_QUERY_RESULTS ? parseInt(process.env.MAX_QUERY_RESULTS, 10) : 8;
+      const relevantNodes = filterRelevantNodes(keywords, allNodes, maxResults);
 
       if (relevantNodes.length === 0) {
         this.logger.info(`🔍 Không tìm thấy nốt liên quan cho câu hỏi "${question}". Đang kích hoạt luồng LEARN...`);
