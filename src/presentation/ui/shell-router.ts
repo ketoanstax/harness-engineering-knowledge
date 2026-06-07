@@ -128,6 +128,9 @@ export async function handleQuery(input: string, useCase: IngestDocumentUseCase)
     const result = await useCase.query(input);
     s.stop('');
     console.log(renderMarkdown(result.answer));
+    if (process.env.NODE_ENV === 'development' && result.tokensUsed !== undefined) {
+      console.log(chalk.dim(`📊 [Dev Mode] Token đã tiêu thụ: ${result.tokensUsed}`));
+    }
     if (result.status === 'learning' && result.draft) {
       activeDraft = result.draft;
       console.log(chalk.bold.yellow('\n📋 CHI TIẾT BẢN THẢO NỐT NHÁP:'));
