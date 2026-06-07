@@ -67,14 +67,20 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
 
       if (isSuggesting && (key?.name === 'down' || key?.name === 'tab')) {
         selectedIndex = (selectedIndex + 1) % matchedCommands.length;
-        redrawLine(r, r.line, selectedIndex, matchedCommands);
+        const chosen = matchedCommands[selectedIndex].command;
+        r.write(null, { ctrl: true, name: 'u' });
+        r.write(chosen);
+        redrawLine(r, chosen, selectedIndex, matchedCommands);
         return;
       }
 
       if (isSuggesting && key?.name === 'up') {
         selectedIndex = selectedIndex === -1 ? matchedCommands.length - 1 : selectedIndex - 1;
         if (selectedIndex < 0) selectedIndex = matchedCommands.length - 1;
-        redrawLine(r, r.line, selectedIndex, matchedCommands);
+        const chosen = matchedCommands[selectedIndex].command;
+        r.write(null, { ctrl: true, name: 'u' });
+        r.write(chosen);
+        redrawLine(r, chosen, selectedIndex, matchedCommands);
         return;
       }
 

@@ -32,6 +32,7 @@ export const COMMANDS: ShellCommand[] = [
   { command: '/domain', description: 'Liệt kê domain subdirectories' },
   { command: '/graph', description: 'Xem cây tri thức ASCII' },
   { command: '/status', description: 'Tổng quan Vault' },
+  { command: '/clear', description: 'Xóa màn hình terminal' },
   { command: '/exit', description: 'Thoát shell' },
 ];
 
@@ -51,6 +52,11 @@ export async function handleCommand(input: string, useCase: IngestDocumentUseCas
   if (input === '/exit' || input === '/quit') {
     console.log(chalk.gray('\n👋 Tạm biệt!'));
     return false; // Báo hiệu cho shell thoát
+  }
+
+  if (input === '/clear' || input === 'clear') {
+    console.clear();
+    return;
   }
 
   if (input === '/help' || input === 'help') {

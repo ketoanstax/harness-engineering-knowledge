@@ -75,7 +75,13 @@ export function redrawLine(rl: readline.Interface, line: string, selectedIndex =
   const cursorPos = rl.cursor;
   const promptText = 'mrp❯ ';
   const promptLen = 5;
+  const width = getTermWidth();
 
+  // Di chuyển con trỏ lên dòng đầu tiên của prompt nếu dòng bị quấn (wrapped) trước khi xóa
+  const cursorRow = Math.floor((promptText.length + cursorPos) / width);
+  if (cursorRow > 0) {
+    process.stdout.write(`\x1b[${cursorRow}A`);
+  }
   process.stdout.write('\r\x1b[J');
   process.stdout.write(chalk.bold.magenta(promptText));
 
