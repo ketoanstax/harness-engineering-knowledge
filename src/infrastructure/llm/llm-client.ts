@@ -51,8 +51,10 @@ export class LLMClient implements ILLMProvider {
 
     if (process.env.OPENAI_API_KEY) {
       const model = process.env.OPENAI_MODEL || 'gpt-4o';
-      console.log(`🤖 Khởi tạo OpenAI Provider - Model: ${model}`);
-      return new LLMClient(new OpenAIProvider(process.env.OPENAI_API_KEY, 'https://api.openai.com/v1', model));
+      // Cho phép cấu hình Base URL tùy biến (mặc định https://api.openai.com/v1)
+      const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+      console.log(`🤖 Khởi tạo OpenAI Provider - Model: ${model} - Base URL: ${baseUrl}`);
+      return new LLMClient(new OpenAIProvider(process.env.OPENAI_API_KEY, baseUrl, model));
     }
 
     if (process.env.GEMINI_API_KEY) {

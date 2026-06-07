@@ -167,7 +167,10 @@ describe('E2E MRP Ingestion Pipeline', () => {
     // Manifesto mock
     const manifesto = path.join(path.dirname(DIR_ATOMIC), '04_distilled', 'nikaya-distilled.md');
     if (fs.existsSync(manifesto)) {
-      fs.unlinkSync(manifesto);
+      const content = fs.readFileSync(manifesto, 'utf-8');
+      if (content.includes('Đúc kết Kinh điển Nikaya Mock')) {
+        fs.unlinkSync(manifesto);
+      }
     }
     // Journal plans
     if (fs.existsSync(DIR_JOURNAL)) {
