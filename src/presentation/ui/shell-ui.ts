@@ -115,9 +115,16 @@ export function redrawLine(rl: readline.Interface, line: string, selectedIndex =
     process.stdout.write(`\x1b[${matched.length + 2}A`);
   }
 
-  if (promptLen + cursorPos > 0) {
-    process.stdout.write(`\r\x1b[${promptLen + cursorPos}C`);
-  } else {
-    process.stdout.write(`\r`);
+  const endRow = Math.floor((promptLen + line.length) / width);
+  const targetRow = Math.floor((promptLen + cursorPos) / width);
+  const moveUp = endRow - targetRow;
+  const targetCol = (promptLen + cursorPos) % width;
+
+  if (moveUp > 0) {
+    process.stdout.write(`\x1b[${moveUp}A`);
+  }
+  process.stdout.write(`\r`);
+  if (targetCol > 0) {
+    process.stdout.write(`\x1b[${targetCol}C`);
   }
 }
