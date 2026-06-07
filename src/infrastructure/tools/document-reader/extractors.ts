@@ -53,3 +53,55 @@ export class DocxExtractor implements IFileExtractor {
     return result.value;
   }
 }
+
+// @ts-ignore
+import EPub from 'epub';
+import { convert } from 'html-to-text';
+
+export class EpubExtractor implements IFileExtractor {
+  supports(ext: string): boolean {
+    return ext === '.epub';
+  }
+
+  async extract(filepath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const epub: any = new EPub(filepath);
+
+      epub.on('error', (err: any) => {
+        reject(err);
+      });
+
+      epub.on('end', () => {
+        const promises: Promise<string>[] = [];
+
+        epub.flow.forEach((chapter: any) => {
+          if (chapter.id) {
+            promises.push(
+              new Promise<string>((res) => {
+                epub.getChapter(chapter.id, (err: any, html: string) => {
+                  if (err) {
+                    res('');
+                  } else {
+                    const text = convert(html || '', {
+                      wordwrap: 130,
+                    });
+                    res(text);
+                  }
+                });
+              })
+            );
+          }
+        });
+
+        Promise.all(promises)
+          .then((texts) => {
+            resolve(texts.join('\n\n'));
+          })
+          .catch(reject);
+      });
+
+      epub.parse();
+    });
+  }
+}
+

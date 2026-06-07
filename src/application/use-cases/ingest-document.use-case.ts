@@ -464,7 +464,7 @@ Vui lòng chọn hành động tiếp theo:
   private scanAndSortFiles(directory: string): string[] {
     if (!this.fs.fileExists(directory)) return [];
 
-    const supportedExts = ['.md', '.txt', '.pdf', '.docx', '.csv'];
+    const supportedExts = ['.md', '.txt', '.pdf', '.docx', '.csv', '.epub'];
     const filesToProcess: Array<{ mtime: number; filepath: string }> = [];
     const files = this.fs.readdir(directory);
 

@@ -7,7 +7,7 @@ import { AtomicNodeFactory } from '../infrastructure/parsers/atomic-node-factory
 import { FileSystemNodeRepository } from '../infrastructure/repositories/file-system-node-repository.ts';
 import { ConsoleLogger } from '../infrastructure/logging/console-logger.ts';
 import { DocumentReaderTool } from '../infrastructure/tools/document-reader/document-reader.tool.ts';
-import { TextExtractor, PdfTextExtractor, DocxExtractor } from '../infrastructure/tools/document-reader/extractors.ts';
+import { TextExtractor, PdfTextExtractor, DocxExtractor, EpubExtractor } from '../infrastructure/tools/document-reader/extractors.ts';
 import { TokenTracker } from '../application/services/token-tracker.ts';
 import { PipelineDashboard } from './ui/pipeline-dashboard.ts';
 import { IngestDocumentUseCase } from '../application/use-cases/ingest-document.use-case.ts';
@@ -37,7 +37,8 @@ const learningService = new LearningService(nodeRepository, llmClient);
 const textExtractor = new TextExtractor(fileSystem);
 const pdfExtractor = new PdfTextExtractor(fileSystem);
 const docxExtractor = new DocxExtractor(fileSystem);
-const docReader = new DocumentReaderTool([textExtractor, pdfExtractor, docxExtractor]);
+const epubExtractor = new EpubExtractor();
+const docReader = new DocumentReaderTool([textExtractor, pdfExtractor, docxExtractor, epubExtractor]);
 
 // Khởi tạo base logger và logger tích hợp với Dashboard
 const baseLogger = new ConsoleLogger();
