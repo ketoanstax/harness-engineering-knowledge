@@ -39,7 +39,7 @@ Agent có thể kích hoạt các kỹ năng chuyên gia trong thư mục `.agen
 ## 🤖 Bản ghi Ghi nhớ Lần khởi tạo (MEMORY Gate)
 Trước khi bắt đầu bất kỳ Turn nào, Agent PHẢI:
 1.  Đọc tệp [memory/MEMORY.md](memory/MEMORY.md) và [memory/RULE.md](memory/RULE.md) để nạp bộ nhớ cục bộ.
-2.  Chạy script kiểm toán và tự động đồng bộ hóa `scripts/sync_rules_and_memory.py` trước khi bàn giao công việc cho con người để đảm bảo không có liên kết gãy nào trong vault. (FB-004)
+2.  Chạy script kiểm toán và tự động đồng bộ hóa `bun scripts/sync_rules_and_memory.ts` trước khi bàn giao công việc cho con người để đảm bảo không có liên kết gãy nào trong vault. (FB-004)
 
 ---
 

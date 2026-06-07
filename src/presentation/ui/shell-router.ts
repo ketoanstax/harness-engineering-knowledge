@@ -121,7 +121,7 @@ async function runDoctor() {
 
   try {
     console.log(chalk.cyan('\n  🔍 Bước 1: Validate domain raw docs...'));
-    execSync('python3 scripts/validate_raw_docs.py', { stdio: 'inherit' });
+    execSync('bun scripts/validate_raw_docs.ts', { stdio: 'inherit' });
     console.log(chalk.green('  ✅ Domain validation OK'));
   } catch {
     console.log(chalk.red('  ⚠️ Domain validation có vấn đề'));
@@ -130,7 +130,7 @@ async function runDoctor() {
 
   try {
     console.log(chalk.cyan('\n  🔍 Bước 2: Sync rules & audit...'));
-    execSync('python3 scripts/sync_rules_and_memory.py', { stdio: 'inherit' });
+    execSync('bun scripts/sync_rules_and_memory.ts', { stdio: 'inherit' });
     console.log(chalk.green('  ✅ Sync & audit OK'));
   } catch {
     console.log(chalk.red('  ⚠️ Sync/audit thất bại'));

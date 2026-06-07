@@ -14,8 +14,13 @@ với MRP Ingestion Pipeline (TypeScript). Branch: `feature/rewrite-engine-in-ty
 ✅ Runtime: **Bun** (v1.3.14) — không dùng Node/pnpm nữa
 ✅ Test: **Bun Test** (Unit/Integration/E2E) — `bun test` 
 ✅ `bunx tsc --noEmit` = 0 errors, `bun test` = 20/20 pass
-✅ Đã khắc phục hoàn toàn 218 liên kết hỏng và 11 lỗi cây tri thức trong Vault.
-✅ Đã cấu trúc lại `00_raw_docs` theo đúng chuẩn domain/folder riêng.
+✅ Đã tích hợp gói chính thức `openai` SDK thay thế cho HTTP fetch thủ công trong OpenAIProvider.
+✅ Khắc phục triệt để lỗi parse format API OpenAI từ 9Router (hoạt động tốt với base_url tùy biến cục bộ).
+✅ Đã tạo file siêu tụ thực tế `vault/04_distilled/nikaya-distilled.md` (giải quyết 214 link hỏng trỏ về đây).
+✅ Đã sửa file e2e test (`mrp-pipeline.test.ts`) để bảo vệ file thực tế `nikaya-distilled.md` không bị xóa sau khi test.
+✅ Đã dọn dẹp sạch liên kết hỏng (0 broken links) và cấu trúc cây hoàn hảo (0 tree errors).
+✅ Đã dọn dẹp TOÀN BỘ file Python cũ (scripts/mrp_pipeline/ và các script .py).
+✅ Đã chuyển dịch 100% các công cụ chẩn đoán (sync_rules, audit, validate_raw_docs) sang **TypeScript** chạy bằng Bun.
 
 ## Cấu trúc thư mục Domain (Layer 1) mới:
 1. **nikaya_trung_bo/**: Chứa 152 file thô nguyên bản Kinh điển Nikaya (định dạng `sutta-mn-*.md`), domain: "nikaya-trung-bo".
@@ -24,17 +29,20 @@ với MRP Ingestion Pipeline (TypeScript). Branch: `feature/rewrite-engine-in-ty
 4. **lecture/**: Đã loại bỏ hoàn toàn (không còn rác từ bài giảng cũ).
 
 ## File đúc kết vĩ mô (Layer 3)
-- Đã tạo **`vault/04_distilled/nikaya-distilled.md`** để làm nốt siêu tụ (super-hub) liên kết toàn bộ 215 nốt nguyên tử trên Obsidian Graph View.
+- Đã tạo và duy trì bền vững **`vault/04_distilled/nikaya-distilled.md`** để làm nốt siêu tụ (super-hub) liên kết toàn bộ 215 nốt nguyên tử trên Obsidian Graph View.
 
 ## Lịch sử session hiện tại:
-- Reorganize `00_raw_docs` từ root vào đúng các thư mục domain con mới (`nikaya_trung_bo/`, `giang_giai_trung_bo_modern/`, `loi_phat_day_brahm/`).
-- Sửa lỗi YAML frontmatter `ndomain:` thành `domain:` và mapping chính xác với tên thư mục cha dạng slug.
-- Xóa bỏ folder `lecture/` và các liên kết hỏng trỏ về `lecture-14-blast-radius-advanced-processed.md` trong `HAE-concept-kho-dau.md`, `HAE-concept-vo-thuong.md` và `HAE-concept-sati.md`.
-- Sửa đổi metadata `parent`/`children` trong 11 nốt nguyên tử bị báo lệch.
-- Đồng bộ `vault/memory/project_context.md` khớp chính xác 100% với thực tế dự án.
+- Sửa lỗi `LLMClient` và `OpenAIProvider` để tương thích hoàn toàn với 9Router API (thông qua local proxy `localhost:20128` hoặc cloud).
+- Chuyển `OpenAIProvider` sang dùng SDK `openai` chính thức giúp tăng độ ổn định, tự động parse response và ngăn ngừa lỗi 404/định dạng do curl/fetch thủ công.
+- Cấu hình `.env` khớp chính xác với 9Router (`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL=KhaBoDo_1.0`).
+- Sửa lỗi trong `tests/e2e/mrp-pipeline.test.ts` ở phần dọn dẹp `afterAll`: chỉ xóa tệp mock của test nếu nó chứa nội dung mock, tránh xóa nhầm file siêu tụ thực tế của Vault.
+- Tạo tệp `vault/04_distilled/nikaya-distilled.md` thực tế cho Obsidian.
+- Đồng bộ hóa Vault đạt 0 liên kết hỏng, 0 lỗi parent/children, test suite pass 100%.
+- Dọn dẹp toàn bộ file Python cũ, viết lại `validate_raw_docs.ts` và `sync_rules_and_memory.ts`.
+- Cập nhật CLAUDE.md và shell router (/doctor) để gọi lệnh kiểm toán hoàn toàn bằng Bun TS.
 
 ## Điểm cần lưu ý cho Session tiếp theo:
-- Chạy `python3 scripts/sync_rules_and_memory.py` và `python3 scripts/validate_raw_docs.py` để đảm bảo hệ thống luôn ở trạng thái 0 lỗi.
+- Chạy `bun scripts/sync_rules_and_memory.ts` và `bun scripts/validate_raw_docs.ts` để đảm bảo hệ thống luôn ở trạng thái 0 lỗi.
 - Hiện tại Vault đã sạch bóng liên kết hỏng (0 broken links) và cấu trúc cây hoàn hảo.
 - Việc tiếp theo là chạy MRP Ingestion Pipeline bằng TypeScript Engine để tinh lọc sâu các nốt nháp (draft/placeholder) cho Trung Bộ Kinh.
 ```
@@ -54,7 +62,7 @@ với MRP Ingestion Pipeline (TypeScript). Branch: `feature/rewrite-engine-in-ty
 ## 🧪 3. Lệnh Verification & Diagnostics
 
 ```bash
-python3 scripts/validate_raw_docs.py     # Đảm bảo 0 lỗi cấu trúc domain thô
-python3 scripts/sync_rules_and_memory.py # Đảm bảo 0 liên kết hỏng, 0 lỗi parent/children
-bun test                                 # Đảm bảo test suite TypeScript pass 100%
+bun scripts/validate_raw_docs.ts     # Đảm bảo 0 lỗi cấu trúc domain thô
+bun scripts/sync_rules_and_memory.ts # Đảm bảo 0 liên kết hỏng, 0 lỗi parent/children
+bun test                             # Đảm bảo test suite TypeScript pass 100%
 ```
