@@ -15,7 +15,9 @@ import type { VerifierPhase } from '../phases/verifier.phase.ts';
 import type { CommitterPhase } from '../phases/committer.phase.ts';
 import type { PlanResult, MappedData, ReducedData } from '../phases/_types.ts';
 import type { TokenTracker } from '../services/token-tracker.ts';
-import { filterRelevantNodes } from '../../core/context-filter.ts';
+import { filterRelevantNodes, tokenize } from '../../core/context-filter.ts';
+import type { LearningService } from '../services/learning.service.ts';
+import type { DraftNode } from '../../domain/entities/learning.entity.ts';
 
 type PhaseResult = 'continue' | 'fail' | 'wait';
 
@@ -56,6 +58,7 @@ export class IngestDocumentUseCase {
   private currentPhaseName: string | null = null;
   private llm: ILLMProvider;
   private logger: ILogger;
+  private learningService: LearningService;
 
   constructor(
     mapper: MapperPhase,
@@ -72,6 +75,7 @@ export class IngestDocumentUseCase {
     llm: ILLMProvider,
     nodeRepo: INodeRepository,
     logger: ILogger,
+    learningService: LearningService,
   ) {
     this.mapper = mapper;
     this.reducer = reducer;
@@ -87,6 +91,7 @@ export class IngestDocumentUseCase {
     this.llm = llm;
     this.nodeRepo = nodeRepo;
     this.logger = logger;
+    this.learningService = learningService;
   }
 
   // ============ Public API ============
@@ -102,9 +107,9 @@ export class IngestDocumentUseCase {
     return this.runStateMachine({ sourcePath, autoApprove: true, skipVerify });
   }
 
-  async query(question: string): Promise<{ answer: string; tokensUsed?: number }> {
+  async query(question: string): Promise<{ answer: string; tokensUsed?: number; draft?: DraftNode; status?: 'success' | 'learning' }> {
     try {
-      const cleanWords = question.toLowerCase().match(/\b\w+\b/g) || [];
+      const cleanWords = Array.from(tokenize(question));
       const keywords = cleanWords.map(w => ({ name: w, definition: '' }));
 
       // Lấy nodes từ Repository thay vì context-filter tự đọc FS
@@ -112,33 +117,39 @@ export class IngestDocumentUseCase {
       const relevantNodes = filterRelevantNodes(keywords, allNodes, 8);
 
       if (relevantNodes.length === 0) {
-        return { answer: '⚠️ Không tìm thấy khái niệm liên quan trong kho tri thức phẳng của bạn.' };
+        this.logger.info(`🔍 Không tìm thấy nốt liên quan cho câu hỏi "${question}". Đang kích hoạt luồng LEARN...`);
+        const draft = await this.learningService.generateDraft(question, []);
+        return {
+          answer: `Rất tiếc, tôi chưa tìm thấy khái niệm nào liên quan trong kho tri thức hiện tại.\nĐã khởi tạo nốt nháp cho khái niệm mới: **${draft.title}**.`,
+          status: 'learning',
+          draft,
+        };
       }
 
       const contextBlocks = relevantNodes.map((node, i) => {
         return `[${i + 1}] NỐT: ${node.title} (slug: ${node.slug})\nĐịnh nghĩa: ${node.definition}\nLiên kết cha: ${node.parent || 'không có'}\nLiên kết con: ${node.children.join(', ') || 'không có'}`;
       }).join('\n\n');
 
-      const prompt = `Bạn là Harness Knowledge OS, một bộ não đồ thị tri thức thông minh, cấu trúc phẳng.
-Nhiệm vụ: Trả lời câu hỏi của người dùng dựa TRỰC TIẾP vào các nốt nguyên tử tri thức được cung cấp bên dưới.
+      const prompt = `Bạn là một người bạn đồng hành tri thức, thông thái và gần gũi.
+Nhiệm vụ của bạn: trả lời câu hỏi của người dùng dựa trên các ghi chép tri thức dưới đây.
 
-Câu hỏi của người dùng:
-"${question}"
+Câu hỏi: "${question}"
 
-Danh sách các nốt nguyên tử liên quan nhất từ Vault (Active Context):
+Dưới đây là các tài liệu liên quan tôi tìm được cho bạn:
 ${contextBlocks}
 
-Yêu cầu trả lời:
-1. Trả lời bằng tiếng Việt một cách sâu sắc, súc tích, đi thẳng vào bản chất (khoảng 3-5 câu).
-2. Chỉ dựa vào dữ liệu được cung cấp. Nếu dữ liệu không chứa câu trả lời, hãy nói rõ những nốt nào liên quan và đề xuất người dùng nạp thêm tài liệu.
-3. Nếu cần thông tin chi tiết hơn của bài kinh/nguồn gốc, hãy chỉ rõ: "Xem dẫn chứng ngược dòng tại structured doc: [structured-slug-processed](01_structured_docs/structured-slug-processed.md)" (thay thế bằng structured_slug thực tế của nốt nếu bạn suy luận được, hoặc gợi ý nốt liên quan).
+Hãy trả lời bằng tiếng Việt theo cách sau:
+1. Trả lời tự nhiên, ấm áp, súc tích — như đang nói chuyện với một người bạn (khoảng 3–5 câu).
+2. Chỉ dựa vào dữ liệu trên. Nếu chưa đủ thông tin, hãy thành thật nói là tôi chưa có đủ dữ liệu và gợi ý người dùng bổ sung thêm.
+3. Nếu cần tham khảo thêm bài kinh hoặc nguồn gốc, hãy chỉ rõ: "Xem chi tiết tại structured doc: [structured-slug-processed](01_structured_docs/structured-slug-processed.md)".
 `;
 
-      const response = await this.llm.generate(prompt, 'Bạn là Harness Knowledge OS chuyên nghiệp.', false);
+      const response = await this.llm.generate(prompt, 'Bạn là người bạn đồng hành tri thức ấm áp, tinh tế và sâu sắc.', false);
 
       return {
         answer: response.content,
         tokensUsed: response.usage?.totalTokens,
+        status: 'success',
       };
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
@@ -476,5 +487,9 @@ Vui lòng chọn hành động tiếp theo:
 
     filesToProcess.sort((a, b) => a.mtime - b.mtime);
     return filesToProcess.map(x => x.filepath);
+  }
+
+  async approveDraft(draft: DraftNode): Promise<void> {
+    await this.learningService.saveDraft(draft);
   }
 }

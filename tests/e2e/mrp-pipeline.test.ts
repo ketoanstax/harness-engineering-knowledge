@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as process from 'node:process';
 import { LLMClient } from '../../src/infrastructure/llm/llm-client.ts';
 import { IngestDocumentUseCase } from '../../src/application/use-cases/ingest-document.use-case.ts';
+import { LearningService } from '../../src/application/services/learning.service.ts';
 import { NodeFileSystem } from '../../src/infrastructure/fs/node-file-system.ts';
 import { MarkdownGenerator } from '../../src/infrastructure/formatters/markdown.generator.ts';
 import { ConfigProvider } from '../../src/infrastructure/config/config-provider.ts';
@@ -235,6 +236,8 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
     const testVerifier = new VerifierPhase(testFs, testMd, configProvider, testParser, silentLogger, testNodeFactory);
     const committer = new CommitterPhase(testFs, testMd, configProvider, testParser, silentLogger);
 
+    const testLearning = new LearningService(testNodeRepo, testLlm);
+
     const useCase = new IngestDocumentUseCase(
       mapper,
       reducer,
@@ -250,6 +253,7 @@ Chào mừng bạn đến với Bản đồ mạng lưới thần kinh tri thứ
       testLlm,
       testNodeRepo,
       silentLogger,
+      testLearning,
     );
 
     const success = await useCase.runBatch(TEST_DIR_RAW, true);

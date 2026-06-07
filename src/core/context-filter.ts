@@ -133,6 +133,6 @@ export function filterRelevantNodes(
   }
 
   const log = logger || { info: (msg: string) => console.log(msg), success: (msg: string) => console.log(msg), warn: (msg: string) => console.warn(msg), error: (msg: string) => console.error(msg), log: (msg: string) => console.log(msg) };
-  log.info(`  🔍 Active Context Filter: Quét ${allNodes.length} nốt cũ -> Lọc ra ${expandedNodes.length} nốt liên quan nhất (tiết kiệm ~85% token).`);
+  log.info(`  🔍 Đã chọn ${expandedNodes.length} nốt liên quan từ ${allNodes.length} nốt tổng cộng, giúp tối ưu token.`);
   return expandedNodes.slice(0, maxResults);
 }

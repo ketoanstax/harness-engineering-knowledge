@@ -49,3 +49,37 @@ bun scripts/validate_raw_docs.ts       # 0 lỗi domain thô
 bun scripts/sync_rules_and_memory.ts   # 0 link hỏng + 0 tree lỗi
 bun test                                # test suite pass 100%
 ```
+
+---
+
+## 🧠 4. Learning Flow (Kế hoạch — chưa triển khai)
+
+**Vấn đề:** Query trả về 0 node với từ tiếng Việt có dấu (vd “khổ”) do regex ASCII tại `ingest-document.use-case.ts:107`.
+
+**Giải pháp:** Thêm state machine `LEARN` khi không tìm thấy node → LLM sinh draft node → người dùng duyệt → commit vào vault.
+
+### 🎯 Kiến trúc (Clean Architecture)
+
+| Tầng | File mới/Sửa | Vai trò |
+|:---|---:|:---|
+| Domain | `src/domain/entities/learning.entity.ts` | `DraftNode`, `LearningResult` enum |
+| Domain | `INodeRepository` (thêm `add()`) | Giao diện thêm node |
+| Application | `src/application/services/learning.service.ts` | `generateDraft()`, `awaitUserConfirmation()` |
+| Application | `ingest-document.use-case.ts` | Inject `LearningService`, gọi khi `relevantNodes.length===0` |
+| Presentation | `shell-router.ts` | `displayDraft()`, lệnh `/approve-draft`, `/reject-draft` |
+| Infrastructure | `composition-root.ts` | DI wiring |
+| Infrastructure | NodeRepository impl | Hiện thực `add()` ghi file `.md` vào `02_atomic_nodes/` |
+
+### 🚀 Các bước triển khai
+
+1. Thêm `learning.entity.ts` (DraftNode, LearningResult enum).
+2. Mở rộng `INodeRepository` interface với `add(node: DraftNode): void`.
+3. Sửa regex tokenization ở `ingest-document.use-case.ts` → dùng `tokenize()` từ `context-filter.ts`.
+4. Implement `LearningService` (gọi LLM sinh nội dung node).
+5. Cập nhật `IngestDocumentUseCase.query`: nếu 0 node → gọi `LearningService` → trả về draft.
+6. Cập nhật `shell-router.handleQuery` để hiển thị draft & nhận lệnh duyệt.
+7. Đăng ký DI trong `composition-root.ts`.
+8. Viết unit test cho `LearningService` + test edge case query.
+9. Chạy `bunx tsc --noEmit` & `bun test` → xác nhận 0 lỗi.
+
+**Ghi chú:** Các thay đổi chưa thực hiện. Đây chỉ là kế hoạch sẵn sàng cho session tiếp theo.

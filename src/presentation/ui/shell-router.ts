@@ -11,6 +11,7 @@ import { displayDomainStats } from '../tools/domain-scanner.ts';
 import { displayGraphViz } from '../tools/graph-viz.ts';
 import { displayVaultStats } from '../tools/vault-stats.ts';
 import { createTerminalSpinner, renderMarkdown } from './shell-ui.ts';
+import type { DraftNode } from '../../domain/entities/learning.entity.ts';
 
 export interface ShellCommand {
   command: string;
@@ -21,6 +22,8 @@ export const COMMANDS: ShellCommand[] = [
   { command: '/run', description: 'Chọn & chạy pipeline' },
   { command: '/approve -t <ts>', description: 'Duyệt kế hoạch & chạy tiếp' },
   { command: '/reject -t <ts>', description: 'Từ chối & dọn dẹp' },
+  { command: '/approve-draft', description: 'Duyệt bản thảo nốt nháp' },
+  { command: '/reject-draft', description: 'Từ chối bản thảo nốt nháp' },
   { command: '/batch', description: 'Chạy batch tuần tự' },
   { command: '/batch --auto-approve', description: 'Chạy batch tự động' },
   { command: '/guide', description: 'Xem hướng dẫn vận hành' },
@@ -33,6 +36,7 @@ export const COMMANDS: ShellCommand[] = [
 ];
 
 let activeProgram: Command | null = null;
+let activeDraft: DraftNode | null = null;
 
 export function setActiveProgram(program: Command): void {
   activeProgram = program;
@@ -60,6 +64,27 @@ export async function handleCommand(input: string, useCase: IngestDocumentUseCas
     if (filepath) {
       const ok = await useCase.execute(filepath, askPlanAction);
       if (!ok) console.log(chalk.red('⚠️ Pipeline thất bại'));
+    }
+    return;
+  }
+
+  if (input === '/approve-draft') {
+    if (activeDraft) {
+      await useCase.approveDraft(activeDraft);
+      console.log(chalk.green(`\n✅ Đã lưu khái niệm "${activeDraft.title}" vào Vault. Bạn có thể hỏi lại câu hỏi này.`));
+      activeDraft = null;
+    } else {
+      console.log(chalk.yellow('\n⚠️ Không có bản thảo nốt nháp nào đang chờ duyệt.'));
+    }
+    return;
+  }
+
+  if (input === '/reject-draft') {
+    if (activeDraft) {
+      console.log(chalk.yellow(`\n❌ Đã từ chối bản thảo nốt nháp "${activeDraft.title}".`));
+      activeDraft = null;
+    } else {
+      console.log(chalk.yellow('\n⚠️ Không có bản thảo nốt nháp nào đang chờ duyệt.'));
     }
     return;
   }
@@ -103,8 +128,15 @@ export async function handleQuery(input: string, useCase: IngestDocumentUseCase)
     const result = await useCase.query(input);
     s.stop('');
     console.log(renderMarkdown(result.answer));
-    if (result.tokensUsed) {
-      console.log(chalk.dim(`\n  🔤 Tokens: ${result.tokensUsed}`));
+    if (result.status === 'learning' && result.draft) {
+      activeDraft = result.draft;
+      console.log(chalk.bold.yellow('\n📋 CHI TIẾT BẢN THẢO NỐT NHÁP:'));
+      console.log(chalk.cyan(`  - Tiêu đề: `) + chalk.white(activeDraft.title));
+      console.log(chalk.cyan(`  - Định nghĩa: `) + chalk.white(activeDraft.definition));
+      console.log(chalk.cyan(`  - Thẻ: `) + chalk.white(activeDraft.tags.join(', ')));
+      console.log(chalk.bold.magenta('\n👉 Chọn hành động:'));
+      console.log(`  Gõ ${chalk.cyan('/approve-draft')} để duyệt lưu nốt mới vào Vault.`);
+      console.log(`  Gõ ${chalk.cyan('/reject-draft')} để hủy bỏ.`);
     }
   } catch (e: unknown) {
     const err = e instanceof Error ? e.message : String(e);

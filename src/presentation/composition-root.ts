@@ -19,6 +19,7 @@ import { VerifierPhase } from '../application/phases/verifier.phase.ts';
 import { CommitterPhase } from '../application/phases/committer.phase.ts';
 import { buildProgram } from './cli/commands.ts';
 import { runShell } from './ui/interactive-shell.ts';
+import { LearningService } from '../application/services/learning.service.ts';
 
 // === DI Container (Composition Root) ===
 
@@ -30,6 +31,7 @@ const frontmatterParser = new GrayMatterParser();
 const tokenTracker = new TokenTracker();
 const pipelineDashboard = new PipelineDashboard(tokenTracker);
 const nodeRepository = new FileSystemNodeRepository(fileSystem, configProvider);
+const learningService = new LearningService(nodeRepository, llmClient);
 
 // Document Reader Tool (Strategy Pattern)
 const textExtractor = new TextExtractor(fileSystem);
@@ -64,6 +66,7 @@ const useCase = new IngestDocumentUseCase(
   llmClient,
   nodeRepository,
   logger,
+  learningService,
 );
 
 const program = buildProgram(useCase, fileSystem, configProvider);
