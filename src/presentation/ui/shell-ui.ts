@@ -3,6 +3,7 @@ import * as process from 'node:process';
 import type * as readline from 'node:readline';
 import chalk from 'chalk';
 import type { ShellCommand } from './shell-router.ts';
+import boxen from 'boxen';
 
 export function getTermWidth(): number {
   return process.stdout.columns || 80;
@@ -48,15 +49,25 @@ export function createTerminalSpinner(message: string) {
 
 // Render Markdown mini
 export function renderMarkdown(md: string): string {
-  return md
-    .replace(/^# (.*$)/gim, (_, p1) => chalk.bold.yellow(`\n  ⭐ ${p1}\n`))
-    .replace(/^## (.*$)/gim, (_, p1) => chalk.bold.cyan(`\n  🔹 ${p1}\n`))
-    .replace(/^### (.*$)/gim, (_, p1) => chalk.bold.underline(`\n  🔸 ${p1}\n`))
+  const formatted = md
+    .replace(/^# (.*$)/gim, (_, p1) => chalk.bold.yellow(`⭐ ${p1}`))
+    .replace(/^## (.*$)/gim, (_, p1) => chalk.bold.cyan(`🔹 ${p1}`))
+    .replace(/^### (.*$)/gim, (_, p1) => chalk.bold.greenBright(`🔸 ${p1}`))
+    .replace(/^[ \t]*> (.*$)/gim, (_, p1) => chalk.gray('│ ') + p1)
     .replace(/\*\*(.*?)\*\*/g, (_, p1) => chalk.bold(p1))
     .replace(/\*(.*?)\*/g, (_, p1) => chalk.italic(p1))
-    .replace(/`(.*?)`/g, (_, p1) => chalk.bgGray.black(` ${p1} `))
-    .replace(/\[(.*?)\]\((.*?)\)/g, (_, p1, p2) => `${chalk.bold.blue(p1)} (${chalk.dim(p2)})`)
-    .replace(/^- (.*$)/gim, (_, p1) => `    • ${p1}`);
+    .replace(/`(.*?)`/g, (_, p1) => chalk.bgGray.white(` ${p1} `))
+    .replace(/\[(.*?)\]\((.*?)\)/g, (_, p1, p2) => `${chalk.blue.underline(p1)} ${chalk.dim(`(${p2})`)}`)
+    .replace(/^- (.*$)/gim, (_, p1) => `  • ${p1}`);
+
+  return boxen(formatted.trim(), {
+    padding: { top: 1, bottom: 1, left: 2, right: 2 },
+    margin: { top: 0, bottom: 1 },
+    borderStyle: 'round',
+    borderColor: 'cyan',
+    title: chalk.bold.cyan(' 🧠 Trợ Lý Tri Thức '),
+    titleAlignment: 'left',
+  });
 }
 
 // Highlight cú pháp & vẽ Menu gợi ý

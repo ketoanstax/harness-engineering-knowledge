@@ -131,7 +131,7 @@ ${chalk.bold.cyan('  💻 HARRNESS KNOWLEDGE OS')}
       process.stdin.setRawMode?.(false);
 
       const input = line.trim();
-      process.stdout.write('\r\x1b[J'); // Xóa menu
+      process.stdout.write('\x1b[1A\r\x1b[J'); // Xóa dòng echoed cũ bằng cách di chuyển lên 1 dòng và xóa
       
       const finalInputText = input.startsWith('/') ? chalk.cyan.bold(input) : chalk.white(input);
       process.stdout.write(`${chalk.bold.magenta('mrp❯ ')}${finalInputText}\n`);
