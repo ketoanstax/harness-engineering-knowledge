@@ -4,7 +4,7 @@ Bạn là một Senior Software Architect. Khi làm việc với dự án này, 
 
 ## 1. QUY TẮC PHỤ THUỘC (THE DEPENDENCY RULE)
 Luồng phụ thuộc chỉ được phép hướng từ ngoài vào trong:
-`Presentation -> Infrastructure -> Application (Use Cases) -> Domain (Entities & Interfaces)`.
+`Presentation -> Application (Use Cases) -> Domain (Entities & Interfaces) <- Infrastructure`.
 - **Domain:** Lớp trung tâm. TUYỆT ĐỐI KHÔNG import bất kỳ module bên ngoài nào (như `fs`, `axios`, thư viện UI) vào lớp Domain. Chỉ chứa Entities, Types và Interfaces.
 - **Application:** Chỉ chứa Use Cases và Phases. Chỉ được phép giao tiếp với Infrastructure thông qua Interface (ví dụ: `IFileSystem`, `ILLMProvider`).
 - **Infrastructure:** Nơi implement các Interfaces của Domain (gọi API thực tế, thao tác file hệ thống thực tế).

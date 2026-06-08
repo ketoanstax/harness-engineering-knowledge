@@ -14,6 +14,10 @@ export const MappedDataSchema = z.object({
   title: z.string(),
   key_takeaways: z.array(z.string()),
   keywords: z.array(KeywordItemSchema),
+  rules: z.object({
+    globalRules: z.string(),
+    domainRules: z.string(),
+  }).optional(),
 });
 export type MappedData = z.infer<typeof MappedDataSchema>;
 

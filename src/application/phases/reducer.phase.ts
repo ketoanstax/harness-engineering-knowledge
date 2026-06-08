@@ -31,8 +31,19 @@ export class ReducerPhase {
 
     // Gọi LLM
     try {
+      const rules = mappedData.rules;
+      let rulesPrompt = '';
+      if (rules) {
+        if (rules.globalRules) {
+          rulesPrompt += `\n\n=== RÀNG BUỘC TOÀN CỤC (GLOBAL RULES) ===\n${rules.globalRules}`;
+        }
+        if (rules.domainRules) {
+          rulesPrompt += `\n\n=== CHỈ DẪN NGHIỆP VỤ DOMAIN (DOMAIN RULES) ===\n${rules.domainRules}`;
+        }
+      }
+
       const llmPrompt = `Bạn là một Lead Architect chuyên gia về hệ thống tri thức.
-Chúng tôi chuẩn bị nạp thêm các khái niệm mới vào kho tri thức, nhưng cần đảm bảo cấu trúc lưu trữ phẳng và không có trùng lặp (deduplication).
+Chúng tôi chuẩn bị nạp thêm các khái niệm mới vào kho tri thức, nhưng cần đảm bảo cấu trúc lưu trữ phẳng và không có trùng lặp (deduplication).${rulesPrompt}
 
 Các khái niệm liên quan hiện tại trong hệ thống:
 ${JSON.stringify(relevantNodes, null, 2)}

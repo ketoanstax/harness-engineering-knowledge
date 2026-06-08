@@ -5,7 +5,7 @@ aliases:
 tags:
   - distilled
   - insight
-  - harness-engineering
+  - mrp-knowledge-engine
 date: {{date}}
 ---
 

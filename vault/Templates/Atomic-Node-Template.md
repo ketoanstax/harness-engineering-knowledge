@@ -1,9 +1,9 @@
 ---
 id: HAE-concept-{{slug}}
 title: "{{title}}"
-category: "Harness Engineering Core"
+category: "MRP Knowledge Engine Core"
 tags:
-  - harness-engineering
+  - mrp-knowledge-engine
   - system-design
   - agent-capabilities
 date: 2026-05-24
@@ -26,4 +26,4 @@ date: 2026-05-24
   - [Ghi chú cấu trúc: {{source_title}}](01_structured_docs/{{date}}{{time}}-{{source_slug}}-processed.md)
   - [Ghi chú thô: {{source_title}}](00_raw_docs/{{date}}{{time}}-{{source_slug}}.md)
 - **Đúc kết vĩ mô (Xuôi dòng - Distilled Thoughts)**:
-  - [Tuyên ngôn Harness Engineering](04_distilled/harness-engineering-manifesto.md)
+  - [Tuyên ngôn MRP Knowledge Engine](04_distilled/mrp-knowledge-engine-manifesto.md)

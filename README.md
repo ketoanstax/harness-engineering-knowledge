@@ -1,4 +1,4 @@
-# Harness Engineering — Kho Tri Thức & Hệ Thống Cộng Tác AI
+# MRP Knowledge Engine — Công cụ Quản trị Tri thức & Hệ thống Cộng tác AI
 
 > **Triết lý:** "Framework viết cho lập trình viên dùng. Harness viết cho AI dùng."
 
@@ -21,7 +21,7 @@ Hệ thống quản lý tri thức đa domain với pipeline xử lý tự độ
 ## 🏗 Kiến trúc Tổng quan
 
 ```
-harness-engineering/
+mrp-knowledge-engine/
 ├── vault/
 │   ├── 00_raw_docs/         # Layer 1: Tài liệu thô, tổ chức theo domain subdir
 │   │   ├── phat-hoc/        #   Mỗi thư mục con = 1 domain

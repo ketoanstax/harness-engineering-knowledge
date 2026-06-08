@@ -18,7 +18,7 @@ Quy tắc này quản lý việc tổng hợp tri thức cấp cao, viết các 
    tags:
      - distilled
      - insight
-     - harness-engineering
+     - mrp-knowledge-engine
    date: 2026-05-24
    ---
    ```

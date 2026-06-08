@@ -10,6 +10,7 @@ import type { IConfigProvider } from '../../domain/interfaces/config-provider.in
 import type { ILogger } from '../../domain/interfaces/logger.interface.ts';
 import { type MappedData, LLMStructuredResponseSchema, type KeywordItem } from './_types.ts';
 import { extractJson } from './_utils.ts';
+import { resolveRules } from './_rule-resolver.ts';
 
 export class MapperPhase {
   private llm: ILLMProvider;
@@ -76,6 +77,14 @@ export class MapperPhase {
 
     // Gọi LLM
     this.logger.info('  🔄 Đang chắt lọc...');
+    const rules = resolveRules(sourcePath, this.config.dirVault, this.fs);
+    if (rules.globalRules) {
+      this.logger.info('  ⚙️ Đã nạp luật toàn cục (Global Rules)');
+    }
+    if (rules.domainRules) {
+      this.logger.info('  ⚙️ Đã nạp luật domain (Domain Rules)');
+    }
+
     const structuredDoc = new StructuredDoc(
       `${slug}-processed`,
       `${frontmatter.title} - Bản Chắt Lọc Cấu Trúc`,
@@ -84,7 +93,7 @@ export class MapperPhase {
 
     let keywords: KeywordItem[] = [];
     try {
-      const parsed = await this.callLLM(rawContent, onTokenUsed);
+      const parsed = await this.callLLM(rawContent, rules, onTokenUsed);
       structuredDoc.title = parsed.title || structuredDoc.title;
       structuredDoc.keyTakeaways = parsed.key_takeaways || [];
 
@@ -119,11 +128,20 @@ export class MapperPhase {
       title: structuredDoc.title,
       key_takeaways: structuredDoc.keyTakeaways,
       keywords,
+      rules,
     };
   }
 
-  private async callLLM(rawContent: string, onTokenUsed?: (usage: LLMUsage) => void) {
-    const llmPrompt = `Hãy phân tích bài kinh Phật giáo Nikaya hoặc tài liệu nghiên cứu dưới đây và trả về kết quả dưới dạng JSON.
+  private async callLLM(rawContent: string, rules: { globalRules: string; domainRules: string }, onTokenUsed?: (usage: LLMUsage) => void) {
+    let rulesPrompt = '';
+    if (rules.globalRules) {
+      rulesPrompt += `\n\n=== RÀNG BUỘC TOÀN CỤC (GLOBAL RULES) ===\n${rules.globalRules}`;
+    }
+    if (rules.domainRules) {
+      rulesPrompt += `\n\n=== CHỈ DẪN NGHIỆP VỤ DOMAIN (DOMAIN RULES) ===\n${rules.domainRules}`;
+    }
+
+    const llmPrompt = `Hãy phân tích bài kinh Phật giáo Nikaya hoặc tài liệu nghiên cứu dưới đây và trả về kết quả dưới dạng JSON.${rulesPrompt}
 
 
 Tài liệu:

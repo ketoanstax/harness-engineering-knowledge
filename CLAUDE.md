@@ -1,4 +1,4 @@
-# CLAUDE.md — Harness Engineering
+# CLAUDE.md — MRP Knowledge Engine
 
 > **"Framework viết cho lập trình viên dùng. Harness viết cho AI dùng."**
 

@@ -1,3 +1,7 @@
+---
+name: hae-writer
+description: "Kỹ năng Chuyên gia: Viết và Cấu trúc hóa Note (HAE Writer)"
+---
 # Kỹ năng Chuyên gia: Viết và Cấu trúc hóa Note (HAE Writer)
 
 Kỹ năng này chịu trách nhiệm sinh ra các nốt tri thức nguyên tử (`02_atomic_nodes/`) và ghi chú cấu trúc (`01_structured_docs/`) đúng định dạng Obsidian, súc tích và có tính kết nối cao.

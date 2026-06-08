@@ -1,3 +1,7 @@
+---
+name: hae-auditor
+description: "Kỹ năng Chuyên gia: Kiểm toán và Tự động hóa Vault (HAE Auditor)"
+---
 # Kỹ năng Chuyên gia: Kiểm toán và Tự động hóa Vault (HAE Auditor)
 
 Kỹ năng này giám sát chất lượng liên kết, tính toàn vẹn của tri thức và điều phối việc tự động cập nhật quy tắc (Closed Feedback Loop) trong kho tri thức.

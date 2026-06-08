@@ -1,3 +1,7 @@
+---
+name: hae-qa-oracle
+description: "Kỹ năng Chuyên gia: Hỏi đáp & Tự động Tiến hóa Tri thức (HAE QA & Evolution Oracle)"
+---
 # Kỹ năng Chuyên gia: Hỏi đáp & Tự động Tiến hóa Tri thức (HAE QA & Evolution Oracle)
 
 Kỹ năng này chịu trách nhiệm hỏi đáp với Người dùng dựa trên kho tri thức hiện có của dự án và điều phối **Vòng Lặp Tự Tiến Hóa Tri Thức (Knowledge Self-Evolution Loop)** để cập nhật tri thức mới chất lượng cao một cách an toàn và sạch sẽ.

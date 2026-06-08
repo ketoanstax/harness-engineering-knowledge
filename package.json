@@ -1,5 +1,5 @@
 {
-  "name": "harness-mrp-engine",
+  "name": "mrp-knowledge-engine",
   "version": "0.1.0",
   "description": "TypeScript Engine for MRP Pipeline",
   "type": "module",

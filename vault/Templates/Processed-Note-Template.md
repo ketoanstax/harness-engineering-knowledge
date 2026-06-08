@@ -7,7 +7,7 @@ type: processed-note
 source_note: "[{{Title}}](00_raw_docs/{{title}}.md)"
 tags:
   - processed
-  - harness-engineering
+  - mrp-knowledge-engine
 short_summary: ""
 keywords: []
 ---
@@ -33,4 +33,4 @@ keywords: []
 - **Nốt nguyên tử (Atomic Nodes)**:
   - 
 - **Đúc kết (Distilled)**:
-  - [Tuyên ngôn Harness Engineering](04_distilled/harness-engineering-manifesto.md)
+  - [Tuyên ngôn MRP Knowledge Engine](04_distilled/mrp-knowledge-engine-manifesto.md)

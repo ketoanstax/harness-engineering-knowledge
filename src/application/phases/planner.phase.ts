@@ -24,12 +24,23 @@ export class PlannerPhase {
     this.logger.info('  🔄 Đang thiết kế chi tiết các nốt và cấu trúc đồ thị nhân quả...');
 
     try {
+      const rules = mappedData.rules;
+      let rulesPrompt = '';
+      if (rules) {
+        if (rules.globalRules) {
+          rulesPrompt += `\n\n=== RÀNG BUỘC TOÀN CỤC (GLOBAL RULES) ===\n${rules.globalRules}`;
+        }
+        if (rules.domainRules) {
+          rulesPrompt += `\n\n=== CHỈ DẪN NGHIỆP VỤ DOMAIN (DOMAIN RULES) ===\n${rules.domainRules}`;
+        }
+      }
+
       const llmPrompt = `Bạn là Kỹ sư trưởng thiết kế hệ thống Harness.
 Chúng tôi cần thiết kế chi tiết nội dung markdown cho các hành động sau:
 - Khái niệm tạo mới: ${JSON.stringify(newConcepts)}
 - Khái niệm cần cập nhật/trộn vào nốt cũ: ${JSON.stringify(conflicts)}
 
-Yêu cầu thiết kế:
+Yêu cầu thiết kế:${rulesPrompt}
 1. Nốt mới phải định rõ parent (slug), children (danh sách slug), và cấu trúc causal_web (causal_core: slug, supporting_conditions: [slugs], derivative_effects: [slugs]).
 2. Mọi nốt đều được đặt phẳng trong 02_atomic_nodes/ và chỉ chứa Workspace-relative links.
 3. Nội dung phải sắc bén, ngắn gọn, tuân thủ đúng định dạng Markdown nguyên tử.

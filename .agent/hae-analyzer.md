@@ -1,3 +1,7 @@
+---
+name: hae-analyzer
+description: "Kỹ năng Chuyên gia: Phân tích Tri thức & Tư duy Phản biện Hệ thống (HAE Analyzer & Technical Reasoning)"
+---
 # Kỹ năng Chuyên gia: Phân tích Tri thức & Tư duy Phản biện Hệ thống (HAE Analyzer & Technical Reasoning)
 
 Kỹ năng này chịu trách nhiệm điều phối cách Agent tiếp cận, nghiên cứu, phân tích tri thức về Harness Engineering và đồng hành thiết kế/kiến trúc các giải pháp kỹ thuật hệ thống. Kỹ năng này kế thừa và kết hợp hoàn hảo triết lý Socratic phản biện của `ka-think` với các nguyên tắc cốt lõi của Harness Engineering.
